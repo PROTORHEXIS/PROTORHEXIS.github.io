@@ -24,6 +24,8 @@ let previousBodyOverflow: string | null = null;
 const inspectorRef = ref<HTMLElement | null>(null);
 let returnFocus: HTMLElement | null = null;
 const showRangePanel = ref(false);
+// Gate Teleport until after Astro has hydrated the SSR island. Vue SSR cannot hydrate a body-targeted Teleport safely.
+const portalReady = ref(false);
 const rangeTrigger = ref<HTMLElement | null>(null);
 const rangePanel = ref<HTMLElement | null>(null);
 const rangePosition = ref({ left: 0, top: 0 });
@@ -96,6 +98,7 @@ function onKeydown(event: KeyboardEvent) {
   }
 }
 onMounted(() => {
+  portalReady.value = true;
   viewportQuery = window.matchMedia('(max-width: 1050px)');
   motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
   onViewportChange(); onMotionChange();
@@ -355,7 +358,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
         <div class="inspector-foot">INSPECTOR / REV 003 <span>STATIC PREVIEW</span></div>
       </aside>
     </div>
-    <Teleport to="body">
+    <Teleport v-if="portalReady" to="body">
       <Transition name="ws-pop">
         <div v-if="showRangePanel" ref="rangePanel" id="gantt-range-panel" class="gantt-floating-range" role="dialog"
           :aria-label="tr('自定义时间范围','Custom date range')" :style="rangePanelStyle">

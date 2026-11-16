@@ -34,6 +34,14 @@ jobs:
           npm run check:layers
       - name: Build Astro static site
         run: npm run build
+      - name: Upload PR build for browser hydration QA
+        if: github.event_name == 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: roadmap-preview-dist
+          path: dist
+          retention-days: 3
+          if-no-files-found: error
       - name: Configure Pages
         if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
