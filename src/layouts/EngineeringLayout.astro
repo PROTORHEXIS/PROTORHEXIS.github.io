@@ -3,6 +3,7 @@ import BaseLayout from './BaseLayout.astro';
 import '../styles/workstation.css';
 import '../styles/workstation-refinements.css';
 import '../styles/workstation-layer-motion.css';
+import '../styles/workstation-v25.css';
 interface Props {
   title: string;
   active: 'schedule' | 'board' | 'activity' | 'systems';
@@ -23,15 +24,17 @@ const tabs = [
       </a>
       <span class="ws-header-sep" aria-hidden="true"></span>
       <div class="ws-header-title"><span class="ws-signal"></span><span data-zh="公共开发路线图" data-en="PUBLIC DEVELOPMENT ROADMAP">公共开发路线图</span></div>
-      <div class="ws-header-right"><span class="ws-header-edition">WORKSTATION / V2.4</span><span class="ws-live"><span class="ws-spot"></span>DEMO ENVIRONMENT</span><button class="ws-locale" type="button" data-lang-button aria-label="Switch language">EN</button></div>
+      <div class="ws-header-right"><span class="ws-header-edition">WORKSTATION / V2.5</span><span class="ws-live"><span class="ws-spot"></span>DEMO ENVIRONMENT</span><button class="ws-locale" type="button" data-lang-button aria-label="Switch language">EN</button></div>
     </header>
     <nav class="ws-tabbar" aria-label="Engineering roadmap views">
       <div class="ws-tabs">
         {tabs.map(item => <a class:list={['ws-tab', {'is-active':active===item.id}]} href={item.href} aria-current={active===item.id?'page':undefined}><small>{item.code}</small><span data-zh={item.zh} data-en={item.en}>{item.zh}</span></a>)}
         <a class:list={['ws-tab','ws-tab-aux', {'is-active':active==='systems'}]} href="/roadmap/systems/" aria-current={active==='systems'?'page':undefined}><small>04</small><span data-zh="系统图谱" data-en="SYSTEM MAP">系统图谱</span></a>
       </div>
+      <button class="ws-tabs-more" type="button" hidden aria-label="更多视图 / Scroll to more views"><span aria-hidden="true">→</span></button>
       <div class="ws-tab-context">PROTORHEXIS <span>/</span> ROADMAP <span>/</span> {active.toUpperCase()}</div>
     </nav>
+    <script>import '../scripts/roadmap-hints.ts';</script>
     <main id="main" class="ws-main"><slot /></main>
     <footer class="ws-footer"><span>© PROTORHEXIS · ENGINEERING SURFACE</span><span data-zh="界面样本 · 不代表发布资格或时间承诺" data-en="INTERFACE DEMO · NOT A RELEASE CLAIM OR COMMITMENT">界面样本 · 不代表发布资格或时间承诺</span><a href="/" data-zh="机构首页" data-en="INSTITUTIONAL HOME">机构首页</a></footer>
   </div>

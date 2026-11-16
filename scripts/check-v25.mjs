@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+const read = (path) => readFileSync(path, 'utf8');
+const vue = read('src/components/vue/EngineeringWorkbench.vue');
+const layout = read('src/layouts/EngineeringLayout.astro');
+const script = read('src/scripts/roadmap-hints.ts');
+const css = read('src/styles/workstation-v25.css');
+assert(vue.includes('const portalReady = ref(false)') && vue.includes('<Teleport v-if="portalReady" to="body">'), 'client-only teleport guard');
+assert(layout.includes('noIndex={true}'), 'demo noindex must stay enabled');
+assert(vue.includes('ref="boardViewport"') && vue.includes('scrollBoard(1)') && vue.includes('syncBoardScroll'), 'board navigation must be operational');
+assert(vue.includes('role="progressbar"') && vue.includes('boardScrollRatio'), 'board progress must be functional');
+assert(!layout.includes('data-zh="更多视图"'), 'avoid overwriting compact arrow label by locale script');
+assert(layout.includes('ws-tabs-more') && script.includes('scrollBy(') && script.includes('more.hidden'), 'overflow navigation must be usable');
+assert(css.includes('prefers-reduced-motion') && css.includes('corner-shape: squircle'), 'squircle and motion accessibility preserved');
+assert(css.includes('.gantt-dependency-layer > path:not(.active)'), 'lower emphasis on unrelated dependencies');
+assert(!/box-shadow\s*:\s*(?!none)/i.test(css), 'V2.5 may not introduce shadows');
+console.log('V2.5 public-workstation UX and hydration guards: PASS');

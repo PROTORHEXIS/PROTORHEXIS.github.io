@@ -1,0 +1,37 @@
+/* Roadmap V2.5: overflow affordance + quieter dependency lines.
+   Continuous surface / no shadows / never move the primary scroll layer. */
+.ws-tabbar { position: relative; }
+.ws-tabs-more { display: none; }
+.ws-board-transport {
+  display: flex; align-items: center; gap: 8px; min-height: 44px;
+  flex: 0 0 auto; padding: 5px 12px; background: #1d1d20;
+  border-bottom: 1px solid #35353b;
+}
+.ws-board-transport-title { font: 700 10px 'Space Mono', monospace; color: #d5d5dc; white-space: nowrap; }
+.ws-board-transport-title small { font: 400 10px Inter,sans-serif; color: #a1a1ad; margin-left: 9px; }
+.ws-board-transport-progress { flex: 1; min-width: 30px; height: 4px; border-radius: 8px; background: #37373d; overflow: hidden; position: relative; }
+.ws-board-transport-progress > span { display: block; position: absolute; left: 0; top: 0; height: 100%; border-radius: inherit; background: #ff635b; transition: width 140ms ease; }
+.ws-board-transport > button { width: 31px; height: 31px; display: inline-grid; place-items: center; border: 1px solid #494950; border-radius: 11px; color: #e9e9ee; background: #2b2b30; cursor: pointer; }
+.ws-board-transport > button:disabled { opacity: .35; cursor: default; }
+.ws-board-transport > button:not(:disabled):hover { border-color: #ff756b; background: #353037; }
+.ws-board-transport > button:focus-visible, .ws-tabs-more:focus-visible { outline: 2px solid #ff453a; outline-offset: 2px; }
+.ws-board-viewport { min-height: 0; }
+.gantt-dependency-layer > path:not(.active) { opacity: .22; stroke: #85858e; stroke-width: 1.2; }
+.gantt-dependency-layer > path.active { opacity: .96; }
+@media (max-width: 740px) {
+  .ws-tabbar { overflow: visible; padding-right: 6px; }
+  .ws-tabs { width: 100%; min-width: 0; flex: 1 1 auto; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; overscroll-behavior-inline: contain; padding-right: 30px; }
+  .ws-tabs::-webkit-scrollbar { display: none; }
+  .ws-tab { flex: 0 0 auto; }
+  .ws-tabs-more:not([hidden]) { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; border: 1px solid #4e4e56; background: #29292f; color: #ff726a; font: bold 19px Inter,sans-serif; cursor: pointer; z-index: 7; }
+  .ws-board-transport { gap: 7px; padding: 5px 9px; }
+  .ws-board-transport-title { font-size: 9px; }
+  .ws-board-transport-title small { display: none; }
+  .ws-board-transport > button { flex: 0 0 34px; min-height: 34px; }
+}
+@supports (corner-shape: squircle) {
+  .ws-tabs-more, .ws-board-transport > button { corner-shape: squircle; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ws-board-transport-progress > span { transition: none !important; }
+}

@@ -24,7 +24,7 @@ let previousBodyOverflow: string | null = null;
 const inspectorRef = ref<HTMLElement | null>(null);
 let returnFocus: HTMLElement | null = null;
 const showRangePanel = ref(false);
-// Gate Teleport until after Astro has hydrated the SSR island. Vue SSR cannot hydrate a body-targeted Teleport safely.
+// Do not mount a body-targeted Teleport during Astro SSR hydration.
 const portalReady = ref(false);
 const rangeTrigger = ref<HTMLElement | null>(null);
 const rangePanel = ref<HTMLElement | null>(null);
@@ -107,6 +107,8 @@ onMounted(() => {
   window.addEventListener('keydown', onKeydown);
   window.addEventListener('pointerdown', onGlobalPointerDown, true);
   window.addEventListener('resize', positionRangePanel);
+  window.addEventListener('resize', syncBoardScroll);
+  nextTick(syncBoardScroll);
   window.addEventListener('scroll', positionRangePanel, true);
   if (props.view === 'schedule' && ganttViewport.value) {
     const axis = ganttViewport.value.querySelector<HTMLElement>('.gantt-axis');
@@ -121,6 +123,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown);
   window.removeEventListener('pointerdown', onGlobalPointerDown, true);
   window.removeEventListener('resize', positionRangePanel);
+  window.removeEventListener('resize', syncBoardScroll);
   window.removeEventListener('scroll', positionRangePanel, true);
   viewportQuery?.removeEventListener('change', onViewportChange);
   motionQuery?.removeEventListener('change', onMotionChange);
@@ -135,6 +138,23 @@ const customStart = ref('2026-11');
 const customEnd = ref('2027-10');
 const rangeError = ref('');
 const ganttViewport = ref<HTMLElement | null>(null);
+const boardViewport = ref<HTMLElement | null>(null);
+const boardScrollRatio = ref(0);
+const boardOverflow = ref(false);
+function syncBoardScroll() {
+  const el = boardViewport.value;
+  if (!el) return;
+  const max = Math.max(0, el.scrollWidth - el.clientWidth);
+  boardOverflow.value = max > 4;
+  boardScrollRatio.value = max ? Math.min(1, Math.max(0, el.scrollLeft / max)) : 0;
+}
+function scrollBoard(direction: -1 | 1) {
+  const el = boardViewport.value;
+  if (!el) return;
+  const lane = el.querySelector<HTMLElement>('.kanban-column');
+  const distance = (lane?.getBoundingClientRect().width || 260) + 10;
+  el.scrollBy({ left: direction * distance, behavior: reducedMotion.value ? 'auto' : 'smooth' });
+}
 const trackWidth = ref(900);
 let resizeObserver: ResizeObserver | null = null;
 const showDependencies = ref(true);
@@ -331,9 +351,17 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
           <div class="ws-chart-foot"><span><i class="legend-swatch swatch-plan"></i>{{tr('规划','Planned')}}</span><span><i class="legend-swatch swatch-progress"></i>{{tr('开发中','Development')}}</span><span><i class="legend-swatch swatch-valid"></i>{{tr('验证中','Qualification')}}</span><span><i class="legend-swatch swatch-cursor"></i>{{tr('时间参照线','Reference date')}}</span><span class="chart-foot-note">{{tr('只读排期 · 拖动背景平移 · 点击依赖编号跳转','Read-only schedule · drag background to pan · follow dependency IDs')}}</span></div>
         </div>
 
-        <div v-else-if="view==='board'" class="ws-board-viewport" tabindex="0" :aria-label="tr('可横向滚动的交付看板','Scrollable release board')"><div class="ws-board">
+        <template v-else-if="view==='board'">
+          <div class="ws-board-transport" :aria-label="tr('看板横向导航','Board horizontal navigation')">
+            <span class="ws-board-transport-title">05 / {{tr('交付阶段','DELIVERY STAGES')}} <small>{{tr('左右滑动查看全部阶段','Scroll horizontally for every stage')}}</small></span>
+            <div class="ws-board-transport-progress" role="progressbar" :aria-label="tr('看板横向滚动进度','Board horizontal scroll progress')" :aria-valuenow="Math.round(boardScrollRatio*100)" aria-valuemin="0" aria-valuemax="100"><span :style="{width:`${Math.max(4,boardScrollRatio*100)}%`}"></span></div>
+            <button type="button" :aria-label="tr('上一阶段','Previous stage')" :disabled="!boardOverflow || boardScrollRatio<0.01" @click="scrollBoard(-1)"><EngineeringIcon name="back" /></button>
+            <button type="button" :aria-label="tr('下一阶段','Next stage')" :disabled="!boardOverflow || boardScrollRatio>0.99" @click="scrollBoard(1)"><EngineeringIcon name="next" /></button>
+          </div>
+          <div ref="boardViewport" class="ws-board-viewport" tabindex="0" @scroll.passive="syncBoardScroll" :aria-label="tr('可横向滚动的交付看板','Scrollable release board')"><div class="ws-board">
           <section v-for="stage in stages" :key="stage.id" class="kanban-column"><div class="kanban-heading"><span>{{stage.code}} / {{tr(stage.zh,stage.en)}}</span><span class="kanban-count">{{visibleItems.filter(x=>x.stage===stage.id).length.toString().padStart(2,'0')}}</span></div><div class="kanban-stack"><motion.button v-for="item in visibleItems.filter(x=>x.stage===stage.id)" :key="item.id" layout :initial="false" :whileHover="reducedMotion ? undefined : { y: -2 }" :whilePress="reducedMotion ? undefined : { scale: 0.99 }" :transition="{ duration: reducedMotion ? 0 : 0.14 }" class="kanban-card" :class="{selected:selectedId===item.id}" :aria-pressed="selectedId===item.id" @click="select(item.id)"><span class="kanban-card-head"><small>{{item.id}}</small><small>{{item.program}}</small></span><strong>{{tr(item.titleZh,item.titleEn)}}</strong><p>{{tr(item.descZh,item.descEn)}}</p><span class="kanban-card-foot"><span>{{streamName(item.stream)}}</span><span class="ws-action-glyph"><EngineeringIcon name="next" /></span></span></motion.button><div v-if="!visibleItems.some(x=>x.stage===stage.id)" class="kanban-empty">NO ITEMS</div></div></section>
         </div></div>
+        </template>
 
         <div v-else-if="view==='activity'" class="ws-activity"><div class="activity-filters"><span>{{tr('事件类型','EVENT TYPE')}}</span><div class="ws-toolset"><button v-for="kind in eventKinds" :key="kind" :class="{current:eventKind===kind}" @click="eventKind=kind">{{kind==='all'?tr('全部','ALL'):eventName(kind)}}</button></div></div><div class="event-stream"><motion.button v-for="event in visibleEvents" :key="event.id" layout :initial="false" :whileHover="reducedMotion ? undefined : { x: 2 }" :transition="{ duration: reducedMotion ? 0 : 0.14 }" class="event-entry" :class="{selected:selectedId===event.id}" :aria-pressed="selectedId===event.id" @click="select(event.id)"><span class="event-date">{{fmtDate(event.date)}}<small>{{event.program}}</small></span><span class="event-marker"><i></i></span><span class="event-body"><span class="event-kind">{{eventName(event.kind)}} <span>/ {{event.id}}</span></span><strong>{{tr(event.titleZh,event.titleEn)}}</strong><span class="event-summary">{{tr(event.descZh,event.descEn)}}</span></span><span class="event-arrow"><EngineeringIcon name="next" /></span></motion.button><div v-if="visibleEvents.length===0" class="ws-no-results">{{tr('没有匹配的事件。','No matching events.')}}</div></div></div>
 
