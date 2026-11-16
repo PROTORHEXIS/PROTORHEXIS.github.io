@@ -5,7 +5,8 @@ const css = readFileSync('src/styles/workstation-layer-motion.css', 'utf8');
 const layout = readFileSync('src/layouts/EngineeringLayout.astro', 'utf8');
 const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
 const checks = [
-  ['Popover is teleported outside clipped grid', code.includes('<Teleport to="body">') && code.includes('class="gantt-floating-range"')],
+  ['Popover is teleported outside clipped grid', code.includes('<Teleport v-if="portalReady" to="body">') && code.includes('class="gantt-floating-range"')],
+  ['Client-only Teleport preserves SSR hydration', code.includes('const portalReady = ref(false)') && code.includes('portalReady.value = true;') && code.includes('<Teleport v-if="portalReady" to="body">')],
   ['Range button uses expanded semantics', code.includes('aria-controls="gantt-range-panel"') && code.includes(':aria-expanded="showRangePanel"')],
   ['Range popover closes on outside pointer and Escape', code.includes('onGlobalPointerDown') && code.includes("event.key === 'Escape'")],
   ['Popover positions within viewport', code.includes('window.innerWidth - width - 12') && code.includes('window.innerHeight')],
