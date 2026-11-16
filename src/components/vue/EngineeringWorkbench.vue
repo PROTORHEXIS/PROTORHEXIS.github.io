@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { computed, ref, nextTick, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref, nextTick, onMounted, onBeforeUnmount, watch } from 'vue';
+import { AnimatePresence, motion } from 'motion-v';
 import { usePublicLocale } from './usePublicLocale';
 import EngineeringIcon from './EngineeringIcon.vue';
 import { demoItems, demoEvents, demoPrograms, type WorkItem, type ProgramId, type PublicEvent, type Stage, type Stream } from '../../data/workstation-demo';
@@ -15,17 +16,95 @@ const eventKind = ref<'all' | PublicEvent['kind']>('all');
 const eventKinds: Array<'all' | PublicEvent['kind']> = ['all','milestone','verification','decision'];
 const selectedId = ref(props.view === 'activity' ? 'EV-01' : 'TAL-01');
 const inspectorOpen = ref(false);
+const isNarrow = ref(false);
+const reducedMotion = ref(true); // Safe SSR default until the media query is known.
+let viewportQuery: MediaQueryList | null = null;
+let motionQuery: MediaQueryList | null = null;
+let previousBodyOverflow: string | null = null;
+const inspectorRef = ref<HTMLElement | null>(null);
 let returnFocus: HTMLElement | null = null;
+const showRangePanel = ref(false);
+const rangeTrigger = ref<HTMLElement | null>(null);
+const rangePanel = ref<HTMLElement | null>(null);
+const rangePosition = ref({ left: 0, top: 0 });
+const rangePanelStyle = computed(() => ({ left: `${rangePosition.value.left}px`, top: `${rangePosition.value.top}px` }));
+function positionRangePanel() {
+  if (!showRangePanel.value || !rangeTrigger.value || typeof window === 'undefined') return;
+  const r = rangeTrigger.value.getBoundingClientRect();
+  const width = Math.min(342, window.innerWidth - 24);
+  const panelHeight = rangePanel.value?.offsetHeight || 240;
+  const left = Math.max(12, Math.min(r.left, window.innerWidth - width - 12));
+  const top = r.bottom + panelHeight + 12 > window.innerHeight && r.top > panelHeight + 12
+    ? r.top - panelHeight - 8 : Math.min(r.bottom + 8, window.innerHeight - 12 - Math.min(panelHeight, window.innerHeight - 24));
+  rangePosition.value = { left, top: Math.max(12, top) };
+}
+async function toggleRangePanel() {
+  showRangePanel.value = !showRangePanel.value;
+  if (showRangePanel.value) {
+    await nextTick();
+    positionRangePanel();
+    rangePanel.value?.querySelector('input')?.focus();
+  } else rangeTrigger.value?.focus();
+}
+function closeRangePanel(restoreFocus = false) {
+  if (!showRangePanel.value) return;
+  showRangePanel.value = false;
+  if (restoreFocus) nextTick(() => rangeTrigger.value?.focus());
+}
+function onGlobalPointerDown(event: PointerEvent) {
+  if (!showRangePanel.value) return;
+  const target = event.target;
+  if (target instanceof Node && !rangePanel.value?.contains(target) && !rangeTrigger.value?.contains(target)) closeRangePanel();
+}
+function onViewportChange() { isNarrow.value = Boolean(viewportQuery?.matches); }
+function onMotionChange() { reducedMotion.value = Boolean(motionQuery?.matches); }
+function restoreBodyScroll() {
+  if (previousBodyOverflow !== null && typeof document !== 'undefined') {
+    document.body.style.overflow = previousBodyOverflow;
+    previousBodyOverflow = null;
+  }
+}
+watch([inspectorOpen, isNarrow], async ([open, narrow]) => {
+  if (typeof document === 'undefined') return;
+  if (open && narrow) {
+    if (previousBodyOverflow === null) previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    await nextTick();
+    inspectorRef.value?.querySelector<HTMLElement>('.inspector-close')?.focus();
+  } else restoreBodyScroll();
+});
 function closeInspector() {
   inspectorOpen.value = false;
   if (returnFocus?.isConnected) returnFocus.focus();
   returnFocus = null;
 }
 function onKeydown(event: KeyboardEvent) {
-  if (event.key === 'Escape' && inspectorOpen.value) closeInspector();
+  if (event.key === 'Escape') {
+    if (showRangePanel.value) { event.preventDefault(); closeRangePanel(true); return; }
+    if (inspectorOpen.value && isNarrow.value) { event.preventDefault(); closeInspector(); }
+  }
+  if (event.key === 'Tab' && inspectorOpen.value && isNarrow.value && inspectorRef.value) {
+    const controls = [...inspectorRef.value.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
+      .filter(el => !el.hasAttribute('inert') && el.getClientRects().length > 0);
+    if (!controls.length) { event.preventDefault(); return; }
+    const first = controls[0], last = controls[controls.length - 1];
+    if (event.shiftKey && (document.activeElement === first || !inspectorRef.value.contains(document.activeElement))) {
+      event.preventDefault(); last.focus();
+    } else if (!event.shiftKey && (document.activeElement === last || !inspectorRef.value.contains(document.activeElement))) {
+      event.preventDefault(); first.focus();
+    }
+  }
 }
 onMounted(() => {
+  viewportQuery = window.matchMedia('(max-width: 1050px)');
+  motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  onViewportChange(); onMotionChange();
+  viewportQuery.addEventListener('change', onViewportChange);
+  motionQuery.addEventListener('change', onMotionChange);
   window.addEventListener('keydown', onKeydown);
+  window.addEventListener('pointerdown', onGlobalPointerDown, true);
+  window.addEventListener('resize', positionRangePanel);
+  window.addEventListener('scroll', positionRangePanel, true);
   if (props.view === 'schedule' && ganttViewport.value) {
     const axis = ganttViewport.value.querySelector<HTMLElement>('.gantt-axis');
     if (axis) {
@@ -35,7 +114,16 @@ onMounted(() => {
     }
   }
 });
-onBeforeUnmount(() => { window.removeEventListener('keydown', onKeydown); resizeObserver?.disconnect(); });
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', onKeydown);
+  window.removeEventListener('pointerdown', onGlobalPointerDown, true);
+  window.removeEventListener('resize', positionRangePanel);
+  window.removeEventListener('scroll', positionRangePanel, true);
+  viewportQuery?.removeEventListener('change', onViewportChange);
+  motionQuery?.removeEventListener('change', onMotionChange);
+  resizeObserver?.disconnect();
+  restoreBodyScroll();
+});
 const zoom = ref<'month' | 'quarter'>('month');
 const calendarWindow = ref({startMonth:'2026-11',months:12});
 const activePreset = ref<'6m'|'12m'|'24m'|'custom'>('12m');
@@ -43,7 +131,6 @@ const presets = [6, 12, 24] as const;
 const customStart = ref('2026-11');
 const customEnd = ref('2027-10');
 const rangeError = ref('');
-const customRangePanel = ref<HTMLDetailsElement | null>(null);
 const ganttViewport = ref<HTMLElement | null>(null);
 const trackWidth = ref(900);
 let resizeObserver: ResizeObserver | null = null;
@@ -79,7 +166,7 @@ const chosenEvent = computed(() => demoEvents.find(x => x.id === selectedId.valu
 const chosenProgram = computed(() => demoPrograms.find(x => x.id === activeProgram.value) ?? null);
 const dependents = computed(() => chosenItem.value ? demoItems.filter(x => x.deps.includes(chosenItem.value!.id)) : []);
 function select(id:string) { if (document.activeElement instanceof HTMLElement) returnFocus = document.activeElement; selectedId.value=id; inspectorOpen.value=true; }
-function switchProgram(id:ProgramId|'all') { activeProgram.value=id; selectedId.value=''; inspectorOpen.value=false; }
+function switchProgram(id:ProgramId|'all') { activeProgram.value=id; selectedId.value=''; inspectorOpen.value=false; closeRangePanel(); }
 function toggleGroup(id:string) { expanded.value[id] = expanded.value[id] === false ? true : false; }
 function groupExpanded(id:string) { return expanded.value[id] !== false; }
 const grouped = computed(() => demoPrograms.map(prog => ({...prog, items: visibleItems.value.filter(item=>item.program===prog.id)})).filter(group=>group.items.length));
@@ -105,7 +192,7 @@ function applyCustomRange() {
     calendarWindow.value = next;
     activePreset.value = 'custom';
     rangeError.value = '';
-    if (customRangePanel.value) customRangePanel.value.open = false;
+    closeRangePanel(true);
   } catch (e) {
     rangeError.value = (e as Error).message;
   }
@@ -220,9 +307,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
           <div class="gantt-controls">
             <div class="gantt-presets" :aria-label="tr('时间范围','Time range')"><span class="gantt-controls-label">RANGE</span>
               <button v-for="m in presets" :key="m" type="button" :class="{current:activePreset===`${m}m`}" :aria-pressed="activePreset===`${m}m`" @click="setPreset(m)">{{m}}M</button>
-              <details ref="customRangePanel" class="gantt-custom"><summary :class="{current:activePreset==='custom'}">{{tr('自定义','CUSTOM')}}</summary>
-                <form class="gantt-custom-form" @submit.prevent="applyCustomRange"><label>{{tr('开始月份','FROM')}}<input v-model="customStart" type="month" required/></label><label>{{tr('结束月份（含）','TO (INCLUSIVE)')}}<input v-model="customEnd" type="month" required/></label><button type="submit">{{tr('应用范围','APPLY RANGE')}}</button><p v-if="rangeError" role="alert">{{rangeError}}</p><small>{{tr('最多 36 个月；不修改计划数据','Up to 36 months; does not modify task dates')}}</small></form>
-              </details>
+              <button ref="rangeTrigger" type="button" class="gantt-range-trigger" :class="{current:activePreset==='custom'}" :aria-expanded="showRangePanel" aria-controls="gantt-range-panel" aria-haspopup="dialog" @click="toggleRangePanel"><EngineeringIcon name="expand" />{{tr('自定义','CUSTOM')}}</button>
             </div>
             <button type="button" class="gantt-dep-toggle" :aria-pressed="showDependencies" @click="showDependencies=!showDependencies"><span class="ws-dep-dot"></span>{{tr('依赖关系','DEPENDENCIES')}}<strong>{{showDependencies?tr('显示','ON'):tr('隐藏','OFF')}}</strong></button>
           </div>
@@ -244,24 +329,47 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
         </div>
 
         <div v-else-if="view==='board'" class="ws-board-viewport" tabindex="0" :aria-label="tr('可横向滚动的交付看板','Scrollable release board')"><div class="ws-board">
-          <section v-for="stage in stages" :key="stage.id" class="kanban-column"><div class="kanban-heading"><span>{{stage.code}} / {{tr(stage.zh,stage.en)}}</span><span class="kanban-count">{{visibleItems.filter(x=>x.stage===stage.id).length.toString().padStart(2,'0')}}</span></div><div class="kanban-stack"><button v-for="item in visibleItems.filter(x=>x.stage===stage.id)" :key="item.id" class="kanban-card" :class="{selected:selectedId===item.id}" :aria-pressed="selectedId===item.id" @click="select(item.id)"><span class="kanban-card-head"><small>{{item.id}}</small><small>{{item.program}}</small></span><strong>{{tr(item.titleZh,item.titleEn)}}</strong><p>{{tr(item.descZh,item.descEn)}}</p><span class="kanban-card-foot"><span>{{streamName(item.stream)}}</span><span class="ws-action-glyph"><EngineeringIcon name="next" /></span></span></button><div v-if="!visibleItems.some(x=>x.stage===stage.id)" class="kanban-empty">NO ITEMS</div></div></section>
+          <section v-for="stage in stages" :key="stage.id" class="kanban-column"><div class="kanban-heading"><span>{{stage.code}} / {{tr(stage.zh,stage.en)}}</span><span class="kanban-count">{{visibleItems.filter(x=>x.stage===stage.id).length.toString().padStart(2,'0')}}</span></div><div class="kanban-stack"><motion.button v-for="item in visibleItems.filter(x=>x.stage===stage.id)" :key="item.id" layout :initial="false" :whileHover="reducedMotion ? undefined : { y: -2 }" :whilePress="reducedMotion ? undefined : { scale: 0.99 }" :transition="{ duration: reducedMotion ? 0 : 0.14 }" class="kanban-card" :class="{selected:selectedId===item.id}" :aria-pressed="selectedId===item.id" @click="select(item.id)"><span class="kanban-card-head"><small>{{item.id}}</small><small>{{item.program}}</small></span><strong>{{tr(item.titleZh,item.titleEn)}}</strong><p>{{tr(item.descZh,item.descEn)}}</p><span class="kanban-card-foot"><span>{{streamName(item.stream)}}</span><span class="ws-action-glyph"><EngineeringIcon name="next" /></span></span></motion.button><div v-if="!visibleItems.some(x=>x.stage===stage.id)" class="kanban-empty">NO ITEMS</div></div></section>
         </div></div>
 
-        <div v-else-if="view==='activity'" class="ws-activity"><div class="activity-filters"><span>{{tr('事件类型','EVENT TYPE')}}</span><div class="ws-toolset"><button v-for="kind in eventKinds" :key="kind" :class="{current:eventKind===kind}" @click="eventKind=kind">{{kind==='all'?tr('全部','ALL'):eventName(kind)}}</button></div></div><div class="event-stream"><button v-for="event in visibleEvents" :key="event.id" class="event-entry" :class="{selected:selectedId===event.id}" :aria-pressed="selectedId===event.id" @click="select(event.id)"><span class="event-date">{{fmtDate(event.date)}}<small>{{event.program}}</small></span><span class="event-marker"><i></i></span><span class="event-body"><span class="event-kind">{{eventName(event.kind)}} <span>/ {{event.id}}</span></span><strong>{{tr(event.titleZh,event.titleEn)}}</strong><span class="event-summary">{{tr(event.descZh,event.descEn)}}</span></span><span class="event-arrow"><EngineeringIcon name="next" /></span></button><div v-if="visibleEvents.length===0" class="ws-no-results">{{tr('没有匹配的事件。','No matching events.')}}</div></div></div>
+        <div v-else-if="view==='activity'" class="ws-activity"><div class="activity-filters"><span>{{tr('事件类型','EVENT TYPE')}}</span><div class="ws-toolset"><button v-for="kind in eventKinds" :key="kind" :class="{current:eventKind===kind}" @click="eventKind=kind">{{kind==='all'?tr('全部','ALL'):eventName(kind)}}</button></div></div><div class="event-stream"><motion.button v-for="event in visibleEvents" :key="event.id" layout :initial="false" :whileHover="reducedMotion ? undefined : { x: 2 }" :transition="{ duration: reducedMotion ? 0 : 0.14 }" class="event-entry" :class="{selected:selectedId===event.id}" :aria-pressed="selectedId===event.id" @click="select(event.id)"><span class="event-date">{{fmtDate(event.date)}}<small>{{event.program}}</small></span><span class="event-marker"><i></i></span><span class="event-body"><span class="event-kind">{{eventName(event.kind)}} <span>/ {{event.id}}</span></span><strong>{{tr(event.titleZh,event.titleEn)}}</strong><span class="event-summary">{{tr(event.descZh,event.descEn)}}</span></span><span class="event-arrow"><EngineeringIcon name="next" /></span></motion.button><div v-if="visibleEvents.length===0" class="ws-no-results">{{tr('没有匹配的事件。','No matching events.')}}</div></div></div>
 
         <div v-else class="ws-systemmap"><div class="systemmap-topline">PROTORHEXIS / DISTRIBUTED RESEARCH & ENGINEERING <span>RELATIONSHIP MODEL / DEMO</span></div><div class="systemmap-shell"><div class="systemmap-hub"><span>ORG / 00</span><strong>PROTORHEXIS</strong><small>{{tr('协作与公开工程入口','Collaborative engineering network')}}</small></div><div class="systemmap-connect"></div><div class="systemmap-nodes"><button v-for="prog in demoPrograms.filter(x=>x.id!=='PROTORHEXIS')" :key="prog.id" :class="{selected:activeProgram===prog.id}" @click="switchProgram(prog.id)"><small>{{prog.code}}</small><strong>{{prog.id}}</strong><span>{{tr(prog.zh,prog.en)}}</span></button></div></div><p class="systemmap-note">{{tr('这是用于演示导航关系的抽象结构图；真实接口依赖必须在经过公开审查后才会显示。','This is an illustrative relationship diagram. Real integration dependencies require public review before publication.')}}</p></div>
       </div>
 
       <button v-if="inspectorOpen" class="ws-inspector-scrim" type="button" :aria-label="tr('关闭详情面板','Close detail panel')" @click="closeInspector"></button>
-      <aside id="roadmap-inspector" class="ws-inspector" :class="{'inspector-visible':inspectorOpen}" :aria-label="tr('详情检查器','Inspector')"><div class="inspector-title"><span>DETAIL INSPECTOR</span><button type="button" class="inspector-close" :aria-label="tr('关闭详情','Close inspector')" @click="closeInspector"><EngineeringIcon name="close" /></button></div>
+      <aside ref="inspectorRef" id="roadmap-inspector" class="ws-inspector" :class="{'inspector-visible':inspectorOpen}" :aria-label="tr('详情检查器','Inspector')" :aria-hidden="isNarrow && !inspectorOpen ? 'true' : undefined" :inert="isNarrow && !inspectorOpen" tabindex="-1"><div class="inspector-title"><span>DETAIL INSPECTOR</span><button type="button" class="inspector-close" :aria-label="tr('关闭详情','Close inspector')" @click="closeInspector"><EngineeringIcon name="close" /></button></div>
+        <AnimatePresence mode="wait">
+          <motion.div :key="`${view}:${selectedId}:${activeProgram}`" class="inspector-motion-body"
+            :initial="reducedMotion ? false : { opacity: 0, y: 8 }"
+            :animate="{ opacity: 1, y: 0 }"
+            :exit="reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -5 }"
+            :transition="{ duration: reducedMotion ? 0 : 0.16, ease: 'easeOut' }">
         <template v-if="chosenItem && view!=='activity' && view!=='systems'"><div class="inspector-hero"><small>{{chosenItem.id}} / {{chosenItem.program}}</small><h2>{{tr(chosenItem.titleZh,chosenItem.titleEn)}}</h2><span class="inspector-status"><i></i>{{stageName(chosenItem.stage)}}</span></div><div class="inspector-section"><span class="inspector-label">{{tr('工作概要','DESCRIPTION')}}</span><p>{{tr(chosenItem.descZh,chosenItem.descEn)}}</p></div><dl class="inspector-spec"><div><dt>{{tr('时间窗口','WINDOW')}}</dt><dd>{{fmtDate(chosenItem.start)}}<br/>— {{fmtDate(chosenItem.end)}}</dd></div><div><dt>{{tr('工作类别','STREAM')}}</dt><dd>{{streamName(chosenItem.stream)}}</dd></div><div class="inspector-dep-row"><dt>{{tr('前置依赖','PREDECESSORS')}}</dt><dd><template v-if="chosenItem.deps.length"><button v-for="dep in chosenItem.deps" :key="dep" class="inspector-dep-link" type="button" :title="tr('定位并打开依赖任务','Locate dependency')" @click="focusItem(dep)">{{dep}} <EngineeringIcon name="next" /></button></template><span v-else>{{tr('无','NONE')}}</span></dd></div><div class="inspector-dep-row"><dt>{{tr('后续工作','SUCCESSORS')}}</dt><dd><template v-if="dependents.length"><button v-for="next in dependents" :key="next.id" class="inspector-dep-link" type="button" :title="tr('定位后续任务','Locate successor')" @click="focusItem(next.id)">{{next.id}} <EngineeringIcon name="next" /></button></template><span v-else>{{tr('无','NONE')}}</span></dd></div><div><dt>{{tr('数据级别','PROVENANCE')}}</dt><dd>DEMO / SYNTHETIC</dd></div></dl></template>
         <template v-else-if="chosenEvent && view==='activity'"><div class="inspector-hero"><small>{{chosenEvent.id}} / {{chosenEvent.program}}</small><h2>{{tr(chosenEvent.titleZh,chosenEvent.titleEn)}}</h2><span class="inspector-status"><i></i>{{eventName(chosenEvent.kind)}}</span></div><div class="inspector-section"><span class="inspector-label">{{tr('事件说明','EVENT DETAILS')}}</span><p>{{tr(chosenEvent.descZh,chosenEvent.descEn)}}</p></div><dl class="inspector-spec"><div><dt>{{tr('事件时间','EVENT DATE')}}</dt><dd>{{fmtDate(chosenEvent.date)}}</dd></div><div><dt>{{tr('证据状态','EVIDENCE')}}</dt><dd>NOT PROVIDED / DEMO</dd></div></dl></template>
         <template v-else-if="view==='systems'"><div class="inspector-hero"><small>SYSTEM MAP / {{chosenProgram?.code??'OVERVIEW'}}</small><h2>{{chosenProgram?.id??'PROTORHEXIS'}}</h2><span class="inspector-status"><i></i>RELATIONSHIP / DEMO</span></div><div class="inspector-section"><span class="inspector-label">{{tr('系统范围','SYSTEM SCOPE')}}</span><p>{{chosenProgram?tr(chosenProgram.zh,chosenProgram.en):tr('分布式科研和工程协作网络','Distributed research and engineering network')}}</p></div><dl class="inspector-spec"><div><dt>PUBLICATION</dt><dd>NOT VERIFIED</dd></div></dl></template>
         <template v-else><div class="inspector-placeholder"><span class="placeholder-cross">⌖</span><strong>{{tr('选择一个条目','Select an item')}}</strong><p>{{tr('在主视图中点击时间条、卡片或事件，查看对应详细信息。','Choose a bar, card or event to inspect its details.')}}</p></div></template>
+          </motion.div>
+        </AnimatePresence>
         <div class="inspector-warning"><span><EngineeringIcon name="warning" /></span><p>{{tr('样例数据无任何发布承诺。真实项目记录将由公开审批的数据快照替换。','This synthetic fixture contains no release promise. Reviewed public data will replace it.')}}</p></div>
         <div class="inspector-foot">INSPECTOR / REV 003 <span>STATIC PREVIEW</span></div>
       </aside>
     </div>
+    <Teleport to="body">
+      <Transition name="ws-pop">
+        <div v-if="showRangePanel" ref="rangePanel" id="gantt-range-panel" class="gantt-floating-range" role="dialog"
+          :aria-label="tr('自定义时间范围','Custom date range')" :style="rangePanelStyle">
+          <div class="range-panel-header"><strong>{{tr('自定义时间范围','CUSTOM RANGE')}}</strong><button type="button" :aria-label="tr('关闭','Close')" @click="closeRangePanel(true)"><EngineeringIcon name="close" /></button></div>
+          <form class="gantt-custom-form" @submit.prevent="applyCustomRange">
+            <label>{{tr('开始月份','FROM')}}<input v-model="customStart" type="month" required /></label>
+            <label>{{tr('结束月份（含）','TO (INCLUSIVE)')}}<input v-model="customEnd" type="month" required /></label>
+            <button type="submit">{{tr('应用范围','APPLY RANGE')}}</button>
+            <p v-if="rangeError" role="alert">{{rangeError}}</p>
+            <small>{{tr('最多 36 个月；不修改计划数据','Up to 36 months; does not modify task dates')}}</small>
+          </form>
+        </div>
+      </Transition>
+    </Teleport>
     <div class="ws-statusline"><span><i class="ws-mini-square"></i>{{tr('演示工作台','DEMO WORKSTATION')}}</span><span>{{stats.programs.toString().padStart(2,'0')}} PROGRAMS</span><span>{{stats.items.toString().padStart(2,'0')}} WORK ITEMS</span><span>{{stats.events.toString().padStart(2,'0')}} EVENTS</span><span class="status-right">NO LIVE DATA / PUBLIC PREVIEW</span></div>
   </section>
 </template>
