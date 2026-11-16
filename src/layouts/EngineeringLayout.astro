@@ -31,7 +31,7 @@ const tabs = [
         {tabs.map(item => <a class:list={['ws-tab', {'is-active':active===item.id}]} href={item.href} aria-current={active===item.id?'page':undefined}><small>{item.code}</small><span data-zh={item.zh} data-en={item.en}>{item.zh}</span></a>)}
         <a class:list={['ws-tab','ws-tab-aux', {'is-active':active==='systems'}]} href="/roadmap/systems/" aria-current={active==='systems'?'page':undefined}><small>04</small><span data-zh="系统图谱" data-en="SYSTEM MAP">系统图谱</span></a>
       </div>
-      <button class="ws-tabs-more" type="button" hidden aria-label="更多视图 / Scroll to more views" data-zh="更多视图" data-en="MORE VIEWS"><span aria-hidden="true">→</span></button>
+      <button class="ws-tabs-more" type="button" hidden aria-label="更多视图 / Scroll to more views"><span aria-hidden="true">→</span></button>
       <div class="ws-tab-context">PROTORHEXIS <span>/</span> ROADMAP <span>/</span> {active.toUpperCase()}</div>
     </nav>
     <script>import '../scripts/roadmap-hints.ts';</script>

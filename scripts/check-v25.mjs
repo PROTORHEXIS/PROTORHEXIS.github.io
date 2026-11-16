@@ -9,6 +9,7 @@ assert(vue.includes('const portalReady = ref(false)') && vue.includes('<Teleport
 assert(layout.includes('noIndex={true}'), 'demo noindex must stay enabled');
 assert(vue.includes('ref="boardViewport"') && vue.includes('scrollBoard(1)') && vue.includes('syncBoardScroll'), 'board navigation must be operational');
 assert(vue.includes('role="progressbar"') && vue.includes('boardScrollRatio'), 'board progress must be functional');
+assert(!layout.includes('data-zh="更多视图"'), 'avoid overwriting compact arrow label by locale script');
 assert(layout.includes('ws-tabs-more') && script.includes('scrollBy(') && script.includes('more.hidden'), 'overflow navigation must be usable');
 assert(css.includes('prefers-reduced-motion') && css.includes('corner-shape: squircle'), 'squircle and motion accessibility preserved');
 assert(css.includes('.gantt-dependency-layer > path:not(.active)'), 'lower emphasis on unrelated dependencies');

@@ -15,7 +15,7 @@ for (const route of routes) {
     expect(errors).toEqual([]);
     if (route === '/roadmap/' || route === '/roadmap/board/') {
       const label = route.includes('/board/') ? 'board' : 'schedule';
-      await page.screenshot({ path: `test-results/v25-${label}-${test.info().project.name}.png`, fullPage: true });
+      await page.screenshot({ path: `test-results/v25-${label}-${test.info().project.name}.png`, fullPage: true, animations: 'disabled' });
     }
   });
 }
@@ -49,6 +49,11 @@ test('small-screen navigation gives a working hint for clipped tabs', async ({ p
   await page.goto('/roadmap/', { waitUntil: 'domcontentloaded' });
   const more = page.locator('.ws-tabs-more');
   await expect(more).toBeVisible();
+  // Locale script must not replace the compact arrow with a multi-line label.
+  await expect(more).toHaveText('→');
+  const bounds = await more.boundingBox();
+  const navBounds = await page.locator('.ws-tabbar').boundingBox();
+  expect(bounds && navBounds && bounds.bottom <= navBounds.bottom + 1 && bounds.top >= navBounds.top - 1).toBeTruthy();
   const strip = page.locator('.ws-tabs');
   const before = await strip.evaluate(el => el.scrollLeft);
   await more.click();
