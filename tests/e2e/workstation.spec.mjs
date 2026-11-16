@@ -53,7 +53,7 @@ test('small-screen navigation gives a working hint for clipped tabs', async ({ p
   await expect(more).toHaveText('→');
   const bounds = await more.boundingBox();
   const navBounds = await page.locator('.ws-tabbar').boundingBox();
-  expect(bounds && navBounds && bounds.bottom <= navBounds.bottom + 1 && bounds.top >= navBounds.top - 1).toBeTruthy();
+  expect(bounds && navBounds && bounds.y + bounds.height <= navBounds.y + navBounds.height + 1 && bounds.y >= navBounds.y - 1).toBeTruthy();
   const strip = page.locator('.ws-tabs');
   const before = await strip.evaluate(el => el.scrollLeft);
   await more.click();
