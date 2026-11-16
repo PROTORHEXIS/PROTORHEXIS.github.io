@@ -31,6 +31,7 @@ jobs:
           npm run check:fixtures
           npm run check:style
           npm run check:gantt
+          npm run check:layers
       - name: Build Astro static site
         run: npm run build
       - name: Configure Pages
