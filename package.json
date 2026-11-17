@@ -1,6 +1,6 @@
 {
   "name": "protorhexis-public-web",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,13 +12,15 @@
     "check:gantt": "node --experimental-strip-types scripts/check-gantt.mjs",
     "check:layers": "node scripts/check-layers.mjs",
     "check:v25": "node scripts/check-v25.mjs",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "check:v26": "node scripts/check-v26.mjs"
   },
   "dependencies": {
     "astro": "^7.4.0",
     "@astrojs/vue": "^7.1.6",
     "vue": "^3.5.0",
-    "motion-v": "^2.12.0"
+    "motion-v": "^2.12.0",
+    "@vue-flow/core": "^1.48.2"
   },
   "devDependencies": {
     "typescript": "^5.9.0",
