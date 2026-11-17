@@ -1,0 +1,2 @@
+{"schema":"roadmap-intake/v1","batch":"example-work-candidate-001","source":"opaque-private-ledger-ref"}
+{"op":"append","kind":"work","id":"SAMPLE-STATUS-001","record":{"id":"SAMPLE-STATUS-001","program":"TALOS","title":{"zh":"示例候选","en":"Example candidate"},"description":{"zh":"虚构示例，不代表工程事实。","en":"Fictional example, not a real status."},"phase":"development","category":"platform","schedule":null,"dependsOn":[],"sources":[],"updatedAt":"2026-11-18"}}
