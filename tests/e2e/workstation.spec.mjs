@@ -167,7 +167,7 @@ test('approved public JSON API has sources and no synthetic fixture',async({requ
   for(const item of data.workItems){
     expect(item.title.zh).not.toMatch(/TAL-01/);
     if(item.phase==='published')expect(item.sources.length).toBeGreaterThan(0);
-    if(item.schedule===null)expect(item.phase).toBe('planned');
+    if(item.schedule===null)expect(['planned','future','development','qualification','review']).toContain(item.phase);
     for(const src of item.sources)expect(new URL(src.url).hostname).toBe('github.com');
   }
 });
@@ -200,4 +200,18 @@ test('V2.8: brand uses replaceable SVG and has no entry to the unpublished home'
   await expect(mark).toBeVisible();
   await expect.poll(()=>mark.evaluate(el=>el.complete && el.naturalWidth>0)).toBe(true);
   await expect(page.locator('a[href="/"]')).toHaveCount(0);
+});
+
+
+test('Future is undated and unapproved private summaries are excluded',async({page,request})=>{
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('.kanban-heading').filter({hasText:'FUTURE'})).toBeVisible();
+  await expect(page.locator('.kanban-card').filter({hasText:'TAL-FUTURE-001'})).toBeVisible();
+  await expect(page.getByText('TAL-PROGRESS-001')).toHaveCount(0);
+  const res=await request.get('/api/roadmap/v1.json');
+  expect(res.ok()).toBeTruthy();
+  const data=await res.json();
+  expect(data.workItems.filter(x=>x.phase==='future')).toHaveLength(6);
+  expect(data.workItems.some(x=>x.id.endsWith('PROGRESS-001'))).toBe(false);
+  expect(data.workItems.filter(x=>x.phase==='future').every(x=>x.schedule===null)).toBe(true);
 });

@@ -10,3 +10,10 @@ Goal: submit minimal reviewed-public-candidate changes. **Never edit `src/data/r
 6. Do not mention private repo paths, secrets, exact internal commits, staff or tenant records in public output. No dates without a verified public planning decision. If no source, submit nothing.
 
 Agent example: see `agent/example.jsonl`. Full contract: `docs/ROADMAP-V3.1-CONTENT-PIPELINE.md`.
+
+## Private progress and Future (V3.2)
+- Evidence from private projects stays in an access-controlled source ledger. Never copy private URLs, exact internal commits, raw logs or security diagnostics into a public PR, including Draft.
+- Use `roadmap-intake/v1` with `append kind=work` for sanitized work summaries. `intake --stage` writes an ignored local candidate, not public source or an API write.
+- Agent must NOT set `publication` or `reviewReceipt`. A qualified reviewer privately checks exact evidence and authorizes a specific minimal text and receipt. Public PR review is a separate gate.
+- Future is `phase: future`, `schedule: null`, and a concise aspiration (no dates, fake percentages, or inferred production stage). Avoid repeating long descriptions.
+- Publication approval is not a CI PASS; a receipt ID is only an opaque pointer to the protected source-review ledger, never cryptographic proof.

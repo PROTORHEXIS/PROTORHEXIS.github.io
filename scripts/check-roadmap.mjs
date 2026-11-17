@@ -7,11 +7,15 @@ const s=JSON.parse(readFileSync(file,'utf8'));
 assert.equal(s.schemaVersion,1);
 assert.equal(s.publicationStatus,'APPROVED_PUBLIC_SNAPSHOT');
 assert.equal(s.programs.length,5);
-assert.equal(s.workItems.length,5);
+assert.equal(s.workItems.length,11);
+assert.equal(s.workItems.filter(x=>x.phase==='future').length,6);
+assert(s.workItems.filter(x=>x.phase==='future').every(x=>x.schedule===null && x.sources.length===0));
+assert(!s.workItems.some(x=>x.reviewReceipt), 'Private candidate must remain unpublished');
 assert.equal(s.events.length,4);
 assert.equal(s.relations.length,0);
 assert(s.workItems.some(x=>x.schedule===null && x.phase==='planned'));
-assert(s.workItems.every(x=>x.program==='PROTORHEXIS'));
+assert(s.workItems.some(x=>x.program==='TALOS') && s.workItems.some(x=>x.program==='MAXWELL'));
+assert(!s.workItems.some(x=>x.id.endsWith('PROGRESS-001')));
 assert(!existsSync('src/data/workstation-demo.ts'));
 assert(s.events.every(x=>x.sources.every(y=>new URL(y.url).hostname==='github.com')));
 const cli=(...args)=>spawnSync(process.execPath,['scripts/roadmap-cli.mjs',...args],{encoding:'utf8'});
@@ -34,6 +38,21 @@ try{
   r=cli('intake','--input',input);assert.notEqual(r.status,0);
   patch.set={phase:'development'};patch.evidence=[];
   writeFileSync(input,JSON.stringify(header)+'\n'+JSON.stringify(patch)+'\n');
+  r=cli('intake','--input',input);assert.notEqual(r.status,0);
+  // Agent may append a sanitized draft work item, but cannot declare review or publication.
+  const candidate={op:'append',kind:'work',id:'SAMPLE-STATUS-001',record:{
+    id:'SAMPLE-STATUS-001',program:'TALOS',title:{zh:'测试候选',en:'Test candidate'},
+    description:{zh:'仅用于测试。',en:'Test only.'},phase:'development',category:'platform',
+    schedule:null,dependsOn:[],sources:[],updatedAt:'2026-11-18'
+  }};
+  writeFileSync(input,JSON.stringify(header)+'\n'+JSON.stringify(candidate)+'\n');
+  r=cli('intake','--input',input);assert.equal(r.status,0,r.stderr);
+  candidate.record.reviewReceipt='PUB-RM-20261118-FAKE';
+  writeFileSync(input,JSON.stringify(header)+'\n'+JSON.stringify(candidate)+'\n');
+  r=cli('intake','--input',input);assert.notEqual(r.status,0);
+  delete candidate.record.reviewReceipt;
+  candidate.record.publication='approved';
+  writeFileSync(input,JSON.stringify(header)+'\n'+JSON.stringify(candidate)+'\n');
   r=cli('intake','--input',input);assert.notEqual(r.status,0);
 }finally{rmSync(input,{force:true})}
 console.log('ROADMAP_V3.1_PASS: approved data, unknown dates, agent delta, stale revision, forbidden fields and evidence gate');

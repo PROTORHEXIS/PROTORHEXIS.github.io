@@ -44,3 +44,7 @@ GitHub Actions runs source, schema, build and desktop/mobile Chromium Hydration 
 - `/roadmap/systems/` public index. No unreviewed integration edges are drawn.
 
 Frontend: Astro 7 + Vue 3 + TypeScript + Vue Flow + Motion for Vue. Preserve full-width graphite/coral UI, Iconify material line icons, accessible controls, reduced-motion, continuous corners and **no shadows**. Deployment is GitHub Pages at `protorhexis.com`. The unfinished institutional home remains separate.
+
+
+### V3.2 Future and private-source progress
+The board has a separate undated Future phase for brief plans. Four narrowly scoped private-project progress summaries are stored **as drafts only**, excluded from the approved public JSON until review of their private evidence ledger. Agent work-item append goes to ignored local candidate staging; it cannot approve publication. See the V3.2 addendum to the content pipeline document.
