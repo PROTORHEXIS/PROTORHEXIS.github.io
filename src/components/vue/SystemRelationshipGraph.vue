@@ -1,17 +1,18 @@
 <script setup lang="ts">
-import { computed, shallowRef, ref, onMounted, onBeforeUnmount } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount } from 'vue';
 import { VueFlow, Position, Handle, type Node, type Edge } from '@vue-flow/core';
 import '@vue-flow/core/dist/style.css';
 
 interface Program { id:string; code:string; zh:string; en:string }
-const props = defineProps<{ programs:Program[]; locale:'zh'|'en'; activeProgram:string }>();
+interface Relation { id:string; from:string; to:string; kind:'contains'|'depends_on'|'integrates_with'; publication:'approved'|'draft' }
+const props = defineProps<{ programs:Program[]; relations:Relation[]; locale:'zh'|'en'; activeProgram:string }>();
 const emit = defineEmits<{ select:[id:string] }>();
 const compact = ref(false);
 let mq: MediaQueryList | null = null;
 const onCompact = () => {compact.value=Boolean(mq?.matches);};
 onMounted(()=>{mq=window.matchMedia('(max-width:740px)');onCompact();mq.addEventListener('change',onCompact);});
 onBeforeUnmount(()=>mq?.removeEventListener('change',onCompact));
-// Visual, publicly safe example topology only: organizational grouping is not an integration claim.
+// The positions are presentation only. Every drawn connection must exist in reviewed public data.
 const graphNodes = computed<Node[]>(() => [
   { id:'PROTORHEXIS', type:'hub', position:compact.value?{x:0,y:0}:{x:402,y:18}, sourcePosition:Position.Bottom, draggable:false,
     data:{id:'PROTORHEXIS',code:'ORG / 00',zh:'协作与公开工程入口',en:'Collaborative engineering network'} },
@@ -21,12 +22,16 @@ const graphNodes = computed<Node[]>(() => [
     data:{id:p.id,code:p.code,zh:p.zh,en:p.en},
   }))
 ]);
-// No approved evidence of cross-system interfaces: render nodes without invented links.
-const graphEdges = shallowRef<Edge[]>([]);
+const graphEdges = computed<Edge[]>(() => {
+  const ids = new Set(props.programs.map(p=>p.id));
+  return props.relations
+    .filter(r=>r.publication==='approved' && r.kind==='contains' && r.from==='PROTORHEXIS' && ids.has(r.to) && r.to!==r.from)
+    .map(r=>({id:r.id,source:r.from,target:r.to,type:'smoothstep',selectable:false,animated:false}));
+});
 </script>
 
 <template>
-  <div class="system-graph" role="region" :aria-label="locale==='zh'?'公开项目索引图（关系待审查）':'Public project index; no unverified connections'">
+  <div class="system-graph" role="region" :aria-label="locale==='zh'?'已审核的公开项目归属图':'Reviewed public organizational grouping'">
     <div class="system-graph-tools"><span>VUE FLOW / READ ONLY</span><span>{{locale==='zh'?'拖动画布平移 · 滚动页面不缩放':'Drag canvas to pan · Page scroll does not zoom'}}</span></div>
     <div class="system-graph-viewport">
       <VueFlow :key="compact?'vertical':'wide'" :nodes="graphNodes" :edges="graphEdges" :fit-view-on-init="true" :min-zoom="compact?0.25:0.45" :max-zoom="1.5"
