@@ -79,13 +79,9 @@ npm run preview
 
 Source structure and fixture validation can be checked statically. This environment does not have registry access or Astro dependencies, so **npm build has not been verified here**. Run `npm install && npm run check:fixtures && npm run build` under a supported Node version in your own environment before merging; commit the locally generated `package-lock.json` for reproducible subsequent `npm ci` builds.
 
-## GitHub publishing (V2.3 public preview)
+## GitHub deployment policy
 
-Authorized for GitHub Pages publishing on 2026-11-16. The review workflow validates on pull requests; the deploy job is limited to `main`. The published roadmap still contains **fictional demonstration data** and is marked `noindex` until an independently reviewed public feed replaces the sample records.
-
-**Owner setup:** Repository Settings → Pages → Source: GitHub Actions. Configure `protorhexis.com` as the custom domain in GitHub Pages settings; `public/CNAME` alone does not configure Pages for Actions deployments. Confirm HTTPS and DNS at the registrar. Neither a successful commit nor a successful build alone proves the site is live. GitHub Actions status and the actual site URL require separate confirmation.
-
-**Reproducibility gap:** the earlier artifact did not contain a `package-lock.json`. This preview workflow uses `npm install` and checks compilation. Once the lockfile is generated on a supported Node version, commit it and switch to `npm ci` before treating the workflow as a stable release gate.
+Do not merge, deploy, or enable Actions automatically. The organization repository is `PROTORHEXIS/PROTORHEXIS.github.io`; use the existing `feat/astro-vue-engineering-roadmap-v0` branch for a Draft PR after completing local verification.
 
 ## Iconify policy (approved by site owner)
 
@@ -105,3 +101,13 @@ npm run dev
 ```
 
 This package has not passed a full `npm install` / Astro build in the assistant runtime (registry unavailable). The repository source branch is not modified by this local artifact; no merge/deploy/Actions occurred.
+
+
+## V2.8 — Precision and navigation
+
+- Distinct Gantt A/B routing: B draws one source trunk and obstacle-aware, stable branched lanes.
+- Terminal arrowhead aligns exactly with the SVG path endpoint; dependency branches use butt caps.
+- Event hover animates the event card only, without moving timeline dates or axis markers.
+- Brand image is a replaceable placeholder at `public/brand/mark.svg`.
+- Internal links to the unfinished institutional homepage (`/`) are removed; direct URL still serves its construction screen.
+- `npm run check:v28` and Chromium E2E tests protect these invariants.
