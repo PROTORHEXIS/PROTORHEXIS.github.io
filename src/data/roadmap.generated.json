@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "publicationStatus": "APPROVED_PUBLIC_SNAPSHOT",
-  "updatedAt": "2026-11-17",
+  "updatedAt": "2026-11-18",
   "programs": [
     {
       "id": "TALOS",
@@ -100,6 +100,120 @@
     }
   ],
   "workItems": [
+    {
+      "id": "MAX-FUTURE-001",
+      "program": "MAXWELL",
+      "title": {
+        "zh": "Agent 执行轨迹",
+        "en": "Agent execution traces"
+      },
+      "description": {
+        "zh": "让自动化任务具备可审查的历史与恢复能力。",
+        "en": "Make automated work traceable and recoverable."
+      },
+      "phase": "future",
+      "category": "infrastructure",
+      "schedule": null,
+      "dependsOn": [],
+      "sources": [],
+      "updatedAt": "2026-11-18",
+      "publication": "approved"
+    },
+    {
+      "id": "PRO-FUTURE-001",
+      "program": "PROTORHEXIS",
+      "title": {
+        "zh": "跨学科研究网络",
+        "en": "Interdisciplinary research network"
+      },
+      "description": {
+        "zh": "连接自主研究团队与跨领域协作。",
+        "en": "Connect autonomous research teams across disciplines."
+      },
+      "phase": "future",
+      "category": "infrastructure",
+      "schedule": null,
+      "dependsOn": [],
+      "sources": [],
+      "updatedAt": "2026-11-18",
+      "publication": "approved"
+    },
+    {
+      "id": "PRO-FUTURE-002",
+      "program": "PROTORHEXIS",
+      "title": {
+        "zh": "人机协作基础设施",
+        "en": "Human–AI collaboration"
+      },
+      "description": {
+        "zh": "探索持久知识、Agent 协作与自然交互。",
+        "en": "Explore persistent knowledge, agent collaboration and natural interaction."
+      },
+      "phase": "future",
+      "category": "infrastructure",
+      "schedule": null,
+      "dependsOn": [],
+      "sources": [],
+      "updatedAt": "2026-11-18",
+      "publication": "approved"
+    },
+    {
+      "id": "TAL-FUTURE-001",
+      "program": "TALOS",
+      "title": {
+        "zh": "分布式知识协作",
+        "en": "Federated knowledge collaboration"
+      },
+      "description": {
+        "zh": "探索可连接、可追溯的知识基础设施。",
+        "en": "Explore connected and traceable knowledge infrastructure."
+      },
+      "phase": "future",
+      "category": "platform",
+      "schedule": null,
+      "dependsOn": [],
+      "sources": [],
+      "updatedAt": "2026-11-18",
+      "publication": "approved"
+    },
+    {
+      "id": "TES-FUTURE-001",
+      "program": "TESSERACT",
+      "title": {
+        "zh": "空间化仓储交互",
+        "en": "Spatial warehouse interaction"
+      },
+      "description": {
+        "zh": "用实时状态与轻量空间表达辅助仓储操作。",
+        "en": "Support warehousing with live state and lightweight spatial views."
+      },
+      "phase": "future",
+      "category": "product",
+      "schedule": null,
+      "dependsOn": [],
+      "sources": [],
+      "updatedAt": "2026-11-18",
+      "publication": "approved"
+    },
+    {
+      "id": "THO-FUTURE-001",
+      "program": "THOULESS",
+      "title": {
+        "zh": "可扩展租赁服务",
+        "en": "Extensible rental services"
+      },
+      "description": {
+        "zh": "连接租赁流程与可替换的服务模块。",
+        "en": "Connect rental workflows with replaceable services."
+      },
+      "phase": "future",
+      "category": "product",
+      "schedule": null,
+      "dependsOn": [],
+      "sources": [],
+      "updatedAt": "2026-11-18",
+      "publication": "approved"
+    },
     {
       "id": "WEB-SITE-001",
       "program": "PROTORHEXIS",
@@ -314,5 +428,5 @@
     }
   ],
   "relations": [],
-  "sourceRevision": "sha256:55dbd7ce45a5c6f6c50a83bcbdcc84390bd8f08ec9add880b0fae09bdd9b165e"
+  "sourceRevision": "sha256:98f192419a6df4960437560124ba024e3b549ec155d7f7ab5426ae395d7c539b"
 }
