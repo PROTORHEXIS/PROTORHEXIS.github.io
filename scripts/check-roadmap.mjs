@@ -7,15 +7,19 @@ const s=JSON.parse(readFileSync(file,'utf8'));
 assert.equal(s.schemaVersion,1);
 assert.equal(s.publicationStatus,'APPROVED_PUBLIC_SNAPSHOT');
 assert.equal(s.programs.length,5);
-assert.equal(s.workItems.length,11);
+assert.equal(s.workItems.length,15);
 assert.equal(s.workItems.filter(x=>x.phase==='future').length,6);
 assert(s.workItems.filter(x=>x.phase==='future').every(x=>x.schedule===null && x.sources.length===0));
-assert(!s.workItems.some(x=>x.reviewReceipt), 'Private candidate must remain unpublished');
+const reviewed=s.workItems.filter(x=>x.reviewReceipt);
+assert.equal(reviewed.length,4,'Four approved sanitized private-source summaries expected');
+assert.equal(new Set(reviewed.map(x=>x.reviewReceipt)).size,4,'Duplicate review receipt');
+assert(reviewed.every(x=>x.publication==='approved' && !x.sources.length && x.schedule===null),'No raw/private source or invented schedule');
+assert.deepEqual(reviewed.map(x=>x.id).sort(),['MAX-PROGRESS-001','TAL-PROGRESS-001','TES-PROGRESS-001','THO-PROGRESS-001']);
 assert.equal(s.events.length,4);
 assert.equal(s.relations.length,0);
 assert(s.workItems.some(x=>x.schedule===null && x.phase==='planned'));
 assert(s.workItems.some(x=>x.program==='TALOS') && s.workItems.some(x=>x.program==='MAXWELL'));
-assert(!s.workItems.some(x=>x.id.endsWith('PROGRESS-001')));
+assert.equal(s.workItems.filter(x=>x.id.endsWith('PROGRESS-001')).length,4);
 assert(!existsSync('src/data/workstation-demo.ts'));
 assert(s.events.every(x=>x.sources.every(y=>new URL(y.url).hostname==='github.com')));
 const cli=(...args)=>spawnSync(process.execPath,['scripts/roadmap-cli.mjs',...args],{encoding:'utf8'});
@@ -55,4 +59,4 @@ try{
   writeFileSync(input,JSON.stringify(header)+'\n'+JSON.stringify(candidate)+'\n');
   r=cli('intake','--input',input);assert.notEqual(r.status,0);
 }finally{rmSync(input,{force:true})}
-console.log('ROADMAP_V3.1_PASS: approved data, unknown dates, agent delta, stale revision, forbidden fields and evidence gate');
+console.log('ROADMAP_V3.2_PASS: approved data, unknown dates, agent delta, stale revision, forbidden fields and evidence gate');

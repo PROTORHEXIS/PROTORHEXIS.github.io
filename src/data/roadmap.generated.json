@@ -120,6 +120,26 @@
       "publication": "approved"
     },
     {
+      "id": "MAX-PROGRESS-001",
+      "program": "MAXWELL",
+      "title": {
+        "zh": "Agent 工作流控制面候选",
+        "en": "Agent workflow control-plane candidate"
+      },
+      "description": {
+        "zh": "已形成单节点控制面候选并完成限定范围的本地测试，尚未获得生产资格。",
+        "en": "A single-node control-plane candidate has bounded local test evidence; it is not production qualified."
+      },
+      "phase": "development",
+      "category": "infrastructure",
+      "schedule": null,
+      "dependsOn": [],
+      "sources": [],
+      "updatedAt": "2026-11-18",
+      "publication": "approved",
+      "reviewReceipt": "PUB-RM-20261118-MAX"
+    },
+    {
       "id": "PRO-FUTURE-001",
       "program": "PROTORHEXIS",
       "title": {
@@ -177,6 +197,26 @@
       "publication": "approved"
     },
     {
+      "id": "TAL-PROGRESS-001",
+      "program": "TALOS",
+      "title": {
+        "zh": "模块化平台与通信验证",
+        "en": "Modular platform and communication checks"
+      },
+      "description": {
+        "zh": "正在推进统一通信契约和跨模块测试验证；首个测试版本尚未获得正式发布资格。",
+        "en": "Unified communication contracts and cross-module checks are in progress; the first test release is not yet authorized."
+      },
+      "phase": "development",
+      "category": "platform",
+      "schedule": null,
+      "dependsOn": [],
+      "sources": [],
+      "updatedAt": "2026-11-18",
+      "publication": "approved",
+      "reviewReceipt": "PUB-RM-20261118-TAL"
+    },
+    {
       "id": "TES-FUTURE-001",
       "program": "TESSERACT",
       "title": {
@@ -196,6 +236,26 @@
       "publication": "approved"
     },
     {
+      "id": "TES-PROGRESS-001",
+      "program": "TESSERACT",
+      "title": {
+        "zh": "仓储读取与隔离验证",
+        "en": "Warehouse read and isolation validation"
+      },
+      "description": {
+        "zh": "仓储只读查询及隔离已完成限定范围联测，完整仓储业务尚未正式发布。",
+        "en": "Warehouse reads and isolation have bounded integration evidence; the complete warehouse service is not released."
+      },
+      "phase": "qualification",
+      "category": "product",
+      "schedule": null,
+      "dependsOn": [],
+      "sources": [],
+      "updatedAt": "2026-11-18",
+      "publication": "approved",
+      "reviewReceipt": "PUB-RM-20261118-TES"
+    },
+    {
       "id": "THO-FUTURE-001",
       "program": "THOULESS",
       "title": {
@@ -213,6 +273,26 @@
       "sources": [],
       "updatedAt": "2026-11-18",
       "publication": "approved"
+    },
+    {
+      "id": "THO-PROGRESS-001",
+      "program": "THOULESS",
+      "title": {
+        "zh": "租赁服务独立化验证",
+        "en": "Independent rental-service validation"
+      },
+      "description": {
+        "zh": "订单读取与仓储目录完成限定范围联测，完整租赁业务仍未正式发布。",
+        "en": "Order reads and warehouse listing have bounded integration evidence; the full rental service is not released."
+      },
+      "phase": "qualification",
+      "category": "product",
+      "schedule": null,
+      "dependsOn": [],
+      "sources": [],
+      "updatedAt": "2026-11-18",
+      "publication": "approved",
+      "reviewReceipt": "PUB-RM-20261118-THO"
     },
     {
       "id": "WEB-SITE-001",
@@ -428,5 +508,5 @@
     }
   ],
   "relations": [],
-  "sourceRevision": "sha256:98f192419a6df4960437560124ba024e3b549ec155d7f7ab5426ae395d7c539b"
+  "sourceRevision": "sha256:36ae7139d4ef38e7976bef9b9cc532abdcf1f0f514a0efa78d35093767ba042f"
 }
