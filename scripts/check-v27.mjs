@@ -23,6 +23,11 @@ const a12=a.find(e=>e.key==='TAL-01>TAL-02'),b12=b.find(e=>e.key==='TAL-01>TAL-0
 assert.ok(a12 && b12 && a12.active && b12.active);
 assert.ok(!a12.d.includes(' Q ') && b12.d.includes(' Q '));
 assert.notEqual(a12.d,b12.d);
+// Different outgoing dependencies share a source trunk rather than outlining a
+// tiny rectangle that the eye misreads as the original circular arrow defect.
+const nextFromTal=b.find(e=>e.key==='TAL-01>MAX-01');
+assert.ok(nextFromTal,'missing secondary TALOS outbound dependency');
+assert.equal(b12.d.split(' Q ')[0],nextFromTal.d.split(' Q ')[0], 'outgoing routes must share the initial channel');
 // Last segment *always* approaches target from the left. Regression for the ring-shaped arrow.
 for(const mode of ['standard','optimized']){
   for(const edge of dependencyPaths(groups,{},range,width,null,mode)){

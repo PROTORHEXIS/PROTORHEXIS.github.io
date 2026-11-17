@@ -142,17 +142,18 @@ export function dependencyPaths<T extends GanttItem>(
   }
   // Stable channels are assigned independently from selection/hover state.
   proposed.sort((a,b)=>a.to.localeCompare(b.to)||a.from.localeCompare(b.from));
-  const incoming=new Map<string,number>(),outgoing=new Map<string,number>();
+  const incoming=new Map<string,number>();
   const edges:Edge[]=[];
   for(const e of proposed) {
     const sibling=incoming.get(e.to)||0;incoming.set(e.to,sibling+1);
-    const sourceSibling=outgoing.get(e.from)||0;outgoing.set(e.from,sourceSibling+1);
     const optimized=mode==='optimized';
-    const sourceY=e.source.y + (optimized ? (sourceSibling%3-1)*3 : 0);
+    // One shared outgoing trunk per source prevents two nearby routes from
+    // drawing a false U-shaped loop/outline at the predecessor's right edge.
+    const sourceY=e.source.y;
     const targetY=e.target.y + (optimized ? (sibling%3-1)*5 : 0);
     const sx=e.source.end, tx=e.target.start;
     const arrowTip=tx-6;
-    const exitGap=optimized ? 18+(sourceSibling%3)*5 : 18;
+    const exitGap=optimized ? 22 : 18;
     const entryGap=optimized ? 24+(sibling%3)*7 : 24;
     const hasOverlap=arrowTip-sx<42;
     let points:Point[];

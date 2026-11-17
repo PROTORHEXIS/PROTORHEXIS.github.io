@@ -8,7 +8,7 @@ Routes a normal separated dependency as a clean `H → V → H` orthogonal elbow
 
 ## B — Routed / 避让 (default)
 
-Uses the same safe terminal direction with additional deterministic channels, staggered entries when several edges arrive at one item, intermediate-row obstacle avoidance and modest rounded corners. This is a route geometry change, not a purely cosmetic theme. Both modes are available in the right side of Gantt controls, with `aria-pressed` state and persisted choice in local storage. Both are read-only. The dependency visibility switch remains independent.
+Uses the same safe terminal direction with a shared outgoing trunk (to avoid false U-shaped outlines), deterministic downstream channels, staggered entries when several edges arrive at one item, intermediate-row obstacle avoidance and modest rounded corners. This is a route geometry change, not a purely cosmetic theme. Both modes are available in the right side of Gantt controls, with `aria-pressed` state and persisted choice in local storage. Both are read-only. The dependency visibility switch remains independent.
 
 ## Invariants
 
