@@ -143,90 +143,75 @@ test('system map uses real Vue Flow nodes and edges, not a CSS-only illustration
 });
 
 
-test('two Gantt route modes switch without reversed arrowheads or layout shifts', async ({page}) => {
+test('single optimized router removes both long U-turns and keeps arrows forward', async ({page}) => {
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
   await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
   const layer=page.locator('.gantt-dependency-layer');
-  const edge=layer.locator('path[data-dependency-key="TAL-01>TAL-02"]');
-  await expect(edge).toBeAttached();
-  const standard=page.locator('[data-route-option="standard"]');
-  const optimized=page.locator('[data-route-option="optimized"]');
-  await expect(standard).toBeVisible();
-  await expect(optimized).toBeVisible();
-  await expect(layer).toHaveAttribute('data-route-mode','optimized');
-  const viewport=page.locator('.gantt-viewport');
-  const startingScroll=await viewport.evaluate(el=>el.scrollLeft);
-  async function geometry() {
-    return await edge.evaluate(el=>{
-      const total=el.getTotalLength();
-      const end=el.getPointAtLength(total);
-      const before=el.getPointAtLength(Math.max(0,total-3));
-      const layer=el.ownerSVGElement;
-      const bar=document.querySelector('[data-gantt-id="TAL-02"]');
-      return {d:el.getAttribute('d'), deltaX:end.x-before.x,deltaY:end.y-before.y,
-        tipX:end.x+layer.getBoundingClientRect().left, targetX:bar.getBoundingClientRect().left,
-        marker:el.getAttribute('marker-end')};
-    });
+  await expect(layer).toBeVisible();
+  // The old A/B controls and persisted switch no longer exist.
+  await expect(page.locator('[data-route-option],.gantt-route-selector')).toHaveCount(0);
+  await expect(page.getByRole('button',{name:/依赖关系|DEPENDENCIES/})).toBeVisible();
+  const snapshot=await layer.evaluate(svg=>{
+    const result={};
+    for(const key of ['TAL-01>TAL-02','TAL-02>TES-02','TAL-02>TAL-03']){
+      const path=svg.querySelector(`path[data-dependency-key="${key}"]`);
+      if(!path)continue;
+      const len=path.getTotalLength(),start=path.getPointAtLength(0);
+      const end=path.getPointAtLength(len),before=path.getPointAtLength(Math.max(0,len-3));
+      const source=document.querySelector(`[data-gantt-id="${key.split('>')[0]}"]`);
+      const target=document.querySelector(`[data-gantt-id="${key.split('>')[1]}"]`);
+      const src=source.getBoundingClientRect(),dst=target.getBoundingClientRect();
+      const r=svg.getBoundingClientRect();
+      result[key]={len,startX:start.x+r.left,startY:start.y+r.top,
+        tipX:end.x+r.left,targetX:dst.left,dx:end.x-before.x,dy:end.y-before.y,
+        sourceRight:src.right,sourceLeft:src.left,sourceTop:src.top,sourceBottom:src.bottom,
+        trunk:!!svg.querySelector(`[data-dependency-trunk="${key.split('>')[0]}"]`),
+        marker:path.getAttribute('marker-end'),cap:getComputedStyle(path).strokeLinecap};
+    }
+    return result;
+  });
+  const near=snapshot['TAL-01>TAL-02'],far=snapshot['TAL-02>TES-02'],forward=snapshot['TAL-02>TAL-03'];
+  expect(near&&far&&forward).toBeTruthy();
+  // Both overlapping links now leave the source task's BOTTOM edge, not its
+  // far-right tip, eliminating the circled right jog and bottom-left U-turn.
+  for(const e of [near,far]){
+    expect(e.startX).toBeGreaterThan(e.sourceLeft+10);
+    expect(e.startX).toBeLessThan(e.sourceRight-10);
+    expect(Math.abs(e.startY-e.sourceBottom)).toBeLessThan(4);
+    expect(Math.abs(e.tipX-(e.targetX-6))).toBeLessThan(3);
+    expect(e.dx).toBeGreaterThan(2);
+    expect(Math.abs(e.dy)).toBeLessThan(.6);
+    expect(e.cap).toBe('butt');
+    expect(e.marker).toContain('dep-arrow');
   }
-  const advanced=await geometry();
-  expect(advanced.d).toContain(' Q ');
-  expect(advanced.deltaX).toBeGreaterThan(2);
-  expect(Math.abs(advanced.deltaY)).toBeLessThan(0.5);
-  expect(Math.abs(advanced.tipX-(advanced.targetX-6))).toBeLessThan(3);
-  expect(advanced.marker).toContain('dep-arrow');
-  await page.screenshot({path:`test-results/v27-route-B-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
-  await standard.click();
-  await expect(layer).toHaveAttribute('data-route-mode','standard');
-  await expect(standard).toHaveAttribute('aria-pressed','true');
-  const classic=await geometry();
-  expect(classic.d).not.toEqual(advanced.d);
-  expect(classic.d).not.toContain(' Q ');
-  expect(classic.deltaX).toBeGreaterThan(2);
-  expect(Math.abs(classic.deltaY)).toBeLessThan(0.5);
-  expect(Math.abs(classic.tipX-(classic.targetX-6))).toBeLessThan(3);
-  expect(await viewport.evaluate(el=>el.scrollLeft)).toBe(startingScroll);
-  await page.screenshot({path:`test-results/v27-route-A-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
-  await page.reload({waitUntil:'domcontentloaded'});
-  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
-  await expect(page.locator('.gantt-dependency-layer')).toHaveAttribute('data-route-mode','standard');
-  await page.locator('[data-route-option="optimized"]').click();
-  await expect(page.locator('.gantt-dependency-layer')).toHaveAttribute('data-route-mode','optimized');
+  expect(near.len).toBeLessThan(115); // used to make a multi-hundred-pixel U
+  expect(far.len).toBeLessThan(1200); // previously routed to nearly x=0
+  expect(forward.trunk).toBe(true); // normal finish-start still has a shared trunk
+  await page.screenshot({path:`test-results/v29-no-loops-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
+  // Existing dependency visibility remains functional.
+  await page.getByRole('button',{name:/依赖关系|DEPENDENCIES/}).click();
+  await expect(layer).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
-test('V2.8: B uses one real source trunk and an exact non-rounded arrow endpoint', async ({page}) => {
-  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+test('single router does not cross unrelated task bars in overlapping example', async ({page}) => {
   await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
   await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
-  const layer=page.locator('.gantt-dependency-layer');
-  await expect(layer).toHaveAttribute('data-route-mode','optimized');
-  await expect(page.locator('[data-dependency-trunk="TAL-01"]')).toHaveCount(1);
-  const edge=layer.locator('path[data-dependency-key="TAL-01>TAL-02"]');
-  const stats=await edge.evaluate(el=>{
-    const svg=el.ownerSVGElement;
-    const total=el.getTotalLength(),end=el.getPointAtLength(total);
-    const prior=el.getPointAtLength(Math.max(0,total-3));
-    const marker=svg.querySelector('#dep-arrow');
-    const target=document.querySelector('[data-gantt-id="TAL-02"]');
-    return {cap:getComputedStyle(el).strokeLinecap,refX:+marker.getAttribute('refX'),
-      markerUnits:marker.getAttribute('markerUnits'),tipX:end.x+svg.getBoundingClientRect().left,
-      targetX:target.getBoundingClientRect().left,dx:end.x-prior.x,
-      markerEnd:el.getAttribute('marker-end')};
+  const collision=await page.locator('path[data-dependency-key="TAL-02>TES-02"]').evaluate(path=>{
+    const svg=path.ownerSVGElement;
+    const total=path.getTotalLength(),xy=svg.getBoundingClientRect();
+    const candidates=[...document.querySelectorAll('[data-gantt-id]')].filter(el=>!['TAL-02','TES-02'].includes(el.getAttribute('data-gantt-id')))
+      .map(el=>({id:el.getAttribute('data-gantt-id'),r:el.getBoundingClientRect()}));
+    for(let at=0;at<=total;at+=3){
+      const p=path.getPointAtLength(at),x=xy.left+p.x,y=xy.top+p.y;
+      for(const {id,r} of candidates){
+        if(x>r.left-2&&x<r.right+2&&y>r.top-2&&y<r.bottom+2)return {id,x,y};
+      }
+    }
+    return null;
   });
-  expect(stats.cap).toBe('butt');
-  expect(stats.refX).toBe(8);
-  expect(stats.markerUnits).toBe('userSpaceOnUse');
-  expect(stats.dx).toBeGreaterThan(2);
-  expect(Math.abs(stats.tipX-(stats.targetX-6))).toBeLessThan(3);
-  await page.locator('[data-route-option="standard"]').click();
-  await expect(page.locator('.gantt-dependency-trunk')).toHaveCount(0);
-  await expect(edge).toHaveCSS('stroke-linecap','butt');
-  await page.screenshot({path:`test-results/v28-arrow-A-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
-  await page.locator('[data-route-option="optimized"]').click();
-  await expect(page.locator('.gantt-dependency-trunk')).not.toHaveCount(0);
-  await page.screenshot({path:`test-results/v28-arrow-B-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
-  expect(errors).toEqual([]);
+  expect(collision).toBe(null);
 });
 
 test('V2.8: hovering a timeline card does not move its date or axis marker', async ({page}) => {

@@ -105,7 +105,7 @@ This package has not passed a full `npm install` / Astro build in the assistant 
 
 ## V2.8 — Precision and navigation
 
-- Distinct Gantt A/B routing: B draws one source trunk and obstacle-aware, stable branched lanes.
+- One production Gantt routing algorithm: shared trunks for forward links and compact edge exits with obstacle-aware channels for overlapping schedules.
 - Terminal arrowhead aligns exactly with the SVG path endpoint; dependency branches use butt caps.
 - Event hover animates the event card only, without moving timeline dates or axis markers.
 - Brand image is a replaceable placeholder at `public/brand/mark.svg`.

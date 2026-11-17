@@ -32,3 +32,7 @@
 }
 @media(prefers-reduced-motion:reduce){.event-entry .event-body{transition:none!important;transform:none!important}}
 @media(max-width:740px){.ws-footer-state{display:none}}
+
+/* V2.9: single production route; dependency visibility remains right-aligned. */
+.gantt-controls > .gantt-dep-toggle { margin-left:auto; }
+@media(max-width:740px) { .gantt-controls > .gantt-dep-toggle { margin-left:2px; } }
