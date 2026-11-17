@@ -11,7 +11,7 @@ export const publicPrograms = snapshot.programs.map(p=>({id:p.id as ProgramId, c
 export const publicItems:WorkItem[] = snapshot.workItems.map(i=>({
   id:i.id,program:i.program as ProgramId,titleZh:i.title.zh,titleEn:i.title.en,
   descZh:i.description.zh,descEn:i.description.en,start:i.schedule?.start??null,end:i.schedule?.end??null,
-  stage:i.phase as Stage,stream:i.category as Stream,deps:i.dependsOn,evidence:i.sources,scheduleKind:i.schedule?.kind??null,reviewReceipt:i.reviewReceipt??null
+  stage:i.phase as Stage,stream:i.category as Stream,deps:i.dependsOn,evidence:i.sources,scheduleKind:i.schedule?.kind??null,reviewReceipt:'reviewReceipt' in i && typeof i.reviewReceipt === 'string' ? i.reviewReceipt : null
 }));
 export const publicEvents:PublicEvent[] = snapshot.events.map(e=>({
   id:e.id,date:e.date,program:e.program as ProgramId,kind:e.kind as PublicEvent['kind'],
