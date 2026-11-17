@@ -205,7 +205,7 @@ test('V2.8: brand uses replaceable SVG and has no entry to the unpublished home'
 
 test('Future is undated and unapproved private summaries are excluded',async({page,request})=>{
   await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
-  await expect(page.locator('.kanban-heading').filter({hasText:'FUTURE'})).toBeVisible();
+  await expect(page.locator('.kanban-heading').filter({hasText:/未来方向|FUTURE/})).toBeVisible();
   await expect(page.locator('.kanban-card').filter({hasText:'TAL-FUTURE-001'})).toBeVisible();
   await expect(page.getByText('TAL-PROGRESS-001')).toHaveCount(0);
   const res=await request.get('/api/roadmap/v1.json');
