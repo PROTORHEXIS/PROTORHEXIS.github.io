@@ -1,0 +1,69 @@
+/* V2.6 — fix event card containment; single, measured sticky Gantt label mask.
+   Never rely on transparent sticky gaps to hide scrollable Gantt bars. */
+.event-entry { grid-template-columns:118px 27px minmax(0,1fr); min-height:0; align-items:stretch; }
+.event-body { position:relative; min-width:0; margin:8px 0; padding:16px 56px 16px 18px; overflow-wrap:anywhere; }
+.event-arrow { position:absolute; right:17px; top:50%; transform:translateY(-50%); padding:0;
+  display:inline-flex; width:24px; height:24px; align-items:center; justify-content:center; color:#ff6259; }
+.event-summary { max-width:100%; }
+.gantt-canvas { --gantt-label-width:256px; }
+.gantt-head-name, .gantt-item-name { box-sizing:border-box; width:var(--gantt-label-width); flex:0 0 var(--gantt-label-width); }
+.gantt-label-mask { display:block; position:sticky; top:0; left:0; width:var(--gantt-label-width);
+  height:0; pointer-events:none; z-index:var(--ws-layer-frozen); }
+.gantt-label-mask::after { content:''; position:absolute; top:0; left:0;
+  height:var(--gantt-masked-height); width:var(--gantt-label-width);
+  background:#1e1e21; border-right:1px solid #39393f; box-sizing:border-box; }
+.gantt-item-name { z-index:calc(var(--ws-layer-frozen) + 1); }
+.gantt-group { z-index:calc(var(--ws-layer-frozen) + 2); }
+.gantt-head { z-index:calc(var(--ws-layer-frozen) + 3); }
+.gantt-dependency-layer { left:var(--gantt-label-width); width:calc(100% - var(--gantt-label-width)); }
+.gantt-head-name { min-width:0; overflow:hidden; }
+.gantt-item-name strong { max-width:100%; }
+/* Professional node/edge renderer: Vue Flow, not handmade connection-line pseudo-elements. */
+.ws-systemmap { min-width:0; }
+.system-graph { display:flex; flex-direction:column; width:100%; min-width:0;
+  background:#18181b; border:1px solid #39393f; border-radius:18px; overflow:hidden; }
+.system-graph-tools { min-height:39px; flex:0 0 auto; padding:9px 16px; background:#232326; border-bottom:1px solid #39393f;
+  display:flex; justify-content:space-between; gap:12px; align-items:center; font:9px 'Space Mono',monospace; color:#92929c; }
+.system-graph-tools span:first-child { color:#d8d8df; }
+.system-graph-viewport { width:100%; height:520px; min-height:300px; position:relative; }
+.system-graph-flow { width:100%; height:100%; background-color:#171719; }
+.system-graph-flow .vue-flow__pane { cursor:grab; }
+.system-graph-flow .vue-flow__pane:active { cursor:grabbing; }
+.system-graph-flow .vue-flow__node { border:0; background:transparent; padding:0; box-shadow:none; }
+.system-graph-flow .vue-flow__edge-path { stroke:#76727a; stroke-width:1.5px; }
+.system-graph-flow .vue-flow__attribution { display:none; }
+.system-graph-flow .vue-flow__handle { width:6px; height:6px; border:1px solid #b2a6ae; background:#70646a; pointer-events:none; }
+.system-graph-node { width:288px; min-height:98px; text-align:left; display:flex; flex-direction:column; gap:7px;
+  padding:15px 18px; border:1px solid #4c4b53; border-radius:16px; color:#f3f3f6; background:#29292e; }
+.system-graph-node span { color:#fd7770; font:10px 'Space Mono',monospace; }
+.system-graph-node strong { font:700 17px 'Space Mono',monospace; letter-spacing:.02em; }
+.system-graph-node small { color:#b6b5bf; font:11px Inter,'Microsoft YaHei',sans-serif; }
+.system-graph-node:hover,.system-graph-node.is-selected { border-color:#ff766d; background:#372b30; }
+.system-graph-node:focus-visible { outline:2px solid #ff453a; outline-offset:3px; }
+.system-graph-hub { background:#3b262b; border-color:#a45c57; }
+.systemmap-stage { width:100%; min-width:0; padding:12px 0 8px; }
+.systemmap-fallback { display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:9px; margin:12px 0; }
+.systemmap-fallback button { border:1px solid #44434a; background:#2a292e; color:#eee; border-radius:13px; min-height:66px; }
+.systemmap-note { margin-top:13px; }
+@media(max-width:740px) {
+  .event-entry { grid-template-columns:77px 17px minmax(0,1fr); min-height:0; }
+  .event-stream { padding:8px 9px 22px; }
+  .event-body { margin:5px 0; padding:12px 35px 12px 12px; border-radius:13px; }
+  .event-body strong { font-size:12px; }
+  .event-date { font-size:9px; padding-top:18px; overflow-wrap:anywhere; }
+  .event-marker::before { left:6px; }
+  .event-marker i { left:2px; }
+  .event-arrow { display:inline-flex; right:7px; width:23px; height:23px; font-size:15px; }
+  .gantt-item-name { padding-left:8px; padding-right:8px; }
+  .gantt-head-name { padding-left:8px; padding-right:8px; }
+  .gantt-item-name strong { font-size:11px; }
+  .gantt-item-name small { overflow:hidden; white-space:nowrap; text-overflow:ellipsis; }
+  .gantt-row.selected .gantt-item-name { padding-left:5px; }
+  .ws-systemmap { padding:12px 10px; }
+  .system-graph-tools { font-size:9px; }
+  .system-graph-tools span:last-child { display:none; }
+  .system-graph-viewport { height:430px; }
+}
+@supports (corner-shape:squircle) {
+  .system-graph,.system-graph-node,.systemmap-fallback button,.event-body { corner-shape:squircle; }
+}

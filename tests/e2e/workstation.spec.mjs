@@ -72,3 +72,64 @@ test('mobile inspector can close via Escape and return focus', async ({page,isMo
   await expect(inspector).not.toHaveClass(/inspector-visible/);
   await expect(first).toBeFocused();
 });
+
+test('timeline entry arrow stays inside its own card with no extra mobile row', async ({page}) => {
+  await page.goto('/roadmap/evidence/', {waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const entry=page.locator('.event-entry').first();
+  const body=entry.locator('.event-body');
+  const arrow=body.locator('.event-arrow');
+  await expect(arrow).toBeVisible();
+  const [a,b,e]=await Promise.all([arrow.boundingBox(),body.boundingBox(),entry.boundingBox()]);
+  expect(a && b && e).toBeTruthy();
+  expect(a.x).toBeGreaterThanOrEqual(b.x-1);
+  expect(a.x+a.width).toBeLessThanOrEqual(b.x+b.width+1);
+  expect(a.y).toBeGreaterThanOrEqual(b.y-1);
+  expect(a.y+a.height).toBeLessThanOrEqual(b.y+b.height+1);
+  expect(e.height).toBeLessThan(245);
+  const following=await page.locator('.event-entry').nth(1).boundingBox();
+  expect(following.y - (e.y+e.height)).toBeLessThan(24);
+  await page.screenshot({path:`test-results/v26-activity-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
+});
+
+test('Gantt labels have one opaque sticky mask with shared dynamic width', async ({page,isMobile}) => {
+  await page.goto('/roadmap/', {waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const mask=page.locator('.gantt-label-mask');
+  await expect(mask).toBeAttached();
+  const viewport=page.locator('.gantt-viewport');
+  const label=page.locator('.gantt-item-name').first();
+  const sizes=await page.evaluate(()=>{
+    const m=document.querySelector('.gantt-label-mask');
+    const l=document.querySelector('.gantt-item-name');
+    const head=document.querySelector('.gantt-head-name');
+    const p=getComputedStyle(m,'::after');
+    return {mask:m.getBoundingClientRect().width,label:l.getBoundingClientRect().width,head:head.getBoundingClientRect().width,
+      background:p.backgroundColor,maskHeight:Number.parseFloat(p.height)};
+  });
+  expect(Math.abs(sizes.mask-sizes.label)).toBeLessThan(1);
+  expect(Math.abs(sizes.head-sizes.label)).toBeLessThan(1);
+  expect(sizes.maskHeight).toBeGreaterThan(200);
+  expect(sizes.background).toMatch(/^rgb\(/);
+  if(isMobile) expect(sizes.label).toBeLessThanOrEqual(390*.36+2);
+  await viewport.evaluate(el=>el.scrollLeft=560);
+  await expect.poll(()=>viewport.evaluate(el=>el.scrollLeft)).toBeGreaterThan(300);
+  const labelAfter=await label.boundingBox();
+  const canvasAfter=await viewport.boundingBox();
+  expect(labelAfter.x).toBeGreaterThanOrEqual(canvasAfter.x-1);
+  await page.screenshot({path:`test-results/v26-gantt-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
+});
+
+test('system map uses real Vue Flow nodes and edges, not a CSS-only illustration', async ({page}) => {
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('/roadmap/systems/', {waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  await expect(page.locator('.system-graph .vue-flow')).toBeVisible({timeout:15000});
+  await expect(page.locator('.vue-flow__node')).toHaveCount(5);
+  await expect(page.locator('.vue-flow__edge')).toHaveCount(4);
+  await expect(page.locator('.system-graph-node').filter({hasText:'TALOS'})).toBeVisible();
+  await page.locator('.system-graph-node').filter({hasText:'TALOS'}).click();
+  await expect(page.locator('.rail-item.is-current')).toContainText('TALOS');
+  await page.screenshot({path:`test-results/v26-systems-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
+  expect(errors).toEqual([]);
+});

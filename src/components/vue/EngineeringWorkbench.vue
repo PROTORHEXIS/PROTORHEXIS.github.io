@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref, nextTick, onMounted, onBeforeUnmount, watch } from 'vue';
+import { computed, ref, nextTick, onMounted, onBeforeUnmount, watch, shallowRef, type Component } from 'vue';
 import { AnimatePresence, motion } from 'motion-v';
 import { usePublicLocale } from './usePublicLocale';
 import EngineeringIcon from './EngineeringIcon.vue';
@@ -7,6 +7,10 @@ import { demoItems, demoEvents, demoPrograms, type WorkItem, type ProgramId, typ
 import { monthIndex, monthString, validateWindow, windowEnds, axisTicks, barPosition, visibleRows, dependencyPaths } from '../../lib/gantt';
 
 const props = defineProps<{ view: 'schedule' | 'board' | 'activity' | 'systems' }>();
+const graphComponent = shallowRef<Component | null>(null);
+const labelWidth = ref(256);
+function selectGraphProgram(id:string) { if (id==='all' || demoPrograms.some(p=>p.id===id)) switchProgram(id as ProgramId|'all'); }
+
 const { locale } = usePublicLocale();
 const tr = (zh: string, en: string) => locale.value === 'zh' ? zh : en;
 const activeProgram = ref<ProgramId | 'all'>('all');
@@ -108,7 +112,11 @@ onMounted(() => {
   window.addEventListener('pointerdown', onGlobalPointerDown, true);
   window.addEventListener('resize', positionRangePanel);
   window.addEventListener('resize', syncBoardScroll);
+  window.addEventListener('resize', measureGanttLabels);
   nextTick(syncBoardScroll);
+  if (props.view === 'systems') import('./SystemRelationshipGraph.vue').then(mod=>{graphComponent.value=mod.default;}).catch(()=>{graphComponent.value=null;});
+  if (props.view === 'schedule') nextTick(measureGanttLabels);
+
   window.addEventListener('scroll', positionRangePanel, true);
   if (props.view === 'schedule' && ganttViewport.value) {
     const axis = ganttViewport.value.querySelector<HTMLElement>('.gantt-axis');
@@ -124,6 +132,7 @@ onBeforeUnmount(() => {
   window.removeEventListener('pointerdown', onGlobalPointerDown, true);
   window.removeEventListener('resize', positionRangePanel);
   window.removeEventListener('resize', syncBoardScroll);
+  window.removeEventListener('resize', measureGanttLabels);
   window.removeEventListener('scroll', positionRangePanel, true);
   viewportQuery?.removeEventListener('change', onViewportChange);
   motionQuery?.removeEventListener('change', onMotionChange);
@@ -156,6 +165,25 @@ function scrollBoard(direction: -1 | 1) {
   el.scrollBy({ left: direction * distance, behavior: reducedMotion.value ? 'auto' : 'smooth' });
 }
 const trackWidth = ref(900);
+// Measure the full visible label text (not clipped DOM widths), then share one CSS variable
+// between the frozen labels, header, chart coordinate origin, and opaque continuous mask.
+function measureGanttLabels() {
+  if (typeof document === 'undefined' || !ganttViewport.value || props.view !== 'schedule') return;
+  const strong = ganttViewport.value.querySelector<HTMLElement>('.gantt-item-name strong');
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.font = strong ? getComputedStyle(strong).font : '500 12px Inter';
+  const titles = demoItems.map(item => tr(item.titleZh,item.titleEn));
+  const widest = titles.reduce((max,title)=>Math.max(max,ctx.measureText(title).width),0);
+  const needed = Math.ceil(Math.max(156,widest + 34));
+  const narrow = window.matchMedia('(max-width:740px)').matches;
+  labelWidth.value = narrow
+    ? Math.min(needed, Math.max(108, Math.floor(window.innerWidth * .36)))
+    : Math.max(190, Math.min(420,needed));
+}
+watch(locale,()=>nextTick(measureGanttLabels));
+
 let resizeObserver: ResizeObserver | null = null;
 const showDependencies = ref(true);
 const hoveredId = ref<string | null>(null);
@@ -197,7 +225,7 @@ const totalCount = computed(()=>props.view==='activity'? visibleEvents.value.len
 const windowBounds = computed(() => windowEnds(calendarWindow.value));
 const ticks = computed(() => axisTicks(calendarWindow.value, zoom.value));
 const unitCount = computed(() => ticks.value.length);
-const gridMinWidth = computed(() => 256 + Math.max(8,unitCount.value)*(zoom.value === 'month' ? 120 : 164));
+const gridMinWidth = computed(() => labelWidth.value + Math.max(8,unitCount.value)*(zoom.value === 'month' ? 120 : 164));
 const rangeStart = computed(() => windowBounds.value.start);
 const rangeEnd = computed(() => windowBounds.value.end);
 function durationPosition(item:WorkItem) {
@@ -335,7 +363,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
             <button type="button" class="gantt-dep-toggle" :aria-pressed="showDependencies" @click="showDependencies=!showDependencies"><span class="ws-dep-dot"></span>{{tr('依赖关系','DEPENDENCIES')}}<strong>{{showDependencies?tr('显示','ON'):tr('隐藏','OFF')}}</strong></button>
           </div>
           <div ref="ganttViewport" class="gantt-viewport" tabindex="0" :aria-label="tr('可横向滚动的只读甘特排期图','Scrollable read-only Gantt timeline')" @pointerdown="panStart" @pointermove="panMove" @pointerup="panEnd" @pointercancel="panEnd" @lostpointercapture="panEnd">
-            <div class="gantt-canvas" :style="{'--tick-count':unitCount,minWidth:`${gridMinWidth}px`}">
+            <div class="gantt-canvas" :style="{'--tick-count':unitCount,'--gantt-label-width':`${labelWidth}px`,'--gantt-masked-height':`${ganttLayout.height+56}px`,minWidth:`${gridMinWidth}px`}"><div class="gantt-label-mask" aria-hidden="true"></div>
               <div class="gantt-head"><div class="gantt-head-name"><strong>{{tr('工作项 / 交付物','WORK PACKAGE / DELIVERABLE')}}</strong><small>WBS INDEX</small></div><div class="gantt-axis"><span v-for="(tick,i) in ticks" :key="i" :style="{width:`${tick.width}%`,flex:`0 0 ${tick.width}%`}">{{tick.label}}</span></div></div>
               <svg v-if="showDependencies && dependencyEdges.length" class="gantt-dependency-layer" :viewBox="`0 0 ${trackWidth} ${ganttLayout.height}`" :style="{height:`${ganttLayout.height}px`}" preserveAspectRatio="none" aria-hidden="true">
                 <defs><marker id="dep-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#777781"/></marker><marker id="dep-arrow-active" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#ff453a"/></marker></defs>
@@ -363,9 +391,9 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
         </div></div>
         </template>
 
-        <div v-else-if="view==='activity'" class="ws-activity"><div class="activity-filters"><span>{{tr('事件类型','EVENT TYPE')}}</span><div class="ws-toolset"><button v-for="kind in eventKinds" :key="kind" :class="{current:eventKind===kind}" @click="eventKind=kind">{{kind==='all'?tr('全部','ALL'):eventName(kind)}}</button></div></div><div class="event-stream"><motion.button v-for="event in visibleEvents" :key="event.id" layout :initial="false" :whileHover="reducedMotion ? undefined : { x: 2 }" :transition="{ duration: reducedMotion ? 0 : 0.14 }" class="event-entry" :class="{selected:selectedId===event.id}" :aria-pressed="selectedId===event.id" @click="select(event.id)"><span class="event-date">{{fmtDate(event.date)}}<small>{{event.program}}</small></span><span class="event-marker"><i></i></span><span class="event-body"><span class="event-kind">{{eventName(event.kind)}} <span>/ {{event.id}}</span></span><strong>{{tr(event.titleZh,event.titleEn)}}</strong><span class="event-summary">{{tr(event.descZh,event.descEn)}}</span></span><span class="event-arrow"><EngineeringIcon name="next" /></span></motion.button><div v-if="visibleEvents.length===0" class="ws-no-results">{{tr('没有匹配的事件。','No matching events.')}}</div></div></div>
+        <div v-else-if="view==='activity'" class="ws-activity"><div class="activity-filters"><span>{{tr('事件类型','EVENT TYPE')}}</span><div class="ws-toolset"><button v-for="kind in eventKinds" :key="kind" :class="{current:eventKind===kind}" @click="eventKind=kind">{{kind==='all'?tr('全部','ALL'):eventName(kind)}}</button></div></div><div class="event-stream"><motion.button v-for="event in visibleEvents" :key="event.id" layout :initial="false" :whileHover="reducedMotion ? undefined : { x: 2 }" :transition="{ duration: reducedMotion ? 0 : 0.14 }" class="event-entry" :class="{selected:selectedId===event.id}" :aria-pressed="selectedId===event.id" @click="select(event.id)"><span class="event-date">{{fmtDate(event.date)}}<small>{{event.program}}</small></span><span class="event-marker"><i></i></span><span class="event-body"><span class="event-kind">{{eventName(event.kind)}} <span>/ {{event.id}}</span></span><strong>{{tr(event.titleZh,event.titleEn)}}</strong><span class="event-summary">{{tr(event.descZh,event.descEn)}}</span><span class="event-arrow" aria-hidden="true"><EngineeringIcon name="next" /></span></span></motion.button><div v-if="visibleEvents.length===0" class="ws-no-results">{{tr('没有匹配的事件。','No matching events.')}}</div></div></div>
 
-        <div v-else class="ws-systemmap"><div class="systemmap-topline">PROTORHEXIS / DISTRIBUTED RESEARCH & ENGINEERING <span>RELATIONSHIP MODEL / DEMO</span></div><div class="systemmap-shell"><div class="systemmap-hub"><span>ORG / 00</span><strong>PROTORHEXIS</strong><small>{{tr('协作与公开工程入口','Collaborative engineering network')}}</small></div><div class="systemmap-connect"></div><div class="systemmap-nodes"><button v-for="prog in demoPrograms.filter(x=>x.id!=='PROTORHEXIS')" :key="prog.id" :class="{selected:activeProgram===prog.id}" @click="switchProgram(prog.id)"><small>{{prog.code}}</small><strong>{{prog.id}}</strong><span>{{tr(prog.zh,prog.en)}}</span></button></div></div><p class="systemmap-note">{{tr('这是用于演示导航关系的抽象结构图；真实接口依赖必须在经过公开审查后才会显示。','This is an illustrative relationship diagram. Real integration dependencies require public review before publication.')}}</p></div>
+        <div v-else class="ws-systemmap"><div class="systemmap-topline">PROTORHEXIS / DISTRIBUTED RESEARCH & ENGINEERING <span>RELATIONSHIP MODEL / DEMO</span></div><div class="systemmap-stage"><component :is="graphComponent" v-if="graphComponent" :programs="demoPrograms" :locale="locale" :active-program="activeProgram" @select="selectGraphProgram" /><div v-else class="systemmap-fallback" role="group" :aria-label="tr('系统列表','System list')"><button v-for="prog in demoPrograms" :key="prog.id" type="button" @click="selectGraphProgram(prog.id)">{{prog.id}}</button></div></div><p class="systemmap-note">{{tr('这是用于演示导航关系的抽象结构图；真实接口依赖必须在经过公开审查后才会显示。','This is an illustrative relationship diagram. Real integration dependencies require public review before publication.')}}</p></div>
       </div>
 
       <button v-if="inspectorOpen" class="ws-inspector-scrim" type="button" :aria-label="tr('关闭详情面板','Close detail panel')" @click="closeInspector"></button>
