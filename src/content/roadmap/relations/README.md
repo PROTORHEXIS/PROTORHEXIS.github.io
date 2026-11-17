@@ -1,3 +1,3 @@
-# Published system relations
+# Reviewed public organizational relations
 
-There are no independently reviewed public system integration relations. This directory deliberately has no relation YAML until one is publicly verified.
+Four approved `contains` relations connect the PROTORHEXIS public project index to TALOS, MAXWELL, THOULESS and TESSERACT. They represent **organizational grouping in the public portfolio**, not source ownership, authority delegation, runtime integration, service dependencies or release qualification. No cross-system technical edge is asserted. Every displayed relation has publicly accessible source URLs and is compiled through the shared schema. New technical edges require separate evidence review.
