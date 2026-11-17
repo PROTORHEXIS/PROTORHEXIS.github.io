@@ -1,6 +1,5 @@
 /** Pure UTC calendar and edge geometry for the public, read-only roadmap. */
 export type Scale = 'month' | 'quarter';
-export type RouteMode = 'standard' | 'optimized';
 export interface CalendarWindow { startMonth: string; months: number; }
 export interface Tick { label: string; left: number; width: number; start: number; end: number; }
 export interface Bar { hidden: boolean; left: number; width: number; right: number; }
@@ -75,171 +74,187 @@ export function visibleRows<T extends GanttItem>(groups: GanttGroup<T>[], expand
   return { centers, height: y };
 }
 /**
- * Consistent routing for dependency arrows. All arrowheads approach targets
- * from the LEFT with a positive-X final segment. The old 3-segment dogleg
- * reversed its last segment when predecessor/successor schedules overlapped,
- * producing the ring-shaped arrow seen in the browser.
+ * The sole public-roadmap dependency router (formerly route B).
+ * A finish-before-start dependency uses a shared right-hand source trunk.
+ * For overlapping schedules, a short exit from the SOURCE BAR EDGE avoids
+ * forcing a large U-turn around the bar's far-right endpoint. These cases are
+ * common in the SYNTHETIC demo and must not visually resemble loop arrows.
  *
- * A — standard: orthogonal elbows and a clearance bridge when bars overlap.
- * B — optimized: stable per-edge channels, intermediate-bar avoidance and
- * subtly rounded corners. Both stay in the read-only Gantt SVG coordinate frame.
+ * Every target receives a positive-X final segment, with the SVG marker
+ * ending 6px before its left edge. Geometry is focus-independent.
  */
 type Point = { x: number; y: number };
-const rounded = (n:number) => Number(n.toFixed(1));
-const pathNumber = (n:number) => rounded(n).toFixed(1);
+type Rect = { start: number; end: number; y: number };
+const round = (n: number) => Number(n.toFixed(1));
+const fmt = (n: number) => round(n).toFixed(1);
+const clamp = (n:number,lo:number,hi:number) => Math.max(lo, Math.min(hi, n));
 
-function orthogonalPath(points:Point[], radius = 0):string {
-  const clean:Point[] = [];
+function orthogonalPath(points: Point[], radius=5): string {
+  // Remove zero-length AND collinear internal points before rounding corners:
+  // unneeded micro-elbows are responsible for many near-circular artifacts.
+  const clean: Point[] = [];
   for (const p of points) {
-    if (clean.length && Math.abs(clean[clean.length-1].x-p.x)<0.01 && Math.abs(clean[clean.length-1].y-p.y)<0.01) continue;
+    const last = clean.at(-1);
+    if (last && Math.hypot(last.x-p.x,last.y-p.y)<.05) continue;
     clean.push(p);
-  }
-  if (clean.length < 2) return '';
-  if (radius <= 0) {
-    return `M ${pathNumber(clean[0].x)} ${pathNumber(clean[0].y)}` + clean.slice(1).map((p,i) =>
-      Math.abs(p.y-clean[i].y)<0.01 ? ` H ${pathNumber(p.x)}` : ` V ${pathNumber(p.y)}`
-    ).join('');
-  }
-  let d = `M ${pathNumber(clean[0].x)} ${pathNumber(clean[0].y)}`;
-  for (let i=1;i<clean.length-1;i++) {
-    const prev=clean[i-1],p=clean[i],next=clean[i+1];
-    const inLen=Math.hypot(p.x-prev.x,p.y-prev.y), outLen=Math.hypot(next.x-p.x,next.y-p.y);
-    // The incoming and outgoing straight portions stay nonzero even for short turns.
-    const r=Math.min(radius,inLen/3,outLen/3);
-    const ux=(p.x-prev.x)/inLen, uy=(p.y-prev.y)/inLen;
-    const vx=(next.x-p.x)/outLen, vy=(next.y-p.y)/outLen;
-    if (!Number.isFinite(r) || r<0.5 || Math.abs(ux*vx+uy*vy)>0.01) {
-      d+=` L ${pathNumber(p.x)} ${pathNumber(p.y)}`;
-      continue;
+    while (clean.length>=3) {
+      const [a,b,c]=clean.slice(-3);
+      if ((Math.abs(a.x-b.x)<.05 && Math.abs(b.x-c.x)<.05) ||
+          (Math.abs(a.y-b.y)<.05 && Math.abs(b.y-c.y)<.05)) clean.splice(-2,1);
+      else break;
     }
-    d+=` L ${pathNumber(p.x-ux*r)} ${pathNumber(p.y-uy*r)} Q ${pathNumber(p.x)} ${pathNumber(p.y)} ${pathNumber(p.x+vx*r)} ${pathNumber(p.y+vy*r)}`;
   }
-  const end=clean[clean.length-1];
-  return d+` L ${pathNumber(end.x)} ${pathNumber(end.y)}`;
+  if(clean.length<2)return '';
+  let d=`M ${fmt(clean[0].x)} ${fmt(clean[0].y)}`;
+  for(let i=1;i<clean.length-1;i++) {
+    const a=clean[i-1],b=clean[i],c=clean[i+1];
+    const inLen=Math.hypot(b.x-a.x,b.y-a.y),outLen=Math.hypot(c.x-b.x,c.y-b.y);
+    const r=Math.min(radius,inLen/3,outLen/3);
+    const ux=(b.x-a.x)/inLen,uy=(b.y-a.y)/inLen;
+    const vx=(c.x-b.x)/outLen,vy=(c.y-b.y)/outLen;
+    if(!Number.isFinite(r)||r<.5||Math.abs(ux*vx+uy*vy)>.01){d+=` L ${fmt(b.x)} ${fmt(b.y)}`;continue;}
+    d+=` L ${fmt(b.x-ux*r)} ${fmt(b.y-uy*r)} Q ${fmt(b.x)} ${fmt(b.y)} ${fmt(b.x+vx*r)} ${fmt(b.y+vy*r)}`;
+  }
+  const end=clean.at(-1)!;
+  return d+` L ${fmt(end.x)} ${fmt(end.y)}`;
 }
 
 /**
- * Route A keeps conventional orthogonal connectors; Route B has a separate
- * source trunk and deterministic, obstacle-aware branch corridors. Routing
- * depends on the canonical item graph, not hover or selection, so geometry
- * remains stable when inspecting a dependency.
+ * Route through one free x-lane per intermediate bar row. Horizontal lane
+ * changes occur ONLY in gaps between rows (outside their 26px bar boxes).
+ * A bounded dynamic program minimizes sideways distance + unnecessary turns;
+ * no giant left-edge gutter is chosen just because one row has a blocker.
  */
-/**
- * Route A keeps conventional orthogonal connectors; Route B has a separate
- * source trunk and deterministic, obstacle-aware branch corridors. Routing
- * depends on the canonical item graph, not hover or selection, so geometry
- * remains stable when inspecting a dependency.
- */
-/**
- * Route A keeps conventional orthogonal connectors; Route B has a separate
- * source trunk and deterministic, obstacle-aware branch corridors. Routing
- * depends on the canonical item graph, not hover or selection, so geometry
- * remains stable when inspecting a dependency.
- */
-export function dependencyPaths<T extends GanttItem>(
-  groups: GanttGroup<T>[], expanded: Record<string, boolean>, range: CalendarWindow,
-  trackWidth: number, focusedId: string | null, mode: RouteMode = 'standard'
-): Edge[] {
-  if (!Number.isFinite(trackWidth) || trackWidth <= 0) return [];
-  const { centers } = visibleRows(groups, expanded);
-  const items = new Map(groups.flatMap(g => g.items.map(item => [item.id, item] as const)));
-  type Rect = { start:number; end:number; y:number };
-  const visible = new Map<string,Rect>();
-  for (const item of items.values()) {
-    const y = centers.get(item.id), bar = barPosition(item, range);
-    if (y!==undefined && !bar.hidden) visible.set(item.id,{start:bar.left/100*trackWidth,end:bar.right/100*trackWidth,y});
+function overlappingRoute(source: Rect, target: Rect, tipX:number,
+  all: Map<string,Rect>, from:string, to:string): {points:Point[],laneX:number} {
+  const direction=target.y>source.y?1:-1;
+  const entryX=tipX-24;
+  const startX=clamp(entryX,source.start+16,source.end-16);
+  const middle=[...all.entries()]
+    .filter(([id,r])=>id!==from&&id!==to&&direction*(r.y-source.y)>0&&direction*(target.y-r.y)>0)
+    .map(([,r])=>r).sort((a,b)=>direction*(a.y-b.y));
+  const candidates=[startX,entryX,...middle.flatMap(r=>[r.start-18,r.end+18])]
+    .filter(x=>x>=8 && x<=Math.max(8,tipX+250))
+    .map(round).filter((x,i,a)=>a.indexOf(x)===i).sort((a,b)=>a-b);
+  // Normally candidate set is < 30; never search pixels or loop indefinitely.
+  const layers:Map<number,{cost:number,prev:number|null}>[]=[];
+  let prior=new Map<number,{cost:number,prev:number|null}>([[round(startX),{cost:0,prev:null}]]);
+  for(const rect of middle){
+    const next=new Map<number,{cost:number,prev:number|null}>();
+    for(const x of candidates){
+      if(x>=rect.start-13.5 && x<=rect.end+13.5) continue;
+      let winner:{cost:number,prev:number|null}|undefined;
+      for(const [px,state] of prior){
+        const cost=state.cost+Math.abs(x-px)+(Math.abs(x-px)>1?13:0);
+        if(!winner||cost<winner.cost-.001||(Math.abs(cost-winner.cost)<.001&&Math.abs(x-entryX)<Math.abs((winner.prev??0)-entryX)))
+          winner={cost,prev:px};
+      }
+      if(winner)next.set(x,winner);
+    }
+    // In a fully blocked row (should not occur on a wide timeline), bail out
+    // to the closest unclipped left or right lane without an infinite search.
+    if(!next.size){
+      const x=round(Math.max(8,rect.start-18));
+      const [px,state]=[...prior].sort((a,b)=>Math.abs(a[0]-x)-Math.abs(b[0]-x))[0];
+      next.set(x,{cost:state.cost+Math.abs(x-px)+13,prev:px});
+    }
+    layers.push(next); prior=next;
   }
-  type Proposed = {from:string;to:string;source:Rect;target:Rect};
+  let currentX=round(entryX);
+  const chosen:number[]=[];
+  for(let i=layers.length-1;i>=0;i--){
+    const state=[...layers[i]].sort((a,b)=>
+      a[1].cost+Math.abs(a[0]-currentX)-(b[1].cost+Math.abs(b[0]-currentX)))[0];
+    // When unwinding, a chosen intermediate x must match its predecessor
+    // in the preceding layer; reconstruct from the final optimal state below.
+    if(i===layers.length-1){
+      chosen[i]=state[0];
+    }else{
+      chosen[i]=layers[i+1].get(chosen[i+1])!.prev!;
+    }
+    currentX=chosen[i];
+  }
+  const sourceEdgeY=source.y+direction*13; // exact top/bottom of 26px task bar
+  const points:Point[]=[{x:startX,y:sourceEdgeY}];
+  let priorX=startX,priorY=source.y;
+  for(let i=0;i<=middle.length;i++){
+    const nextY=i<middle.length?middle[i].y:target.y;
+    const nextX=i<middle.length?chosen[i]:entryX;
+    if(Math.abs(nextX-priorX)>.05){
+      const gutterY=(priorY+nextY)/2;
+      points.push({x:priorX,y:gutterY},{x:nextX,y:gutterY});
+    }
+    points.push({x:nextX,y:nextY});
+    priorX=nextX;priorY=nextY;
+  }
+  points.push({x:tipX,y:target.y});
+  return {points,laneX:round(chosen.at(-1)??startX)};
+}
+
+export function dependencyPaths<T extends GanttItem>(
+  groups:GanttGroup<T>[],expanded:Record<string,boolean>,range:CalendarWindow,
+  trackWidth:number,focusedId:string|null
+):Edge[] {
+  if(!Number.isFinite(trackWidth)||trackWidth<=0)return [];
+  const {centers}=visibleRows(groups,expanded);
+  const items=new Map(groups.flatMap(g=>g.items.map(i=>[i.id,i] as const)));
+  const visible=new Map<string,Rect>();
+  for(const item of items.values()) {
+    const y=centers.get(item.id),bar=barPosition(item,range);
+    if(y!==undefined&&!bar.hidden)visible.set(item.id,{start:bar.left/100*trackWidth,end:bar.right/100*trackWidth,y});
+  }
+  type Proposed={from:string,to:string,source:Rect,target:Rect};
   const proposed:Proposed[]=[];
-  for (const item of items.values()) {
+  for(const item of items.values()) {
     const target=visible.get(item.id);
-    if (!target || target.start<28) continue; // clipped left edge cannot accept an arrow
-    for (const dep of item.deps) {
+    if(!target||target.start<28)continue;
+    for(const dep of item.deps){
       const source=visible.get(dep);
-      if (!source || dep===item.id || source.end>trackWidth-28 || source.y===target.y) continue;
-      proposed.push({from:dep,to:item.id,source,target});
+      if(source&&dep!==item.id&&source.y!==target.y)proposed.push({from:dep,to:item.id,source,target});
     }
   }
   proposed.sort((a,b)=>a.from.localeCompare(b.from)||a.to.localeCompare(b.to));
-  const arrivals=new Map<string,number>();
-  const departures=new Map<string,number>();
+  const arrivals=new Map<string,number>(),departures=new Map<string,number>();
   const edges:Edge[]=[];
   for(const edge of proposed) {
-    const inbound=arrivals.get(edge.to)||0;
-    const outbound=departures.get(edge.from)||0;
-    arrivals.set(edge.to,inbound+1);
-    departures.set(edge.from,outbound+1);
-    const optimized=mode==='optimized';
-    const sx=edge.source.end, sy=edge.source.y;
-    const tx=edge.target.start, ty=edge.target.y+(optimized?(inbound%3-1)*5:0);
-    const tipX=tx-6; // SVG marker tip (refX=8) exactly meets this terminal point
-    const trunkX=sx+22;
-    const overlap=tipX-sx<46;
-    let points:Point[];
-    let laneX:number;
-    let trunk:string|undefined;
-
-    if (!optimized) {
-      // The A path remains bare orthogonal elbows with a deterministic gutter
-      // bridge when a predecessor overlaps the successor in calendar time.
-      if (!overlap) {
-        laneX=Math.max(sx+14,Math.min(sx+18,tipX-16));
-        points=[{x:sx,y:sy},{x:laneX,y:sy},{x:laneX,y:ty},{x:tipX,y:ty}];
-      } else {
-        const gutterY=sy+(ty>sy?31:-31);
-        laneX=Math.max(8,Math.min(tx-24,tipX-14));
-        points=[{x:sx,y:sy},{x:sx+18,y:sy},{x:sx+18,y:gutterY},
-          {x:laneX,y:gutterY},{x:laneX,y:ty},{x:tipX,y:ty}];
-      }
-    } else {
-      // B draws this segment ONCE per source (see unique trunks in Vue),
-      // so multiple successor branches do not re-stroke the same exit.
-      trunk=`M ${pathNumber(sx)} ${pathNumber(sy)} H ${pathNumber(trunkX)}`;
-      if (!overlap && tipX>trunkX+26) {
-        // Center-of-gap corridor is visibly different from A's near-source
-        // dogleg. Stable fanout separates vertical channels by 12px.
-        const minLane=trunkX+12, maxLane=tipX-17;
-        const preferred=trunkX+(maxLane-trunkX)*0.56+outbound*12-inbound*5;
-        const blockers=[...visible.entries()]
-          .filter(([id,r])=>id!==edge.from&&id!==edge.to &&
-            r.y>Math.min(sy,ty)&&r.y<Math.max(sy,ty))
-          .map(([,r])=>({left:r.start-14,right:r.end+14}));
-        laneX=chooseFreeLane(preferred,minLane,maxLane,blockers);
-        points=[{x:trunkX,y:sy},{x:laneX,y:sy},{x:laneX,y:ty},{x:tipX,y:ty}];
-      } else {
-        // For overlapping schedules, keep the long horizontal run in the
-        // inter-row gutter, not over another task bar, then enter from left.
-        const gutterY=sy+(ty>sy?31:-31)+(outbound%3)*4*(ty>sy?1:-1);
-        const minLane=8,maxLane=tipX-16;
-        const preferred=tx-30-inbound*10-outbound*4;
-        const blockers=[...visible.entries()]
-          .filter(([id,r])=>id!==edge.from&&id!==edge.to&&
-            r.y>Math.min(gutterY,ty)&&r.y<Math.max(gutterY,ty))
-          .map(([,r])=>({left:r.start-14,right:r.end+14}));
-        laneX=chooseFreeLane(preferred,minLane,maxLane,blockers);
-        points=[{x:trunkX,y:sy},{x:trunkX,y:gutterY},
-          {x:laneX,y:gutterY},{x:laneX,y:ty},{x:tipX,y:ty}];
-      }
+    const inbound=arrivals.get(edge.to)||0,outbound=departures.get(edge.from)||0;
+    arrivals.set(edge.to,inbound+1);departures.set(edge.from,outbound+1);
+    const {source,target}=edge,tipX=target.start-6;
+    const ty=target.y+(inbound%3-1)*5;
+    let d='',trunk:string|undefined,laneX=0;
+    // A short finish-before-start gap supports the ordinary right-exit trunk.
+    // All overlapping/nearby bars use an edge exit instead of the giant U.
+    if(tipX-source.end>=54 && source.end<=trackWidth-28) {
+      const trunkX=source.end+22;
+      trunk=`M ${fmt(source.end)} ${fmt(source.y)} H ${fmt(trunkX)}`;
+      const minLane=trunkX+12,maxLane=tipX-17;
+      const preferred=trunkX+(maxLane-trunkX)*.56+outbound*12-inbound*5;
+      const blockers=[...visible.entries()].filter(([id,r])=>id!==edge.from&&id!==edge.to&&
+        r.y>Math.min(source.y,target.y)&&r.y<Math.max(source.y,target.y))
+        .map(([,r])=>({left:r.start-14,right:r.end+14}));
+      laneX=chooseFreeLane(preferred,minLane,maxLane,blockers);
+      d=orthogonalPath([{x:trunkX,y:source.y},{x:laneX,y:source.y},
+        {x:laneX,y:ty},{x:tipX,y:ty}]);
+    }else{
+      const routed=overlappingRoute(source,{...target,y:ty},tipX,visible,edge.from,edge.to);
+      laneX=routed.laneX;
+      d=orthogonalPath(routed.points);
     }
-    const d=orthogonalPath(points,optimized?6:0);
-    if(d) edges.push({key:`${edge.from}>${edge.to}`,from:edge.from,to:edge.to,d,
-      active:focusedId===edge.from||focusedId===edge.to,trunk,laneX:rounded(laneX)});
+    if(d)edges.push({key:`${edge.from}>${edge.to}`,from:edge.from,to:edge.to,
+      d,trunk,laneX:round(laneX),active:focusedId===edge.from||focusedId===edge.to});
   }
   return edges;
 }
 
 function chooseFreeLane(preferred:number,min:number,max:number,blockers:{left:number;right:number}[]):number {
-  if(max<=min) return min;
-  const clamp=(v:number)=>Math.max(min,Math.min(max,v));
+  if(max<=min)return min;
+  const candidate=clamp(preferred,min,max);
   const occupied=(x:number)=>blockers.some(r=>x>=r.left&&x<=r.right);
-  const candidate=clamp(preferred);
-  if(!occupied(candidate)) return candidate;
-  // Search both sides in small, deterministic steps; never reposition links
-  // in response to hover or focus, and never use unbounded retry loops.
+  if(!occupied(candidate))return candidate;
   for(let shift=8;shift<=max-min+8;shift+=8){
-    const left=clamp(candidate-shift),right=clamp(candidate+shift);
-    if(!occupied(left)) return left;
-    if(!occupied(right)) return right;
+    const left=clamp(candidate-shift,min,max),right=clamp(candidate+shift,min,max);
+    if(!occupied(left))return left;
+    if(!occupied(right))return right;
   }
   return candidate;
 }
