@@ -20,6 +20,8 @@ assert(snapshot.workItems.every(x=>x.sources.length || x.phase==='planned'), 'Pu
 assert(snapshot.workItems.every(x=>x.schedule===null || x.schedule.kind==='observed' || x.schedule.kind==='tentative'), 'No invented committed dates');
 assert(!existsSync(resolve(root,'src/data/workstation-demo.ts')), 'Synthetic demo feed must be removed from production');
 assert(existsSync(resolve(root,'src/data/roadmap.generated.json')), 'Generated public data missing');
+const layout = read('src/layouts/EngineeringLayout.astro');
+assert(layout.includes('PUBLIC RECORDS / LIMITED') && layout.includes('PUBLIC SNAPSHOT / LIMITED COVERAGE'),'public data must not retain DEMO labels');
 const component = read('src/components/vue/EngineeringWorkbench.vue');
 assert(component.includes('VERIFIED PUBLIC RECORDS'), 'public partial coverage banner missing');
 assert(component.includes('import { publicSnapshot,') && component.includes('publicSnapshot.updatedAt'), 'public content snapshot must be imported before SSR rendering');
