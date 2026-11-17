@@ -47,4 +47,4 @@ Frontend: Astro 7 + Vue 3 + TypeScript + Vue Flow + Motion for Vue. Preserve ful
 
 
 ### V3.2 Future and private-source progress
-The board has a separate undated Future phase for brief plans. Four narrowly scoped private-project progress summaries are stored **as drafts only**, excluded from the approved public JSON until review of their private evidence ledger. Agent work-item append goes to ignored local candidate staging; it cannot approve publication. See the V3.2 addendum to the content pipeline document.
+The board has a separate undated Future phase for brief plans. Four narrowly scoped private-project progress proposals remain **only in the protected private review ledger**; an unapproved progress record must not appear even in a public Draft branch. Agent work-item append goes to ignored local candidate staging; it cannot approve publication. See the V3.2 addendum to the content pipeline document.
