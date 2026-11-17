@@ -1,0 +1,34 @@
+/* V2.8: exact arrow endpoints, independent time-line hover and SVG brand slot. */
+.ws-mark {padding:0; overflow:hidden; display:grid;place-items:center;}
+.ws-mark::after,.ws-mark > span {content:none!important;display:none!important;}
+.ws-mark img {display:block;width:100%;height:100%;object-fit:contain;}
+.identity .mark {padding:0;overflow:hidden;}
+.identity .mark::after {display:none;}
+.identity .mark img {display:block;width:100%;height:100%;object-fit:contain;}
+.ws-footer-state {color:#7d7d86;white-space:nowrap;}
+/* Arrow branches end at the actual marker tip; round stroke caps used to
+   protrude underneath the tip and make it appear as a small terminal dot. */
+.gantt-dependency-layer > path:not(.gantt-dependency-trunk) {
+  stroke-linecap:butt;
+  stroke-linejoin:round;
+}
+.gantt-dependency-layer > path.gantt-dependency-trunk {
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  fill:none;
+}
+.gantt-dependency-layer > path.gantt-dependency-trunk:not(.active) {opacity:.22;stroke:#85858e;stroke-width:1.2;}
+.gantt-dependency-layer > path.gantt-dependency-trunk.active {stroke:#ff453a;stroke-width:2;opacity:.96;}
+/* The date, axis and event-row container are never transformed.
+   Only the card scales; all timeline coordinates remain fixed. */
+.event-entry {transform:none!important;}
+.event-entry .event-body {
+  transform:scale(1);
+  transform-origin:center center;
+  transition:transform 140ms ease,background 140ms ease,border-color 140ms ease;
+}
+@media(hover:hover) and (prefers-reduced-motion:no-preference) {
+  .event-entry:hover .event-body {transform:scale(1.008);}
+}
+@media(prefers-reduced-motion:reduce){.event-entry .event-body{transition:none!important;transform:none!important}}
+@media(max-width:740px){.ws-footer-state{display:none}}

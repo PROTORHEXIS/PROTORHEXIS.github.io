@@ -194,3 +194,67 @@ test('two Gantt route modes switch without reversed arrowheads or layout shifts'
   await expect(page.locator('.gantt-dependency-layer')).toHaveAttribute('data-route-mode','optimized');
   expect(errors).toEqual([]);
 });
+
+test('V2.8: B uses one real source trunk and an exact non-rounded arrow endpoint', async ({page}) => {
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const layer=page.locator('.gantt-dependency-layer');
+  await expect(layer).toHaveAttribute('data-route-mode','optimized');
+  await expect(page.locator('[data-dependency-trunk="TAL-01"]')).toHaveCount(1);
+  const edge=layer.locator('path[data-dependency-key="TAL-01>TAL-02"]');
+  const stats=await edge.evaluate(el=>{
+    const svg=el.ownerSVGElement;
+    const total=el.getTotalLength(),end=el.getPointAtLength(total);
+    const prior=el.getPointAtLength(Math.max(0,total-3));
+    const marker=svg.querySelector('#dep-arrow');
+    const target=document.querySelector('[data-gantt-id="TAL-02"]');
+    return {cap:getComputedStyle(el).strokeLinecap,refX:+marker.getAttribute('refX'),
+      markerUnits:marker.getAttribute('markerUnits'),tipX:end.x+svg.getBoundingClientRect().left,
+      targetX:target.getBoundingClientRect().left,dx:end.x-prior.x,
+      markerEnd:el.getAttribute('marker-end')};
+  });
+  expect(stats.cap).toBe('butt');
+  expect(stats.refX).toBe(8);
+  expect(stats.markerUnits).toBe('userSpaceOnUse');
+  expect(stats.dx).toBeGreaterThan(2);
+  expect(Math.abs(stats.tipX-(stats.targetX-6))).toBeLessThan(3);
+  await page.locator('[data-route-option="standard"]').click();
+  await expect(page.locator('.gantt-dependency-trunk')).toHaveCount(0);
+  await expect(edge).toHaveCSS('stroke-linecap','butt');
+  await page.screenshot({path:`test-results/v28-arrow-A-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
+  await page.locator('[data-route-option="optimized"]').click();
+  await expect(page.locator('.gantt-dependency-trunk')).not.toHaveCount(0);
+  await page.screenshot({path:`test-results/v28-arrow-B-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
+  expect(errors).toEqual([]);
+});
+
+test('V2.8: hovering a timeline card does not move its date or axis marker', async ({page}) => {
+  await page.goto('/roadmap/evidence/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const entry=page.locator('.event-entry').first();
+  const date=entry.locator('.event-date'),marker=entry.locator('.event-marker'),card=entry.locator('.event-body');
+  const [dateBefore,markerBefore,cardBefore]=await Promise.all([date.boundingBox(),marker.boundingBox(),card.boundingBox()]);
+  await card.hover();
+  const [dateAfter,markerAfter,cardAfter]=await Promise.all([date.boundingBox(),marker.boundingBox(),card.boundingBox()]);
+  for(const [before,after] of [[dateBefore,dateAfter],[markerBefore,markerAfter]]){
+    for(const k of ['x','y','width','height']) expect(Math.abs(before[k]-after[k])).toBeLessThan(.6);
+  }
+  expect(await entry.evaluate(el=>getComputedStyle(el).transform)).toBe('none');
+  if(await page.evaluate(()=>matchMedia('(prefers-reduced-motion: no-preference)').matches && matchMedia('(hover: hover)').matches)){
+    await expect.poll(async()=>card.evaluate(el=>getComputedStyle(el).transform)).not.toBe('none');
+    expect(cardAfter.width).toBeGreaterThanOrEqual(cardBefore.width);
+  }
+  await page.screenshot({path:`test-results/v28-timeline-hover-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
+});
+
+test('V2.8: brand uses replaceable SVG and has no entry to the unpublished home', async ({page}) => {
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  const brand=page.locator('.ws-header .ws-brand');
+  await expect(brand).toBeVisible();
+  expect(await brand.evaluate(el=>el.tagName)).toBe('DIV');
+  const mark=brand.locator('img[src="/brand/mark.svg"]');
+  await expect(mark).toBeVisible();
+  await expect.poll(()=>mark.evaluate(el=>el.complete && el.naturalWidth>0)).toBe(true);
+  await expect(page.locator('a[href="/"]')).toHaveCount(0);
+});

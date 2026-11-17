@@ -284,6 +284,17 @@ const currentLine=computed(()=>{
 const ganttLayout=computed(()=>visibleRows(grouped.value,expanded.value));
 const focusedId=computed(()=>hoveredId.value || (chosenItem.value ? selectedId.value : null));
 const dependencyEdges=computed(()=>dependencyPaths(grouped.value, expanded.value, calendarWindow.value, trackWidth.value,focusedId.value,dependencyRouteMode.value));
+const dependencyTrunks = computed(() => {
+  if (dependencyRouteMode.value !== 'optimized') return [];
+  const trunks = new Map<string,{key:string;d:string;active:boolean}>();
+  for (const edge of dependencyEdges.value) {
+    if (!edge.trunk) continue;
+    const existing=trunks.get(edge.from);
+    if(existing) existing.active ||= edge.active;
+    else trunks.set(edge.from,{key:edge.from,d:edge.trunk,active:edge.active});
+  }
+  return [...trunks.values()];
+});
 function panStart(event:PointerEvent) {
   if (event.pointerType==='touch' || (event.pointerType==='mouse' && event.button !== 0)) return;
   const el=event.target;
@@ -387,6 +398,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
               <div class="gantt-head"><div class="gantt-head-name"><strong>{{tr('工作项 / 交付物','WORK PACKAGE / DELIVERABLE')}}</strong><small>WBS INDEX</small></div><div class="gantt-axis"><span v-for="(tick,i) in ticks" :key="i" :style="{width:`${tick.width}%`,flex:`0 0 ${tick.width}%`}">{{tick.label}}</span></div></div>
               <svg v-if="showDependencies && dependencyEdges.length" class="gantt-dependency-layer" :data-route-mode="dependencyRouteMode" :viewBox="`0 0 ${trackWidth} ${ganttLayout.height}`" :style="{height:`${ganttLayout.height}px`}" preserveAspectRatio="none" aria-hidden="true">
                 <defs><marker id="dep-arrow" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 1 L8 4 L0 7 Z" fill="#777781"/></marker><marker id="dep-arrow-active" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 1 L8 4 L0 7 Z" fill="#ff453a"/></marker></defs>
+                <path v-for="trunk in dependencyTrunks" :key="`trunk-${trunk.key}`" class="gantt-dependency-trunk" :data-dependency-trunk="trunk.key" :class="{active:trunk.active}" :d="trunk.d" />
                 <path v-for="edge in dependencyEdges" :key="edge.key" :data-dependency-key="edge.key" :d="edge.d" :class="{active:edge.active}" :marker-end="edge.active?'url(#dep-arrow-active)':'url(#dep-arrow)'"/>
               </svg>
               <template v-for="group in grouped" :key="group.id">
@@ -411,7 +423,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
         </div></div>
         </template>
 
-        <div v-else-if="view==='activity'" class="ws-activity"><div class="activity-filters"><span>{{tr('事件类型','EVENT TYPE')}}</span><div class="ws-toolset"><button v-for="kind in eventKinds" :key="kind" :class="{current:eventKind===kind}" @click="eventKind=kind">{{kind==='all'?tr('全部','ALL'):eventName(kind)}}</button></div></div><div class="event-stream"><motion.button v-for="event in visibleEvents" :key="event.id" layout :initial="false" :whileHover="reducedMotion ? undefined : { x: 2 }" :transition="{ duration: reducedMotion ? 0 : 0.14 }" class="event-entry" :class="{selected:selectedId===event.id}" :aria-pressed="selectedId===event.id" @click="select(event.id)"><span class="event-date">{{fmtDate(event.date)}}<small>{{event.program}}</small></span><span class="event-marker"><i></i></span><span class="event-body"><span class="event-kind">{{eventName(event.kind)}} <span>/ {{event.id}}</span></span><strong>{{tr(event.titleZh,event.titleEn)}}</strong><span class="event-summary">{{tr(event.descZh,event.descEn)}}</span><span class="event-arrow" aria-hidden="true"><EngineeringIcon name="next" /></span></span></motion.button><div v-if="visibleEvents.length===0" class="ws-no-results">{{tr('没有匹配的事件。','No matching events.')}}</div></div></div>
+        <div v-else-if="view==='activity'" class="ws-activity"><div class="activity-filters"><span>{{tr('事件类型','EVENT TYPE')}}</span><div class="ws-toolset"><button v-for="kind in eventKinds" :key="kind" :class="{current:eventKind===kind}" @click="eventKind=kind">{{kind==='all'?tr('全部','ALL'):eventName(kind)}}</button></div></div><div class="event-stream"><button v-for="event in visibleEvents" :key="event.id" class="event-entry" :class="{selected:selectedId===event.id}" :aria-pressed="selectedId===event.id" @click="select(event.id)"><span class="event-date">{{fmtDate(event.date)}}<small>{{event.program}}</small></span><span class="event-marker"><i></i></span><span class="event-body"><span class="event-kind">{{eventName(event.kind)}} <span>/ {{event.id}}</span></span><strong>{{tr(event.titleZh,event.titleEn)}}</strong><span class="event-summary">{{tr(event.descZh,event.descEn)}}</span><span class="event-arrow" aria-hidden="true"><EngineeringIcon name="next" /></span></span></button><div v-if="visibleEvents.length===0" class="ws-no-results">{{tr('没有匹配的事件。','No matching events.')}}</div></div></div>
 
         <div v-else class="ws-systemmap"><div class="systemmap-topline">PROTORHEXIS / DISTRIBUTED RESEARCH & ENGINEERING <span>RELATIONSHIP MODEL / DEMO</span></div><div class="systemmap-stage"><component :is="graphComponent" v-if="graphComponent" :programs="demoPrograms" :locale="locale" :active-program="activeProgram" @select="selectGraphProgram" /><div v-else class="systemmap-fallback" role="group" :aria-label="tr('系统列表','System list')"><button v-for="prog in demoPrograms" :key="prog.id" type="button" @click="selectGraphProgram(prog.id)">{{prog.id}}</button></div></div><p class="systemmap-note">{{tr('这是用于演示导航关系的抽象结构图；真实接口依赖必须在经过公开审查后才会显示。','This is an illustrative relationship diagram. Real integration dependencies require public review before publication.')}}</p></div>
       </div>
