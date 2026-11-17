@@ -22,6 +22,7 @@ assert(!existsSync(resolve(root,'src/data/workstation-demo.ts')), 'Synthetic dem
 assert(existsSync(resolve(root,'src/data/roadmap.generated.json')), 'Generated public data missing');
 const component = read('src/components/vue/EngineeringWorkbench.vue');
 assert(component.includes('VERIFIED PUBLIC RECORDS'), 'public partial coverage banner missing');
+assert(component.includes('import { publicSnapshot,') && component.includes('publicSnapshot.updatedAt'), 'public content snapshot must be imported before SSR rendering');
 assert(component.includes('PARTIAL COVERAGE'), 'missing partial coverage warning');
 const stylesheet = read('src/styles/workstation.css');
 assert(!/(?:^|[;{\s])box-shadow\s*:\s*(?!none\s*!important)/m.test(stylesheet), 'workstation must not introduce shadows');

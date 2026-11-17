@@ -3,7 +3,7 @@ import { computed, ref, nextTick, onMounted, onBeforeUnmount, watch, shallowRef,
 import { AnimatePresence, motion } from 'motion-v';
 import { usePublicLocale } from './usePublicLocale';
 import EngineeringIcon from './EngineeringIcon.vue';
-import { publicItems, publicEvents, publicPrograms, type WorkItem, type ProgramId, type PublicEvent, type Stage, type Stream } from '../../data/workstation-public';
+import { publicSnapshot, publicItems, publicEvents, publicPrograms, type WorkItem, type ProgramId, type PublicEvent, type Stage, type Stream } from '../../data/workstation-public';
 import { monthIndex, monthString, validateWindow, windowEnds, axisTicks, barPosition, visibleRows, dependencyPaths } from '../../lib/gantt';
 
 const props = defineProps<{ view: 'schedule' | 'board' | 'activity' | 'systems' }>();
