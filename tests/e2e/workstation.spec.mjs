@@ -128,6 +128,14 @@ test('system map uses real Vue Flow nodes and edges, not a CSS-only illustration
   await expect(page.locator('.vue-flow__node')).toHaveCount(5);
   await expect(page.locator('.vue-flow__edge')).toHaveCount(4);
   await expect(page.locator('.system-graph-node').filter({hasText:'TALOS'})).toBeVisible();
+  if (test.info().project.name.includes('mobile')) {
+    const viewport=await page.locator('.system-graph-viewport').boundingBox();
+    for(const node of await page.locator('.system-graph-node').all()) {
+      const box=await node.boundingBox();
+      expect(box.x).toBeGreaterThanOrEqual(viewport.x-2);
+      expect(box.x+box.width).toBeLessThanOrEqual(viewport.x+viewport.width+2);
+    }
+  }
   await page.locator('.system-graph-node').filter({hasText:'TALOS'}).click();
   await expect(page.locator('.rail-item.is-current')).toContainText('TALOS');
   await page.screenshot({path:`test-results/v26-systems-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});

@@ -29,11 +29,11 @@
 .system-graph-flow { width:100%; height:100%; background-color:#171719; }
 .system-graph-flow .vue-flow__pane { cursor:grab; }
 .system-graph-flow .vue-flow__pane:active { cursor:grabbing; }
-.system-graph-flow .vue-flow__node { border:0; background:transparent; padding:0; box-shadow:none; }
+.system-graph-flow .vue-flow__node { border:0; background:transparent; padding:0; box-shadow:none; pointer-events:all; }
 .system-graph-flow .vue-flow__edge-path { stroke:#76727a; stroke-width:1.5px; }
 .system-graph-flow .vue-flow__attribution { display:none; }
 .system-graph-flow .vue-flow__handle { width:6px; height:6px; border:1px solid #b2a6ae; background:#70646a; pointer-events:none; }
-.system-graph-node { width:288px; min-height:98px; text-align:left; display:flex; flex-direction:column; gap:7px;
+.system-graph-node { pointer-events:auto; cursor:pointer; width:288px; min-height:98px; text-align:left; display:flex; flex-direction:column; gap:7px;
   padding:15px 18px; border:1px solid #4c4b53; border-radius:16px; color:#f3f3f6; background:#29292e; }
 .system-graph-node span { color:#fd7770; font:10px 'Space Mono',monospace; }
 .system-graph-node strong { font:700 17px 'Space Mono',monospace; letter-spacing:.02em; }
@@ -62,7 +62,7 @@
   .ws-systemmap { padding:12px 10px; }
   .system-graph-tools { font-size:9px; }
   .system-graph-tools span:last-child { display:none; }
-  .system-graph-viewport { height:430px; }
+  .system-graph-viewport { height:640px; }
 }
 @supports (corner-shape:squircle) {
   .system-graph,.system-graph-node,.systemmap-fallback button,.event-body { corner-shape:squircle; }

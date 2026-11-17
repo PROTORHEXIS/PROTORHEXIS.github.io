@@ -15,6 +15,7 @@ const cases=[
   ['Gantt adapts to mobile viewport',vue.includes('window.innerWidth * .36') && css.includes('--gantt-label-width')],
   ['Gantt width consistent with calendar',vue.includes('labelWidth.value + Math.max(8') && css.includes('left:var(--gantt-label-width)')],
   ['Architecture uses Vue Flow nodes/edges',graph.includes("from '@vue-flow/core'") && graph.includes('<VueFlow') && graph.includes('graphNodes') && graph.includes('graphEdges')],
+  ['Graph buttons are interactable inside a read-only viewport',css.includes('pointer-events:all') && graph.includes('compact?\'vertical\':\'wide\'')],
   ['Graph uses actual Handles',graph.includes('<Handle type="source"') && graph.includes('<Handle type="target"')],
   ['Architecture graph after Astro hydration only',vue.includes("import('./SystemRelationshipGraph.vue')") && vue.includes('v-if="graphComponent"')],
   ['Graph model remains illustrative',graph.includes('publicly safe example topology only') && vue.includes('真实接口依赖必须在经过公开审查后才会显示')],

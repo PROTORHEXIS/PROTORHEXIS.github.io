@@ -23,3 +23,7 @@ The demo illustrates PROTORHEXIS organizational grouping to TALOS, MAXWELL, THOU
 ## Verification
 
 `check:fixtures`, `check:style`, `check:gantt`, `check:layers`, `check:v25`, and `check:v26` must PASS. Chromium E2E must verify both breakpoints, all four routes, scroll mask geometry, event arrow contained, graph node+edge count and selection, and no page errors. Screenshots at 390 px and 1440 px are required. Merge/deploy only after PR checks pass.
+
+### V2.6 browser-reported repairs
+
+The first candidate proved 5 nodes and 4 edges rendered, but node clicks were intercepted by the Vue Flow pane when both dragging and node selection were disabled. Node container and button pointer events are explicitly re-enabled without permitting graph editing. The first candidate also clipped horizontally positioned nodes on a 390 px viewport. A mobile vertical graph layout is now used and the graph remounts/fits on media query changes; Playwright asserts every mobile node stays within the viewport.
