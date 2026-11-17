@@ -507,6 +507,83 @@
       "publication": "approved"
     }
   ],
-  "relations": [],
-  "sourceRevision": "sha256:36ae7139d4ef38e7976bef9b9cc532abdcf1f0f514a0efa78d35093767ba042f"
+  "relations": [
+    {
+      "id": "REL-ORG-MAXWELL",
+      "from": "PROTORHEXIS",
+      "to": "MAXWELL",
+      "kind": "contains",
+      "description": {
+        "zh": "MAXWELL 列为源爆点的公开工程方向。",
+        "en": "MAXWELL is listed within the PROTORHEXIS public engineering portfolio."
+      },
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/.github/blob/main/profile/README.md"
+        },
+        {
+          "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/12"
+        }
+      ],
+      "publication": "approved"
+    },
+    {
+      "id": "REL-ORG-TALOS",
+      "from": "PROTORHEXIS",
+      "to": "TALOS",
+      "kind": "contains",
+      "description": {
+        "zh": "TALOS 列为源爆点的公开工程方向。",
+        "en": "TALOS is listed within the PROTORHEXIS public engineering portfolio."
+      },
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/.github/blob/main/profile/README.md"
+        },
+        {
+          "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/12"
+        }
+      ],
+      "publication": "approved"
+    },
+    {
+      "id": "REL-ORG-TESSERACT",
+      "from": "PROTORHEXIS",
+      "to": "TESSERACT",
+      "kind": "contains",
+      "description": {
+        "zh": "TESSERACT 列为源爆点的公开工程方向。",
+        "en": "TESSERACT is listed within the PROTORHEXIS public engineering portfolio."
+      },
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/.github/blob/main/profile/README.md"
+        },
+        {
+          "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/12"
+        }
+      ],
+      "publication": "approved"
+    },
+    {
+      "id": "REL-ORG-THOULESS",
+      "from": "PROTORHEXIS",
+      "to": "THOULESS",
+      "kind": "contains",
+      "description": {
+        "zh": "THOULESS 列为源爆点的公开工程方向。",
+        "en": "THOULESS is listed within the PROTORHEXIS public engineering portfolio."
+      },
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/.github/blob/main/profile/README.md"
+        },
+        {
+          "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/12"
+        }
+      ],
+      "publication": "approved"
+    }
+  ],
+  "sourceRevision": "sha256:ccbaf97bd146c5697c055a2c8267a165c84a606caa1a7f6f1b5476573afa25fa"
 }

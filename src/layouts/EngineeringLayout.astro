@@ -1,11 +1,13 @@
 ---
 import BaseLayout from './BaseLayout.astro';
+import BrandLockup from '../components/BrandLockup.astro';
 import '../styles/workstation.css';
 import '../styles/workstation-refinements.css';
 import '../styles/workstation-layer-motion.css';
 import '../styles/workstation-v25.css';
 import '../styles/workstation-v26.css';
 import '../styles/workstation-v28.css';
+import '../styles/workstation-v33.css';
 interface Props {
   title: string;
   active: 'schedule' | 'board' | 'activity' | 'systems';
@@ -17,12 +19,11 @@ const tabs = [
   {id:'activity',href:'/roadmap/evidence/',code:'03',zh:'事件时间线',en:'ACTIVITY'},
 ] as const;
 ---
-<BaseLayout title={title} description="PROTORHEXIS source-linked public engineering records. Private project status is not published here." noIndex={true}>
+<BaseLayout title={title} description="PROTORHEXIS reviewed public engineering summaries and undated future directions. No product release guarantees." noIndex={true}>
   <div class="ws-root">
     <header class="ws-header">
-      <div class="ws-brand" aria-label="PROTORHEXIS">
-        <span class="ws-mark" aria-hidden="true"><img src="/brand/mark.svg" alt="" width="36" height="36" /></span>
-        <span class="ws-brandtext"><strong>PROTORHEXIS</strong><small>ENGINEERING INTERFACE</small></span>
+      <div class="ws-brand" role="img" aria-label="PROTORHEXIS 标识 / PROTORHEXIS logo">
+        <BrandLockup />
       </div>
       <span class="ws-header-sep" aria-hidden="true"></span>
       <div class="ws-header-title"><span class="ws-signal"></span><span data-zh="公共开发路线图" data-en="PUBLIC DEVELOPMENT ROADMAP">公共开发路线图</span></div>

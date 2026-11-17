@@ -1,0 +1,19 @@
+{
+  "id": "REL-ORG-THOULESS",
+  "from": "PROTORHEXIS",
+  "to": "THOULESS",
+  "kind": "contains",
+  "description": {
+    "zh": "THOULESS 列为源爆点的公开工程方向。",
+    "en": "THOULESS is listed within the PROTORHEXIS public engineering portfolio."
+  },
+  "sources": [
+    {
+      "url": "https://github.com/PROTORHEXIS/.github/blob/main/profile/README.md"
+    },
+    {
+      "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/12"
+    }
+  ],
+  "publication": "approved"
+}

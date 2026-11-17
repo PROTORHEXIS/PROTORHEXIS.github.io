@@ -120,13 +120,17 @@ test('Gantt labels have one opaque sticky mask with shared dynamic width', async
   await page.screenshot({path:`test-results/v26-gantt-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
 });
 
-test('system map uses Vue Flow without inventing public dependency links', async ({page}) => {
+test('system map renders four reviewed organizational edges without inferred dependencies', async ({page}) => {
   const errors=[];page.on('pageerror',e=>errors.push(e.message));
   await page.goto('/roadmap/systems/', {waitUntil:'domcontentloaded'});
   await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
   await expect(page.locator('.system-graph .vue-flow')).toBeVisible({timeout:15000});
   await expect(page.locator('.vue-flow__node')).toHaveCount(5);
-  await expect(page.locator('.vue-flow__edge')).toHaveCount(0);
+  await expect(page.locator('.vue-flow__edge')).toHaveCount(4);
+  await expect(page.locator('.vue-flow__edge-path')).toHaveCount(4);
+  for(const edge of await page.locator('.vue-flow__edge-path').all()){
+    expect((await edge.getAttribute('d')||'').length).toBeGreaterThan(20);
+  }
   await expect(page.locator('.system-graph-node').filter({hasText:'TALOS'})).toBeVisible();
   if (test.info().project.name.includes('mobile')) {
     const viewport=await page.locator('.system-graph-viewport').boundingBox();
@@ -163,7 +167,8 @@ test('approved public JSON API has sources and no synthetic fixture',async({requ
   expect(data.programs).toHaveLength(5);
   expect(data.workItems.length).toBeGreaterThanOrEqual(4);
   expect(data.events.length).toBeGreaterThanOrEqual(4);
-  expect(data.relations).toHaveLength(0);
+  expect(data.relations).toHaveLength(4);
+  expect(data.relations.every(r=>r.kind==='contains' && r.from==='PROTORHEXIS')).toBe(true);
   for(const item of data.workItems){
     expect(item.title.zh).not.toMatch(/TAL-01/);
     if(item.phase==='published')expect(item.sources.length).toBeGreaterThan(0);
@@ -196,9 +201,14 @@ test('V2.8: brand uses replaceable SVG and has no entry to the unpublished home'
   const brand=page.locator('.ws-header .ws-brand');
   await expect(brand).toBeVisible();
   expect(await brand.evaluate(el=>el.tagName)).toBe('DIV');
-  const mark=brand.locator('img[src="/brand/mark.svg"]');
+  const mark=brand.locator('svg.ws-brand-lockup');
   await expect(mark).toBeVisible();
-  await expect.poll(()=>mark.evaluate(el=>el.complete && el.naturalWidth>0)).toBe(true);
+  await expect(brand.locator('.ws-brandtext')).toHaveCount(0);
+  await expect(brand.getByText('ENGINEERING INTERFACE')).toHaveCount(0);
+  expect(await mark.getAttribute('fill')).toBe('currentColor');
+  expect(await mark.locator('path,polygon').count()).toBe(20);
+  const css=await mark.evaluate(el=>({fill:getComputedStyle(el).fill,color:getComputedStyle(el).color}));
+  expect(css.fill).toBe(css.color);
   await expect(page.locator('a[href="/"]')).toHaveCount(0);
 });
 
@@ -217,4 +227,25 @@ test('Future is undated and reviewed private-source summaries are sanitized',asy
   expect(reviewed.every(x=>x.reviewReceipt && x.schedule===null && x.sources.length===0)).toBe(true);
   for(const w of reviewed){expect(JSON.stringify(w)).not.toMatch(/HoshiriAki\/|TALOS-LEGACY|RUSTSEC-|github\.com\/PROTORHEXIS\/(?:talos|thouless|tesseract|maxwell)/i);}
   expect(data.workItems.filter(x=>x.phase==='future').every(x=>x.schedule===null)).toBe(true);
+});
+
+
+test('six board stages occupy one horizontal row and the rightmost Published column is scrollable', async ({page}) => {
+  await page.goto('/roadmap/board/', {waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const lanes=page.locator('.kanban-column');
+  await expect(lanes).toHaveCount(6);
+  const first=await lanes.first().boundingBox();
+  const last=await lanes.last().boundingBox();
+  expect(first && last).toBeTruthy();
+  expect(Math.abs(last.y-first.y)).toBeLessThan(2);
+  expect(last.x).toBeGreaterThan(first.x+5*200);
+  await expect(lanes.last().locator('.kanban-heading')).toContainText(/已发布|PUBLISHED/);
+  const viewport=page.locator('.ws-board-viewport');
+  const metrics=await viewport.evaluate(el=>({scrollWidth:el.scrollWidth,clientWidth:el.clientWidth}));
+  expect(metrics.scrollWidth).toBeGreaterThan(metrics.clientWidth);
+  await viewport.evaluate(el=>{el.scrollLeft=el.scrollWidth;});
+  await expect.poll(()=>viewport.evaluate(el=>el.scrollLeft)).toBeGreaterThan(0);
+  await expect(lanes.last().locator('.kanban-heading')).toBeInViewport();
+  await page.screenshot({path:`test-results/v33-published-stage-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
 });

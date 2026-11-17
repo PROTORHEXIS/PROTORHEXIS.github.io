@@ -1,0 +1,19 @@
+{
+  "id": "REL-ORG-TALOS",
+  "from": "PROTORHEXIS",
+  "to": "TALOS",
+  "kind": "contains",
+  "description": {
+    "zh": "TALOS 列为源爆点的公开工程方向。",
+    "en": "TALOS is listed within the PROTORHEXIS public engineering portfolio."
+  },
+  "sources": [
+    {
+      "url": "https://github.com/PROTORHEXIS/.github/blob/main/profile/README.md"
+    },
+    {
+      "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/12"
+    }
+  ],
+  "publication": "approved"
+}

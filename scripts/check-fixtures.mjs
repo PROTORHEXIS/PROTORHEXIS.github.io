@@ -16,6 +16,8 @@ for (const [path, view] of pages) {
 const snapshot=JSON.parse(read('src/data/roadmap.generated.json'));
 assert.equal(snapshot.publicationStatus,'APPROVED_PUBLIC_SNAPSHOT');
 assert(snapshot.events.length>0&&snapshot.programs.length===5, 'Public data missing');
+assert.equal(snapshot.relations.length,4,'Public graph must have four reviewed organization-level relations');
+assert(snapshot.relations.every(x=>x.kind==='contains' && x.from==='PROTORHEXIS'),'Unverified technical dependencies must not be drawn');
 assert(snapshot.workItems.every(x=>x.sources.length || x.phase==='planned' || x.phase==='future' || Boolean(x.reviewReceipt)), 'Public facts must have provenance');
 assert(snapshot.workItems.every(x=>x.schedule===null || x.schedule.kind==='observed' || x.schedule.kind==='tentative'), 'No invented committed dates');
 assert(!existsSync(resolve(root,'src/data/workstation-demo.ts')), 'Synthetic demo feed must be removed from production');
@@ -23,6 +25,15 @@ assert(existsSync(resolve(root,'src/data/roadmap.generated.json')), 'Generated p
 const layout = read('src/layouts/EngineeringLayout.astro');
 assert(layout.includes('PUBLIC RECORDS / LIMITED') && layout.includes('PUBLIC SNAPSHOT / LIMITED COVERAGE'),'public data must not retain DEMO labels');
 const component = read('src/components/vue/EngineeringWorkbench.vue');
+const graph = read('src/components/vue/SystemRelationshipGraph.vue');
+const brand = read('src/components/BrandLockup.astro');
+const header = read('src/layouts/EngineeringLayout.astro');
+const v33 = read('src/styles/workstation-v33.css');
+assert(component.includes(':relations="publicSnapshot.relations"'),'Vue Flow must be driven by approved public relations');
+assert(graph.includes('props.relations') && !graph.includes('shallowRef<Edge[]>([])'),'Graph cannot hardcode empty edges');
+assert(component.includes('--board-stage-count') && v33.includes('grid-template-columns:repeat(var(--board-stage-count'),'Stage count must drive one row of lanes');
+assert(header.includes('<BrandLockup />') && !header.includes('ws-brandtext'),'Header cannot retain old HTML wordmark');
+assert(brand.includes('fill="currentColor"') && !brand.includes('#262626'),'Brand geometry must inherit CSS color');
 assert(component.includes('VERIFIED PUBLIC RECORDS'), 'public partial coverage banner missing');
 assert(component.includes('import { publicSnapshot,') && component.includes('publicSnapshot.updatedAt'), 'public content snapshot must be imported before SSR rendering');
 assert(component.includes('PARTIAL COVERAGE'), 'missing partial coverage warning');

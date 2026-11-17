@@ -18,7 +18,7 @@ const cases=[
   ['Graph buttons are interactable inside a read-only viewport',css.includes('pointer-events:all') && graph.includes('compact?\'vertical\':\'wide\'')],
   ['Graph uses actual Handles',graph.includes('<Handle type="source"') && graph.includes('<Handle type="target"')],
   ['Architecture graph after Astro hydration only',vue.includes("import('./SystemRelationshipGraph.vue')") && vue.includes('v-if="graphComponent"')],
-  ['Graph does not invent unverified edges',graph.includes('const graphEdges = shallowRef<Edge[]>([])') && vue.includes('没有经证据审查的跨系统依赖')],
+  ['Graph only draws sourced public grouping relations',graph.includes('props.relations') && graph.includes("r.kind==='contains'") && graph.includes("r.publication==='approved'") && vue.includes(':relations="publicSnapshot.relations"')],
   ['Reduced motion styling retained',read('src/styles/workstation-layer-motion.css').includes('prefers-reduced-motion')],
   ['Styling actually bundled',layout.includes("import '../styles/workstation-v26.css'")],
   ['Test coverage uploaded',read('tests/e2e/workstation.spec.mjs').includes('Gantt labels have one opaque sticky mask')],

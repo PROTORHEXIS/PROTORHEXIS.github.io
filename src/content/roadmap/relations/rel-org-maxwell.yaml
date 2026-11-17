@@ -1,0 +1,19 @@
+{
+  "id": "REL-ORG-MAXWELL",
+  "from": "PROTORHEXIS",
+  "to": "MAXWELL",
+  "kind": "contains",
+  "description": {
+    "zh": "MAXWELL 列为源爆点的公开工程方向。",
+    "en": "MAXWELL is listed within the PROTORHEXIS public engineering portfolio."
+  },
+  "sources": [
+    {
+      "url": "https://github.com/PROTORHEXIS/.github/blob/main/profile/README.md"
+    },
+    {
+      "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/12"
+    }
+  ],
+  "publication": "approved"
+}
