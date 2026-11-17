@@ -15,7 +15,9 @@
     "test:e2e": "playwright test",
     "check:v26": "node scripts/check-v26.mjs",
     "check:v29": "node --experimental-strip-types scripts/check-v29.mjs",
-    "check:v30": "node --experimental-strip-types scripts/check-v30.mjs"
+    "check:v30": "node --experimental-strip-types scripts/check-v30.mjs",
+    "roadmap": "node scripts/roadmap-cli.mjs",
+    "check:content": "node scripts/roadmap-cli.mjs validate"
   },
   "dependencies": {
     "astro": "^7.4.0",
