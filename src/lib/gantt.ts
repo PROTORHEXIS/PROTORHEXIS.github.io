@@ -3,7 +3,7 @@ export type Scale = 'month' | 'quarter';
 export interface CalendarWindow { startMonth: string; months: number; }
 export interface Tick { label: string; left: number; width: number; start: number; end: number; }
 export interface Bar { hidden: boolean; left: number; width: number; right: number; }
-export interface GanttItem { id: string; start: string; end: string; deps: string[]; }
+export interface GanttItem { id: string; start: string | null; end: string | null; deps: string[]; }
 export interface GanttGroup<T extends GanttItem> { id: string; items: T[]; }
 export interface Edge { key: string; from: string; to: string; d: string; active: boolean; trunk?: string; laneX?: number; }
 const DAY = 86_400_000;
@@ -52,6 +52,7 @@ export function axisTicks(range: CalendarWindow, scale: Scale): Tick[] {
   return ticks;
 }
 export function barPosition(item: Pick<GanttItem, 'start' | 'end'>, range: CalendarWindow): Bar {
+  if(!item.start || !item.end)return {hidden:true,left:0,width:0,right:0};
   const { start, end } = windowEnds(range);
   const from = Date.parse(`${item.start}T00:00:00Z`);
   const to = Date.parse(`${item.end}T00:00:00Z`) + DAY; // inclusive public end date

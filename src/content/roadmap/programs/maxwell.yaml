@@ -1,0 +1,19 @@
+{
+  "id": "MAXWELL",
+  "code": "SYS-02",
+  "title": {
+    "zh": "执行与自动化",
+    "en": "Execution automation"
+  },
+  "description": {
+    "zh": "公开工程方向：智能体执行与协作；不对私有实现进度作公开断言。",
+    "en": "Public direction: agent execution and collaboration; private implementation status is not asserted."
+  },
+  "publication": "approved",
+  "order": 1,
+  "sources": [
+    {
+      "url": "https://github.com/PROTORHEXIS/.github/blob/main/profile/README.md"
+    }
+  ]
+}

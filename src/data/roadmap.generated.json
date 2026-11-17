@@ -1,0 +1,318 @@
+{
+  "schemaVersion": 1,
+  "publicationStatus": "APPROVED_PUBLIC_SNAPSHOT",
+  "updatedAt": "2026-11-17",
+  "programs": [
+    {
+      "id": "TALOS",
+      "code": "SYS-01",
+      "title": {
+        "zh": "通用系统平台",
+        "en": "System platform"
+      },
+      "description": {
+        "zh": "公开工程方向：可靠系统基础设施；内部实施状态尚未作为公开进度发布。",
+        "en": "Public direction: reliable systems infrastructure; implementation status is not publicly certified."
+      },
+      "publication": "approved",
+      "order": 0,
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/.github/blob/main/profile/README.md"
+        }
+      ]
+    },
+    {
+      "id": "MAXWELL",
+      "code": "SYS-02",
+      "title": {
+        "zh": "执行与自动化",
+        "en": "Execution automation"
+      },
+      "description": {
+        "zh": "公开工程方向：智能体执行与协作；不对私有实现进度作公开断言。",
+        "en": "Public direction: agent execution and collaboration; private implementation status is not asserted."
+      },
+      "publication": "approved",
+      "order": 1,
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/.github/blob/main/profile/README.md"
+        }
+      ]
+    },
+    {
+      "id": "THOULESS",
+      "code": "PRD-01",
+      "title": {
+        "zh": "租赁产品",
+        "en": "Rental product"
+      },
+      "description": {
+        "zh": "项目索引条目；没有经审查的公开里程碑或排期。",
+        "en": "Project index entry; no approved public milestone or schedule."
+      },
+      "publication": "approved",
+      "order": 2,
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/1"
+        }
+      ]
+    },
+    {
+      "id": "TESSERACT",
+      "code": "PRD-02",
+      "title": {
+        "zh": "仓储业务",
+        "en": "Warehousing"
+      },
+      "description": {
+        "zh": "项目索引条目；没有经审查的公开里程碑或排期。",
+        "en": "Project index entry; no approved public milestone or schedule."
+      },
+      "publication": "approved",
+      "order": 3,
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/1"
+        }
+      ]
+    },
+    {
+      "id": "PROTORHEXIS",
+      "code": "ORG-01",
+      "title": {
+        "zh": "公共工程站点",
+        "en": "Public engineering web"
+      },
+      "description": {
+        "zh": "公开网站的实际 PR、构建与发布记录；不代表其他系统的生产资格。",
+        "en": "Verified public site PRs and releases; not production qualification for other systems."
+      },
+      "publication": "approved",
+      "order": 4,
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/.github/blob/main/profile/README.md"
+        }
+      ]
+    }
+  ],
+  "workItems": [
+    {
+      "id": "WEB-SITE-001",
+      "program": "PROTORHEXIS",
+      "title": {
+        "zh": "公开工程工作台首次部署",
+        "en": "Initial public engineering workstation"
+      },
+      "description": {
+        "zh": "已合并并部署 Astro/Vue 公开工作台；日期表示公开 PR 生命周期，不代表系统研发起点。",
+        "en": "Merged and deployed the public Astro/Vue workstation. Dates describe a public PR lifecycle, not project inception."
+      },
+      "phase": "published",
+      "category": "infrastructure",
+      "schedule": {
+        "start": "2026-11-16",
+        "end": "2026-11-16",
+        "kind": "observed"
+      },
+      "dependsOn": [],
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/1"
+        }
+      ],
+      "updatedAt": "2026-11-17",
+      "publication": "approved"
+    },
+    {
+      "id": "WEB-SITE-002",
+      "program": "PROTORHEXIS",
+      "title": {
+        "zh": "浏览器发布门禁",
+        "en": "Browser release gate"
+      },
+      "description": {
+        "zh": "引入桌面与移动端的 Chromium Hydration 和交互检查，作为 Pages 发布前门禁。",
+        "en": "Added desktop/mobile Chromium hydration and interaction checks before Pages deployment."
+      },
+      "phase": "published",
+      "category": "infrastructure",
+      "schedule": {
+        "start": "2026-11-16",
+        "end": "2026-11-16",
+        "kind": "observed"
+      },
+      "dependsOn": [],
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/4"
+        }
+      ],
+      "updatedAt": "2026-11-17",
+      "publication": "approved"
+    },
+    {
+      "id": "WEB-SITE-003",
+      "program": "PROTORHEXIS",
+      "title": {
+        "zh": "系统关系图组件",
+        "en": "System relationship graph component"
+      },
+      "description": {
+        "zh": "公开站点使用 Vue Flow 节点与连线；当前系统关联不作为真实接口拓扑证据。",
+        "en": "Public UI uses Vue Flow nodes and edges; visual grouping is not verified integration topology."
+      },
+      "phase": "published",
+      "category": "infrastructure",
+      "schedule": {
+        "start": "2026-11-17",
+        "end": "2026-11-17",
+        "kind": "observed"
+      },
+      "dependsOn": [],
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/5"
+        }
+      ],
+      "updatedAt": "2026-11-17",
+      "publication": "approved"
+    },
+    {
+      "id": "WEB-SITE-004",
+      "program": "PROTORHEXIS",
+      "title": {
+        "zh": "固定端口正交依赖路由",
+        "en": "Fixed-port orthogonal dependency routing"
+      },
+      "description": {
+        "zh": "公开路线图采用右出左入、最少折点优先的依赖线；本条只描述网站实现。",
+        "en": "Public roadmap uses right/left ports and minimum-bend routing; this describes only the website implementation."
+      },
+      "phase": "published",
+      "category": "infrastructure",
+      "schedule": {
+        "start": "2026-11-17",
+        "end": "2026-11-17",
+        "kind": "observed"
+      },
+      "dependsOn": [],
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/9"
+        },
+        {
+          "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/actions/runs/44097465815"
+        }
+      ],
+      "updatedAt": "2026-11-17",
+      "publication": "approved"
+    },
+    {
+      "id": "WEB-SITE-005",
+      "program": "PROTORHEXIS",
+      "title": {
+        "zh": "工程记录自动候选采集",
+        "en": "Automated candidate ingestion"
+      },
+      "description": {
+        "zh": "未来研究目标：从有权访问的工程来源生成经审核的公开候选，不提供承诺日期。",
+        "en": "Future objective: prepare reviewed public candidates from authorized evidence sources; no committed date. "
+      },
+      "phase": "planned",
+      "category": "infrastructure",
+      "schedule": null,
+      "dependsOn": [],
+      "sources": [],
+      "updatedAt": "2026-11-17",
+      "publication": "approved"
+    }
+  ],
+  "events": [
+    {
+      "id": "SITE-EV-004",
+      "program": "PROTORHEXIS",
+      "date": "2026-11-17",
+      "kind": "verification",
+      "title": {
+        "zh": "固定端口依赖线路由 V3.0 发布",
+        "en": "V3.0 fixed-port routing deployed"
+      },
+      "description": {
+        "zh": "PR #9 已合并，配套 GitHub Pages 构建及浏览器检查成功。",
+        "en": "PR #9 merged and the corresponding Pages and Chromium checks succeeded."
+      },
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/9"
+        }
+      ],
+      "publication": "approved"
+    },
+    {
+      "id": "SITE-EV-003",
+      "program": "PROTORHEXIS",
+      "date": "2026-11-17",
+      "kind": "milestone",
+      "title": {
+        "zh": "关系图由 Vue Flow 驱动",
+        "en": "Vue Flow graph introduced"
+      },
+      "description": {
+        "zh": "PR #5 合并 Vue Flow 可视化；其展示并不证明跨系统接口关系。",
+        "en": "PR #5 integrated Vue Flow; its diagram is not proof of system integration."
+      },
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/5"
+        }
+      ],
+      "publication": "approved"
+    },
+    {
+      "id": "SITE-EV-002",
+      "program": "PROTORHEXIS",
+      "date": "2026-11-16",
+      "kind": "verification",
+      "title": {
+        "zh": "真实浏览器发布检查纳入流水线",
+        "en": "Browser release testing added"
+      },
+      "description": {
+        "zh": "PR #4 合并浏览器端到端测试，减轻构建通过但页面黑屏的回归风险。",
+        "en": "PR #4 integrated browser E2E to detect blank-screen regressions."
+      },
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/4"
+        }
+      ],
+      "publication": "approved"
+    },
+    {
+      "id": "SITE-EV-001",
+      "program": "PROTORHEXIS",
+      "date": "2026-11-16",
+      "kind": "milestone",
+      "title": {
+        "zh": "公开工作台首次合并",
+        "en": "Initial workstation merged"
+      },
+      "description": {
+        "zh": "公开站点首版 PR #1 已合并；当时全部路线图任务仍为合成演示数据。",
+        "en": "Public PR #1 merged; roadmap tasks were synthetic at that time."
+      },
+      "sources": [
+        {
+          "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/1"
+        }
+      ],
+      "publication": "approved"
+    }
+  ],
+  "relations": [],
+  "sourceRevision": "sha256:55dbd7ce45a5c6f6c50a83bcbdcc84390bd8f08ec9add880b0fae09bdd9b165e"
+}

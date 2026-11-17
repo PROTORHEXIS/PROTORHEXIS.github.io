@@ -1,0 +1,2 @@
+{"schema":"roadmap-intake/v1","batch":"example-only-001","source":"public-workflow-evidence"}
+{"op":"patch","id":"WEB-SITE-005","base":"sha256:REPLACE_WITH_ROADMAP_CONTEXT_HASH","set":{"phase":"development"},"evidence":[{"url":"https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/9"}]}

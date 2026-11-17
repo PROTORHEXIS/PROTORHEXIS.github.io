@@ -1,0 +1,28 @@
+{
+  "$schema": "https://frontmatter.codes/frontmatter.schema.json",
+  "frontMatter.framework.id": "astro",
+  "frontMatter.content.pageFolders": [
+    {"title":"Roadmap work items","path":"[[workspace]]/src/content/roadmap/work-items"},
+    {"title":"Roadmap updates","path":"[[workspace]]/src/content/roadmap/updates"},
+    {"title":"Programs","path":"[[workspace]]/src/content/roadmap/programs"},
+    {"title":"Relations","path":"[[workspace]]/src/content/roadmap/relations"}
+  ],
+  "frontMatter.taxonomy.contentTypes": [
+    {"name":"roadmap-work", "pageBundle":false,"fields":[
+      {"name":"id","type":"string","required":true},
+      {"name":"program","type":"string","required":true},
+      {"name":"title","type":"fields","fields":[{"name":"zh","type":"string"},{"name":"en","type":"string"}]},
+      {"name":"phase","type":"choice","choices":["planned","development","qualification","review","published"]},
+      {"name":"publication","type":"choice","choices":["draft","approved"]},
+      {"name":"schedule","type":"string"},
+      {"name":"dependsOn","type":"list"},
+      {"name":"sources","type":"list"}
+    ]},
+    {"name":"roadmap-update","pageBundle":false,"fields":[
+      {"name":"id","type":"string"},{"name":"date","type":"datetime"},
+      {"name":"kind","type":"choice","choices":["milestone","verification","decision"]},
+      {"name":"publication","type":"choice","choices":["draft","approved"]},
+      {"name":"sources","type":"list"}
+    ]}
+  ]
+}

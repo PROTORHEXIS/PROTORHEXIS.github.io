@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {dependencyPaths,validateWindow,barPosition,visibleRows,ARROW_LENGTH,TIP_GAP} from '../src/lib/gantt.ts';
-import {demoItems,demoPrograms} from '../src/data/workstation-demo.ts';
+import {demoItems,demoPrograms} from '../tests/fixtures-geometry.ts';
 const groups=demoPrograms.map(p=>({...p,items:demoItems.filter(i=>i.program===p.id)}));
 const range=validateWindow('2026-11','2027-10'),width=1440;
 const edges=dependencyPaths(groups,{},range,width,null);
@@ -50,7 +50,7 @@ for(const key of ['TAL-02>TES-02','TAL-01>TAL-02']) {
  const xs=parts.filter((_,i)=>i%2===0);
  assert.ok(xs.every(x=>x>=minx-2),`far-off detour: ${key}`);
 }
-assert.ok(readFileSync('src/layouts/EngineeringLayout.astro','utf8').includes('WORKSTATION / V3.0'),'public workstation version must match candidate');
+assert.ok(readFileSync('src/layouts/EngineeringLayout.astro','utf8').includes('WORKSTATION / V3.1'),'public workstation version must match candidate');
 const ui=readFileSync('src/components/vue/EngineeringWorkbench.vue','utf8');
 assert.ok(ui.includes('viewBox="0 0 10 8" refX="1"')&&ui.includes('M1 1 L9 4 L1 7 Z'),'marker must project exactly 8px beyond stroke end');
 assert.ok(ui.includes('const routingEdges=computed')&&ui.includes('const dependencyEdges=computed'),'hover must not reroute the geometry');

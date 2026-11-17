@@ -1,0 +1,19 @@
+{
+  "id": "TESSERACT",
+  "code": "PRD-02",
+  "title": {
+    "zh": "仓储业务",
+    "en": "Warehousing"
+  },
+  "description": {
+    "zh": "项目索引条目；没有经审查的公开里程碑或排期。",
+    "en": "Project index entry; no approved public milestone or schedule."
+  },
+  "publication": "approved",
+  "order": 3,
+  "sources": [
+    {
+      "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/1"
+    }
+  ]
+}
