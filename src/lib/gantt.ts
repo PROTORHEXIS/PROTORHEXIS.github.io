@@ -1,5 +1,6 @@
 /** Pure UTC calendar and edge geometry for the public, read-only roadmap. */
 export type Scale = 'month' | 'quarter';
+export type RouteMode = 'standard' | 'optimized';
 export interface CalendarWindow { startMonth: string; months: number; }
 export interface Tick { label: string; left: number; width: number; start: number; end: number; }
 export interface Bar { hidden: boolean; left: number; width: number; right: number; }
@@ -73,26 +74,127 @@ export function visibleRows<T extends GanttItem>(groups: GanttGroup<T>[], expand
   }
   return { centers, height: y };
 }
-export function dependencyPaths<T extends GanttItem>(groups: GanttGroup<T>[], expanded: Record<string, boolean>, range: CalendarWindow, trackWidth: number, focusedId: string | null): Edge[] {
+/**
+ * Consistent routing for dependency arrows. All arrowheads approach targets
+ * from the LEFT with a positive-X final segment. The old 3-segment dogleg
+ * reversed its last segment when predecessor/successor schedules overlapped,
+ * producing the ring-shaped arrow seen in the browser.
+ *
+ * A — standard: orthogonal elbows and a clearance bridge when bars overlap.
+ * B — optimized: stable per-edge channels, intermediate-bar avoidance and
+ * subtly rounded corners. Both stay in the read-only Gantt SVG coordinate frame.
+ */
+type Point = { x: number; y: number };
+const rounded = (n:number) => Number(n.toFixed(1));
+const pathNumber = (n:number) => rounded(n).toFixed(1);
+
+function orthogonalPath(points:Point[], radius = 0):string {
+  const clean:Point[] = [];
+  for (const p of points) {
+    if (clean.length && Math.abs(clean[clean.length-1].x-p.x)<0.01 && Math.abs(clean[clean.length-1].y-p.y)<0.01) continue;
+    clean.push(p);
+  }
+  if (clean.length < 2) return '';
+  if (radius <= 0) {
+    return `M ${pathNumber(clean[0].x)} ${pathNumber(clean[0].y)}` + clean.slice(1).map((p,i) =>
+      Math.abs(p.y-clean[i].y)<0.01 ? ` H ${pathNumber(p.x)}` : ` V ${pathNumber(p.y)}`
+    ).join('');
+  }
+  let d = `M ${pathNumber(clean[0].x)} ${pathNumber(clean[0].y)}`;
+  for (let i=1;i<clean.length-1;i++) {
+    const prev=clean[i-1],p=clean[i],next=clean[i+1];
+    const inLen=Math.hypot(p.x-prev.x,p.y-prev.y), outLen=Math.hypot(next.x-p.x,next.y-p.y);
+    // The incoming and outgoing straight portions stay nonzero even for short turns.
+    const r=Math.min(radius,inLen/3,outLen/3);
+    const ux=(p.x-prev.x)/inLen, uy=(p.y-prev.y)/inLen;
+    const vx=(next.x-p.x)/outLen, vy=(next.y-p.y)/outLen;
+    if (!Number.isFinite(r) || r<0.5 || Math.abs(ux*vx+uy*vy)>0.01) {
+      d+=` L ${pathNumber(p.x)} ${pathNumber(p.y)}`;
+      continue;
+    }
+    d+=` L ${pathNumber(p.x-ux*r)} ${pathNumber(p.y-uy*r)} Q ${pathNumber(p.x)} ${pathNumber(p.y)} ${pathNumber(p.x+vx*r)} ${pathNumber(p.y+vy*r)}`;
+  }
+  const end=clean[clean.length-1];
+  return d+` L ${pathNumber(end.x)} ${pathNumber(end.y)}`;
+}
+
+export function dependencyPaths<T extends GanttItem>(
+  groups: GanttGroup<T>[], expanded: Record<string, boolean>, range: CalendarWindow,
+  trackWidth: number, focusedId: string | null, mode: RouteMode = 'standard'
+): Edge[] {
+  if (!Number.isFinite(trackWidth) || trackWidth <= 0) return [];
   const { centers } = visibleRows(groups, expanded);
   const items = new Map(groups.flatMap(group => group.items.map(item => [item.id, item] as const)));
-  const edges: Edge[] = [];
-  for (const to of items.values()) {
-    const toY = centers.get(to.id), toBar = barPosition(to, range);
-    if (toY === undefined || toBar.hidden) continue;
-    for (const depId of to.deps) {
-      const from = items.get(depId), fromY = centers.get(depId);
-      if (!from || fromY === undefined) continue;
-      const fromBar = barPosition(from, range);
-      if (fromBar.hidden) continue;
-      const a = fromBar.right / 100 * trackWidth;
-      const b = toBar.left / 100 * trackWidth;
-      // A dogleg outside the start bar also works for overlapping schedules.
-      const corridor = Math.min(trackWidth - 4, Math.max(a + 13, b - 15));
-      const target = Math.max(1, b - 5);
-      const d = `M ${a.toFixed(1)} ${fromY.toFixed(1)} H ${corridor.toFixed(1)} V ${toY.toFixed(1)} H ${target.toFixed(1)}`;
-      edges.push({ key: `${depId}>${to.id}`, from: depId, to: to.id, d, active: focusedId === depId || focusedId === to.id });
+  const visible = new Map<string,{start:number;end:number;y:number}>();
+  for(const item of items.values()) {
+    const y=centers.get(item.id), bar=barPosition(item,range);
+    if(y!==undefined && !bar.hidden) visible.set(item.id,{start:bar.left/100*trackWidth,end:bar.right/100*trackWidth,y});
+  }
+  const proposed:{from:string;to:string;source:{start:number;end:number;y:number};target:{start:number;end:number;y:number}}[]=[];
+  for (const item of items.values()) {
+    const target=visible.get(item.id);
+    if (!target || target.start<28) continue; // no room to draw an arrow outside a left-clipped task
+    for(const from of item.deps) {
+      const source=visible.get(from);
+      if(!source || from===item.id || source.end>trackWidth-12 || source.y===target.y) continue;
+      proposed.push({from,to:item.id,source,target});
     }
   }
+  // Stable channels are assigned independently from selection/hover state.
+  proposed.sort((a,b)=>a.to.localeCompare(b.to)||a.from.localeCompare(b.from));
+  const incoming=new Map<string,number>();
+  const edges:Edge[]=[];
+  for(const e of proposed) {
+    const sibling=incoming.get(e.to)||0;incoming.set(e.to,sibling+1);
+    const optimized=mode==='optimized';
+    // One shared outgoing trunk per source prevents two nearby routes from
+    // drawing a false U-shaped loop/outline at the predecessor's right edge.
+    const sourceY=e.source.y;
+    const targetY=e.target.y + (optimized ? (sibling%3-1)*5 : 0);
+    const sx=e.source.end, tx=e.target.start;
+    const arrowTip=tx-6;
+    const exitGap=optimized ? 22 : 18;
+    const entryGap=optimized ? 24+(sibling%3)*7 : 24;
+    const hasOverlap=arrowTip-sx<42;
+    let points:Point[];
+    if (!hasOverlap) {
+      // One clean, forward-going entry. Optimized mode spreads multiple routes
+      // and detours around a visible task between the two row centers.
+      const corridor=Math.max(sx+14,Math.min(sx+exitGap+(optimized?(sibling%3)*6:0),arrowTip-17));
+      const obstacles=optimized && [...visible.entries()].some(([id,v])=>id!==e.from&&id!==e.to&&
+        v.y>Math.min(sourceY,targetY) && v.y<Math.max(sourceY,targetY) &&
+        v.start-10<corridor && v.end+10>corridor);
+      if(!obstacles) points=[{x:sx,y:sourceY},{x:corridor,y:sourceY},{x:corridor,y:targetY},{x:arrowTip,y:targetY}];
+      else points=detourPoints(e,visible,sourceY,targetY,sx,arrowTip,exitGap,entryGap,true);
+    } else points=detourPoints(e,visible,sourceY,targetY,sx,arrowTip,exitGap,entryGap,optimized);
+    const d=orthogonalPath(points,optimized?6:0);
+    if(d) edges.push({key:`${e.from}>${e.to}`,from:e.from,to:e.to,d,active:focusedId===e.from||focusedId===e.to});
+  }
   return edges;
+}
+
+function detourPoints(
+  e:{from:string;to:string;source:{start:number;end:number;y:number};target:{start:number;end:number;y:number}},
+  visible:Map<string,{start:number;end:number;y:number}>,
+  sourceY:number,targetY:number,sx:number,arrowTip:number,exitGap:number,entryGap:number,optimized:boolean
+):Point[] {
+  // Crossing the inter-row gutter avoids the source/target bar overlap.
+  const down=targetY>sourceY;
+  const bridgeY=e.source.y+(down?31:-31);
+  let entryX=e.target.start-entryGap;
+  if (optimized) {
+    // Prefer a vertical lane outside the occupied ranges of intervening tasks.
+    // Never place that lane to the RIGHT of the target entry.
+    for(const [id,v] of visible) {
+      if(id===e.from||id===e.to)continue;
+      if(v.y>Math.min(bridgeY,targetY)&&v.y<Math.max(bridgeY,targetY))
+        entryX=Math.min(entryX,v.start-14);
+    }
+  }
+  entryX=Math.max(8,Math.min(entryX,arrowTip-14));
+  return [
+    {x:sx,y:sourceY}, {x:sx+exitGap,y:sourceY},
+    {x:sx+exitGap,y:bridgeY}, {x:entryX,y:bridgeY},
+    {x:entryX,y:targetY}, {x:arrowTip,y:targetY}
+  ];
 }
