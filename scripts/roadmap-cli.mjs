@@ -54,7 +54,10 @@ function loadContent(){
   for(const w of store.work){
     if(!programs.has(w.program))fail(`Unknown program ${w.program} for ${w.id}`);
     if(w.schedule && w.schedule.end<w.schedule.start)fail(`Invalid schedule ${w.id}`);
-    if(w.phase==='published'&&!w.sources.length)fail(`Published work needs evidence ${w.id}`);
+    if(w.phase==='published'&&!w.sources.length)fail(`Published work needs public evidence ${w.id}`);
+    if(w.reviewReceipt && w.sources.length)fail(`A private review receipt cannot be mixed with public sources ${w.id}`);
+    if(w.phase==='future' && (w.schedule!==null || w.reviewReceipt))fail(`Future must be undated intent without a review receipt: ${w.id}`);
+    if(['development','qualification','review'].includes(w.phase)&&!w.sources.length&&!w.reviewReceipt)fail(`Active public work needs sources or a reviewed receipt: ${w.id}`);
     if(w.phase==='planned'&&w.schedule?.kind==='committed')fail(`Unverified planned item cannot promise a deadline ${w.id}`);
   }
   for(const w of store.work)for(const dep of w.dependsOn){if(!works.has(dep)||dep===w.id)fail(`Missing/self dependency: ${w.id} => ${dep}`)}
@@ -108,9 +111,11 @@ function parseIntake(path){
       const result=schemas.work.safeParse(next);if(!result.success)fail(`Invalid patch ${op.id}: ${result.error.message}`);
       out.push({op:'patch',kind:'work',id:op.id,before:hash(orig.record),after:hash(next),record:next});
     }else if(op.op==='append'){
-      if(!['event','relation'].includes(op.kind)||!op.record)fail(`Only event/relation append is allowed: ${op.id}`);
+      if(!['work','event','relation'].includes(op.kind)||!op.record)fail(`Only work/event/relation append is allowed: ${op.id}`);
       if(indexed.has(op.id))fail(`Append ID already exists: ${op.id}`);
       if(op.record.id!==op.id)fail(`Append id mismatch: ${op.id}`);
+      if('reviewReceipt' in op.record || 'publication' in op.record)fail(`Agent cannot issue review receipts or publication approval: ${op.id}`);
+      if(op.kind==='work' && op.record.sources?.some(s=>!s.url||!/^https:\/\/github\.com\/PROTORHEXIS\/(?:\.github|PROTORHEXIS\.github\.io)\//.test(s.url)))fail(`Agent work candidate sources must be allowlisted public URLs: ${op.id}`);
       if(Object.keys(op).some(k=>!['op','id','kind','record'].includes(k)))fail(`Unknown append field: ${op.id}`);
       const r=schemas[op.kind].safeParse({...op.record,publication:'draft'});
       if(!r.success)fail(`Invalid append: ${op.id}: ${r.error.message}`);
