@@ -149,7 +149,7 @@ test('actual records never display invented Gantt dependencies or promised dates
   await expect(page.getByText('VERIFIED PUBLIC RECORDS')).toBeVisible();
   await expect(page.locator('[data-gantt-id="TAL-01"]')).toHaveCount(0);
   await expect(page.locator('.gantt-bar')).toHaveCount(4);
-  await expect(page.locator('.gantt-undated')).toHaveCount(1);
+  await expect(page.locator('.gantt-undated')).toHaveCount(5);
   await expect(page.locator('.gantt-dependency-layer')).toHaveCount(0);
   await expect(page.locator('[data-route-option],.gantt-route-selector')).toHaveCount(0);
   await page.screenshot({path:`test-results/v31-actual-schedule-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
@@ -167,7 +167,7 @@ test('approved public JSON API has sources and no synthetic fixture',async({requ
   for(const item of data.workItems){
     expect(item.title.zh).not.toMatch(/TAL-01/);
     if(item.phase==='published')expect(item.sources.length).toBeGreaterThan(0);
-    if(item.schedule===null)expect(item.phase).toBe('planned');
+    if(item.schedule===null)expect(['planned','future','development','qualification','review']).toContain(item.phase);
     for(const src of item.sources)expect(new URL(src.url).hostname).toBe('github.com');
   }
 });
@@ -200,4 +200,21 @@ test('V2.8: brand uses replaceable SVG and has no entry to the unpublished home'
   await expect(mark).toBeVisible();
   await expect.poll(()=>mark.evaluate(el=>el.complete && el.naturalWidth>0)).toBe(true);
   await expect(page.locator('a[href="/"]')).toHaveCount(0);
+});
+
+
+test('Future is undated and reviewed private-source summaries are sanitized',async({page,request})=>{
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('.kanban-heading').filter({hasText:/未来方向|FUTURE/})).toBeVisible();
+  await expect(page.locator('.kanban-card').filter({hasText:'TAL-FUTURE-001'})).toBeVisible();
+  await expect(page.locator('.kanban-card').filter({hasText:'TAL-PROGRESS-001'})).toBeVisible();
+  const res=await request.get('/api/roadmap/v1.json');
+  expect(res.ok()).toBeTruthy();
+  const data=await res.json();
+  expect(data.workItems.filter(x=>x.phase==='future')).toHaveLength(6);
+  const reviewed=data.workItems.filter(x=>x.id.endsWith('PROGRESS-001'));
+  expect(reviewed).toHaveLength(4);
+  expect(reviewed.every(x=>x.reviewReceipt && x.schedule===null && x.sources.length===0)).toBe(true);
+  for(const w of reviewed){expect(JSON.stringify(w)).not.toMatch(/HoshiriAki\/|TALOS-LEGACY|RUSTSEC-|github\.com\/PROTORHEXIS\/(?:talos|thouless|tesseract|maxwell)/i);}
+  expect(data.workItems.filter(x=>x.phase==='future').every(x=>x.schedule===null)).toBe(true);
 });

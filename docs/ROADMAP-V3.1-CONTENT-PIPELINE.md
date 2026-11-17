@@ -32,3 +32,14 @@ Actual public provenance in first snapshot: organization README and site PR #1, 
 
 ## Future integration
 `roadmap-intake/v1` is a local file contract for future MAXWELL/TIC/TIR adapters. The interface **does not** expose a network write endpoint, grant publish rights, promise automatic sync, or make private systems accessible to browser JS. Extend through a separately reviewed authorization and sanitization adapter; new public sources need a deliberate allowlist change.
+
+
+## V3.2 — controlled private-source candidate and Future board
+
+**Protected flow:** authorized private repository evidence → private reviewer ledger → Agent emits minimal sanitized `append kind=work` JSONL → `roadmap:intake --stage` (git-ignored candidate) → private reviewer verifies exact source revision, wording, disclosure scope, and `PUB-RM-*` receipt → human-authored Markdown/YAML public source → public Draft PR / exact-head build and browser check → separate merge/deploy authorization.
+
+The public repository must contain no private evidence links, source SHA, secrets, raw logs, or potentially exploitable security details. Public records can hold only an opaque `reviewReceipt`, with source mapping and actual reviewer decision stored privately. **Important:** receipt format validation alone does NOT prove approval because CI cannot read the private ledger. Do not call a self-asserted receipt independently verified. Human review of the private ledger is a necessary fail-closed release step.
+
+The four initial private-project updates passed an explicitly scoped redaction review in the protected ledger, then entered this public snapshot **only as approved minimal summaries with opaque `reviewReceipt` IDs**. Original private evidence remains exclusively in the protected workspace. **Never commit new, unapproved private progress candidates to a public branch, not even as `publication: draft`.** Each new disclosure needs its own approved wording and precise source review. Future uses an independent `phase: future` value, `schedule: null`, short bilingual descriptions and no implied committed delivery or existing implementation. Future appears on the board but is excluded from dated Gantt planning. Agent intake of new work is candidate-only and cannot issue its own receipt or mark itself approved.
+
+The file-based process supports reviewable real progress candidates now. It does NOT implement automatic source polling, webhook authenticity, source-checkout authorization, signing, remote event delivery or automatic synchronization; these can be connected through a later approved MAXWELL adapter without changing the public write boundary.

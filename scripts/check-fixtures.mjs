@@ -16,7 +16,7 @@ for (const [path, view] of pages) {
 const snapshot=JSON.parse(read('src/data/roadmap.generated.json'));
 assert.equal(snapshot.publicationStatus,'APPROVED_PUBLIC_SNAPSHOT');
 assert(snapshot.events.length>0&&snapshot.programs.length===5, 'Public data missing');
-assert(snapshot.workItems.every(x=>x.sources.length || x.phase==='planned'), 'Public facts must have provenance');
+assert(snapshot.workItems.every(x=>x.sources.length || x.phase==='planned' || x.phase==='future' || Boolean(x.reviewReceipt)), 'Public facts must have provenance');
 assert(snapshot.workItems.every(x=>x.schedule===null || x.schedule.kind==='observed' || x.schedule.kind==='tentative'), 'No invented committed dates');
 assert(!existsSync(resolve(root,'src/data/workstation-demo.ts')), 'Synthetic demo feed must be removed from production');
 assert(existsSync(resolve(root,'src/data/roadmap.generated.json')), 'Generated public data missing');
