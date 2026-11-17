@@ -1,0 +1,97 @@
+{
+  "schema": "public-roadmap/v1",
+  "revision": 1,
+  "publicationStatus": "APPROVED_PUBLIC_SOURCE",
+  "updatedAt": "2026-11-17T13:54:39Z",
+  "programs": [
+    {
+      "id": "PROTORHEXIS",
+      "code": "ORG-01",
+      "zh": "公共工程站点",
+      "en": "Public engineering web"
+    }
+  ],
+  "items": [
+    {
+      "id": "WEB-001",
+      "program": "PROTORHEXIS",
+      "titleZh": "路线图公开界面",
+      "titleEn": "Public roadmap interface",
+      "descZh": "公开仓库的 Astro/Vue 路线图初始版本；此项仅代表网站功能发布，不代表其他工程项目已交付。",
+      "descEn": "Initial Astro/Vue roadmap published in the public repository; this is not a release of other engineering systems.",
+      "start": "2026-11-16",
+      "end": "2026-11-16",
+      "stage": "published",
+      "stream": "infrastructure",
+      "deps": [],
+      "evidence": [
+        "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/1"
+      ]
+    },
+    {
+      "id": "WEB-002",
+      "program": "PROTORHEXIS",
+      "titleZh": "移动端及交互修复",
+      "titleEn": "Mobile and interaction fixes",
+      "descZh": "公开仓库 PR #2–#5 已合并，涵盖移动端、页面 Hydration 与图层交互。",
+      "descEn": "Public PRs #2–#5 merged, covering mobile, hydration and layer interactions.",
+      "start": "2026-11-16",
+      "end": "2026-11-17",
+      "stage": "published",
+      "stream": "infrastructure",
+      "deps": [
+        "WEB-001"
+      ],
+      "evidence": [
+        "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/5"
+      ]
+    },
+    {
+      "id": "WEB-003",
+      "program": "PROTORHEXIS",
+      "titleZh": "甘特图路由算法 V3.0",
+      "titleEn": "Gantt routing V3.0",
+      "descZh": "公开 PR #9 已合并；实现固定右侧出口、左侧入口及箭头端点退让。",
+      "descEn": "Public PR #9 merged; fixed right-side departure, left-side arrival and arrow setback.",
+      "start": "2026-11-17",
+      "end": "2026-11-17",
+      "stage": "published",
+      "stream": "infrastructure",
+      "deps": [
+        "WEB-002"
+      ],
+      "evidence": [
+        "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/9"
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": "WEB-EV-001",
+      "date": "2026-11-16",
+      "program": "PROTORHEXIS",
+      "kind": "milestone",
+      "titleZh": "公开路线图初版合并",
+      "titleEn": "Public roadmap first merged",
+      "descZh": "PR #1 合并至 main；只表示网站初版源码已合并。",
+      "descEn": "PR #1 merged to main; denotes source integration only.",
+      "evidence": [
+        "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/1"
+      ]
+    },
+    {
+      "id": "WEB-EV-002",
+      "date": "2026-11-17",
+      "program": "PROTORHEXIS",
+      "kind": "verification",
+      "titleZh": "路线图 V3.0 路由修复合并",
+      "titleEn": "Roadmap V3.0 routing merged",
+      "descZh": "PR #9 合并至 main，相关部署和测试结果以公开工作流为准。",
+      "descEn": "PR #9 merged to main; public workflow is the authority for deployment and tests.",
+      "evidence": [
+        "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/9",
+        "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/actions/runs/44097465815"
+      ]
+    }
+  ]
+}

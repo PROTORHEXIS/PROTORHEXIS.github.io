@@ -28,6 +28,7 @@ jobs:
         run: npm install --no-audit --no-fund
       - name: Verify public fixture and style constraints
         run: |
+          npm run check:content
           npm run check:fixtures
           npm run check:style
           npm run check:gantt
