@@ -143,53 +143,62 @@ test('system map uses real Vue Flow nodes and edges, not a CSS-only illustration
 });
 
 
-test('single optimized router removes both long U-turns and keeps arrows forward', async ({page}) => {
-  const errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+test('single B router uses invariant right/left ports, minimum bends and shortened stroke before arrowhead', async ({page}) => {
+  const errors=[]; page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('/roadmap/', {waitUntil:'domcontentloaded'});
   await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
   const layer=page.locator('.gantt-dependency-layer');
   await expect(layer).toBeVisible();
-  // The old A/B controls and persisted switch no longer exist.
   await expect(page.locator('[data-route-option],.gantt-route-selector')).toHaveCount(0);
-  await expect(page.getByRole('button',{name:/依赖关系|DEPENDENCIES/})).toBeVisible();
   const snapshot=await layer.evaluate(svg=>{
-    const result={};
-    for(const key of ['TAL-01>TAL-02','TAL-02>TES-02','TAL-02>TAL-03']){
+    const result={},r=svg.getBoundingClientRect();
+    const marker=svg.querySelector('#dep-arrow');
+    for(const key of ['TAL-01>TAL-02','MAX-01>MAX-02','TAL-02>TES-02','TAL-02>TAL-03','THO-01>THO-02','TES-01>TES-02']){
+      const [from,to]=key.split('>');
       const path=svg.querySelector(`path[data-dependency-key="${key}"]`);
-      if(!path)continue;
+      const trunk=svg.querySelector(`[data-dependency-trunk="${from}"]`);
+      if(!path||!trunk)continue;
       const len=path.getTotalLength(),start=path.getPointAtLength(0);
-      const end=path.getPointAtLength(len),before=path.getPointAtLength(Math.max(0,len-3));
-      const source=document.querySelector(`[data-gantt-id="${key.split('>')[0]}"]`);
-      const target=document.querySelector(`[data-gantt-id="${key.split('>')[1]}"]`);
-      const src=source.getBoundingClientRect(),dst=target.getBoundingClientRect();
-      const r=svg.getBoundingClientRect();
-      result[key]={len,startX:start.x+r.left,startY:start.y+r.top,
-        tipX:end.x+r.left,targetX:dst.left,dx:end.x-before.x,dy:end.y-before.y,
-        sourceRight:src.right,sourceLeft:src.left,sourceTop:src.top,sourceBottom:src.bottom,
-        trunk:!!svg.querySelector(`[data-dependency-trunk="${key.split('>')[0]}"]`),
-        marker:path.getAttribute('marker-end'),cap:getComputedStyle(path).strokeLinecap};
+      const end=path.getPointAtLength(len),prior=path.getPointAtLength(Math.max(0,len-3));
+      const s=document.querySelector(`[data-gantt-id="${from}"]`).getBoundingClientRect();
+      const t=document.querySelector(`[data-gantt-id="${to}"]`).getBoundingClientRect();
+      const trunkStart=trunk.getPointAtLength(0),trunkEnd=trunk.getPointAtLength(trunk.getTotalLength());
+      let minX=Infinity;for(let n=0;n<=len;n+=3)minX=Math.min(minX,path.getPointAtLength(n).x);
+      result[key]={
+        sourceRight:s.right,sourceCenterY:s.top+s.height/2,targetLeft:t.left,
+        trunkStartX:trunkStart.x+r.left,trunkStartY:trunkStart.y+r.top,
+        trunkEndX:trunkEnd.x+r.left,branchStartX:start.x+r.left,
+        strokeEndX:end.x+r.left,strokeEndY:end.y+r.top,
+        dx:end.x-prior.x,dy:end.y-prior.y,
+        bends:(path.getAttribute('d').match(/ Q /g)||[]).length,
+        minX:minX+r.left,cap:getComputedStyle(path).strokeLinecap,
+        marker:path.getAttribute('marker-end')
+      };
     }
-    return result;
+    return {result,marker:{units:marker.getAttribute('markerUnits'),refX:Number(marker.getAttribute('refX')),
+      tipX:Number(marker.querySelector('path').getAttribute('d').match(/L(\d+) 4/)[1])}};
   });
-  const near=snapshot['TAL-01>TAL-02'],far=snapshot['TAL-02>TES-02'],forward=snapshot['TAL-02>TAL-03'];
-  expect(near&&far&&forward).toBeTruthy();
-  // Both overlapping links now leave the source task's BOTTOM edge, not its
-  // far-right tip, eliminating the circled right jog and bottom-left U-turn.
-  for(const e of [near,far]){
-    expect(e.startX).toBeGreaterThan(e.sourceLeft+10);
-    expect(e.startX).toBeLessThan(e.sourceRight-10);
-    expect(Math.abs(e.startY-e.sourceBottom)).toBeLessThan(4);
-    expect(Math.abs(e.tipX-(e.targetX-6))).toBeLessThan(3);
+  expect(snapshot.marker.units).toBe('userSpaceOnUse');
+  expect(snapshot.marker.tipX-snapshot.marker.refX).toBe(8);
+  const cases=snapshot.result;
+  expect(Object.keys(cases)).toHaveLength(6);
+  for(const [key,e] of Object.entries(cases)) {
+    expect(Math.abs(e.trunkStartX-e.sourceRight)).toBeLessThan(3);
+    expect(Math.abs(e.trunkStartY-e.sourceCenterY)).toBeLessThan(3);
+    expect(e.trunkEndX-e.trunkStartX).toBeGreaterThan(10);
+    expect(Math.abs(e.branchStartX-e.trunkEndX)).toBeLessThan(3);
+    // 8px of marker, i.e. > half the arrow length, lies beyond the stroke endpoint.
+    expect(Math.abs(e.strokeEndX+8-(e.targetLeft-6))).toBeLessThan(3);
+    expect(e.targetLeft-e.strokeEndX).toBeGreaterThanOrEqual(12);
     expect(e.dx).toBeGreaterThan(2);
-    expect(Math.abs(e.dy)).toBeLessThan(.6);
+    expect(Math.abs(e.dy)).toBeLessThan(.8);
     expect(e.cap).toBe('butt');
     expect(e.marker).toContain('dep-arrow');
   }
-  expect(near.len).toBeLessThan(115); // used to make a multi-hundred-pixel U
-  expect(far.len).toBeLessThan(1200); // previously routed to nearly x=0
-  expect(forward.trunk).toBe(true); // normal finish-start still has a shared trunk
-  await page.screenshot({path:`test-results/v29-no-loops-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
-  // Existing dependency visibility remains functional.
+  for(const k of ['TAL-01>TAL-02','MAX-01>MAX-02'])expect(cases[k].bends).toBe(3);
+  for(const k of ['TAL-02>TAL-03','THO-01>THO-02','TES-01>TES-02'])expect(cases[k].bends).toBe(2);
+  expect(cases['TAL-02>TES-02'].minX).toBeGreaterThan(cases['TAL-02>TES-02'].targetLeft-155);
+  await page.screenshot({path:`test-results/v30-right-left-arrow-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
   await page.getByRole('button',{name:/依赖关系|DEPENDENCIES/}).click();
   await expect(layer).toHaveCount(0);
   expect(errors).toEqual([]);
