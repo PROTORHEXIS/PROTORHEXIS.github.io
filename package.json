@@ -13,7 +13,8 @@
     "check:layers": "node scripts/check-layers.mjs",
     "check:v25": "node scripts/check-v25.mjs",
     "test:e2e": "playwright test",
-    "check:v26": "node scripts/check-v26.mjs"
+    "check:v26": "node scripts/check-v26.mjs",
+    "check:v27": "node --experimental-strip-types scripts/check-v27.mjs"
   },
   "dependencies": {
     "astro": "^7.4.0",

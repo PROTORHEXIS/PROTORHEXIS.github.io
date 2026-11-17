@@ -4,7 +4,7 @@ import { AnimatePresence, motion } from 'motion-v';
 import { usePublicLocale } from './usePublicLocale';
 import EngineeringIcon from './EngineeringIcon.vue';
 import { demoItems, demoEvents, demoPrograms, type WorkItem, type ProgramId, type PublicEvent, type Stage, type Stream } from '../../data/workstation-demo';
-import { monthIndex, monthString, validateWindow, windowEnds, axisTicks, barPosition, visibleRows, dependencyPaths } from '../../lib/gantt';
+import { monthIndex, monthString, validateWindow, windowEnds, axisTicks, barPosition, visibleRows, dependencyPaths, type RouteMode } from '../../lib/gantt';
 
 const props = defineProps<{ view: 'schedule' | 'board' | 'activity' | 'systems' }>();
 const graphComponent = shallowRef<Component | null>(null);
@@ -103,6 +103,10 @@ function onKeydown(event: KeyboardEvent) {
 }
 onMounted(() => {
   portalReady.value = true;
+  try {
+    const saved=window.localStorage.getItem('protorhexis-roadmap-route-v1');
+    if(saved==='standard'||saved==='optimized') dependencyRouteMode.value=saved;
+  } catch { /* storage may be unavailable */ }
   viewportQuery = window.matchMedia('(max-width: 1050px)');
   motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
   onViewportChange(); onMotionChange();
@@ -186,6 +190,15 @@ watch(locale,()=>nextTick(measureGanttLabels));
 
 let resizeObserver: ResizeObserver | null = null;
 const showDependencies = ref(true);
+// Both dependency routing modes are real geometries, not merely color variants.
+// The more defensive channel router is the default. Persist only after mount.
+const dependencyRouteMode = ref<RouteMode>('optimized');
+function setDependencyRouteMode(next: RouteMode) {
+  dependencyRouteMode.value = next;
+  if (typeof window !== 'undefined') {
+    try { window.localStorage.setItem('protorhexis-roadmap-route-v1',next); } catch { /* private browsing */ }
+  }
+}
 const hoveredId = ref<string | null>(null);
 let pan: { id:number; pointerX:number; scrollLeft:number; dragged:boolean } | null = null;
 const expanded = ref<Record<string, boolean>>({});
@@ -270,7 +283,7 @@ const currentLine=computed(()=>{
 });
 const ganttLayout=computed(()=>visibleRows(grouped.value,expanded.value));
 const focusedId=computed(()=>hoveredId.value || (chosenItem.value ? selectedId.value : null));
-const dependencyEdges=computed(()=>dependencyPaths(grouped.value, expanded.value, calendarWindow.value, trackWidth.value,focusedId.value));
+const dependencyEdges=computed(()=>dependencyPaths(grouped.value, expanded.value, calendarWindow.value, trackWidth.value,focusedId.value,dependencyRouteMode.value));
 function panStart(event:PointerEvent) {
   if (event.pointerType==='touch' || (event.pointerType==='mouse' && event.button !== 0)) return;
   const el=event.target;
@@ -360,14 +373,21 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
               <button v-for="m in presets" :key="m" type="button" :class="{current:activePreset===`${m}m`}" :aria-pressed="activePreset===`${m}m`" @click="setPreset(m)">{{m}}M</button>
               <button ref="rangeTrigger" type="button" class="gantt-range-trigger" :class="{current:activePreset==='custom'}" :aria-expanded="showRangePanel" aria-controls="gantt-range-panel" aria-haspopup="dialog" @click="toggleRangePanel"><EngineeringIcon name="expand" />{{tr('自定义','CUSTOM')}}</button>
             </div>
-            <button type="button" class="gantt-dep-toggle" :aria-pressed="showDependencies" @click="showDependencies=!showDependencies"><span class="ws-dep-dot"></span>{{tr('依赖关系','DEPENDENCIES')}}<strong>{{showDependencies?tr('显示','ON'):tr('隐藏','OFF')}}</strong></button>
+            <div class="gantt-route-tools">
+              <button type="button" class="gantt-dep-toggle" :aria-pressed="showDependencies" @click="showDependencies=!showDependencies"><span class="ws-dep-dot"></span>{{tr('依赖关系','DEPENDENCIES')}}<strong>{{showDependencies?tr('显示','ON'):tr('隐藏','OFF')}}</strong></button>
+              <div class="gantt-route-selector" role="group" :aria-label="tr('依赖线路径方案','Dependency routing style')">
+                <span class="gantt-route-label" aria-hidden="true">ROUTE</span>
+                <button type="button" data-route-option="standard" :aria-pressed="dependencyRouteMode==='standard'" :class="{current:dependencyRouteMode==='standard'}" :title="tr('A：标准正交折线','A: Clean orthogonal elbows')" @click="setDependencyRouteMode('standard')">A <span>{{tr('直角','Classic')}}</span></button>
+                <button type="button" data-route-option="optimized" :aria-pressed="dependencyRouteMode==='optimized'" :class="{current:dependencyRouteMode==='optimized'}" :title="tr('B：避让任务条、分流并柔化拐角','B: Obstacle-aware lanes and rounded elbows')" @click="setDependencyRouteMode('optimized')">B <span>{{tr('避让','Routed')}}</span></button>
+              </div>
+            </div>
           </div>
           <div ref="ganttViewport" class="gantt-viewport" tabindex="0" :aria-label="tr('可横向滚动的只读甘特排期图','Scrollable read-only Gantt timeline')" @pointerdown="panStart" @pointermove="panMove" @pointerup="panEnd" @pointercancel="panEnd" @lostpointercapture="panEnd">
             <div class="gantt-canvas" :style="{'--tick-count':unitCount,'--gantt-label-width':`${labelWidth}px`,'--gantt-masked-height':`${ganttLayout.height+56}px`,minWidth:`${gridMinWidth}px`}"><div class="gantt-label-mask" aria-hidden="true"></div>
               <div class="gantt-head"><div class="gantt-head-name"><strong>{{tr('工作项 / 交付物','WORK PACKAGE / DELIVERABLE')}}</strong><small>WBS INDEX</small></div><div class="gantt-axis"><span v-for="(tick,i) in ticks" :key="i" :style="{width:`${tick.width}%`,flex:`0 0 ${tick.width}%`}">{{tick.label}}</span></div></div>
-              <svg v-if="showDependencies && dependencyEdges.length" class="gantt-dependency-layer" :viewBox="`0 0 ${trackWidth} ${ganttLayout.height}`" :style="{height:`${ganttLayout.height}px`}" preserveAspectRatio="none" aria-hidden="true">
-                <defs><marker id="dep-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#777781"/></marker><marker id="dep-arrow-active" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 Z" fill="#ff453a"/></marker></defs>
-                <path v-for="edge in dependencyEdges" :key="edge.key" :d="edge.d" :class="{active:edge.active}" :marker-end="edge.active?'url(#dep-arrow-active)':'url(#dep-arrow)'"/>
+              <svg v-if="showDependencies && dependencyEdges.length" class="gantt-dependency-layer" :data-route-mode="dependencyRouteMode" :viewBox="`0 0 ${trackWidth} ${ganttLayout.height}`" :style="{height:`${ganttLayout.height}px`}" preserveAspectRatio="none" aria-hidden="true">
+                <defs><marker id="dep-arrow" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 1 L8 4 L0 7 Z" fill="#777781"/></marker><marker id="dep-arrow-active" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 1 L8 4 L0 7 Z" fill="#ff453a"/></marker></defs>
+                <path v-for="edge in dependencyEdges" :key="edge.key" :data-dependency-key="edge.key" :d="edge.d" :class="{active:edge.active}" :marker-end="edge.active?'url(#dep-arrow-active)':'url(#dep-arrow)'"/>
               </svg>
               <template v-for="group in grouped" :key="group.id">
                 <button class="gantt-group" type="button" @click="toggleGroup(group.id)" :aria-expanded="groupExpanded(group.id)"><span class="gantt-group-name"><span class="chevron" :class="{collapsed:!groupExpanded(group.id)}"><EngineeringIcon name="expand" :key="`${group.id}:${groupExpanded(group.id)}`" /></span><strong>{{group.id}}</strong><small>{{tr(group.zh,group.en)}}</small></span><span class="gantt-group-suffix">{{group.items.length}} {{tr('个工作项','WORK ITEMS')}}</span></button>

@@ -34,6 +34,7 @@ jobs:
           npm run check:layers
           npm run check:v25
           npm run check:v26
+          npm run check:v27
       - name: Build Astro static site
         run: npm run build
       - name: Install Playwright Chromium for real SSR hydration checks

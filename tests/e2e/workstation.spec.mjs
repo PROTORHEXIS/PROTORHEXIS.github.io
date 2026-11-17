@@ -141,3 +141,56 @@ test('system map uses real Vue Flow nodes and edges, not a CSS-only illustration
   await page.screenshot({path:`test-results/v26-systems-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
   expect(errors).toEqual([]);
 });
+
+
+test('two Gantt route modes switch without reversed arrowheads or layout shifts', async ({page}) => {
+  const errors=[];page.on('pageerror',e=>errors.push(e.message));
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const layer=page.locator('.gantt-dependency-layer');
+  const edge=layer.locator('path[data-dependency-key="TAL-01>TAL-02"]');
+  await expect(edge).toBeAttached();
+  const standard=page.locator('[data-route-option="standard"]');
+  const optimized=page.locator('[data-route-option="optimized"]');
+  await expect(standard).toBeVisible();
+  await expect(optimized).toBeVisible();
+  await expect(layer).toHaveAttribute('data-route-mode','optimized');
+  const viewport=page.locator('.gantt-viewport');
+  const startingScroll=await viewport.evaluate(el=>el.scrollLeft);
+  async function geometry() {
+    return await edge.evaluate(el=>{
+      const total=el.getTotalLength();
+      const end=el.getPointAtLength(total);
+      const before=el.getPointAtLength(Math.max(0,total-3));
+      const layer=el.ownerSVGElement;
+      const bar=document.querySelector('[data-gantt-id="TAL-02"]');
+      return {d:el.getAttribute('d'), deltaX:end.x-before.x,deltaY:end.y-before.y,
+        tipX:end.x+layer.getBoundingClientRect().left, targetX:bar.getBoundingClientRect().left,
+        marker:el.getAttribute('marker-end')};
+    });
+  }
+  const advanced=await geometry();
+  expect(advanced.d).toContain(' Q ');
+  expect(advanced.deltaX).toBeGreaterThan(2);
+  expect(Math.abs(advanced.deltaY)).toBeLessThan(0.5);
+  expect(Math.abs(advanced.tipX-(advanced.targetX-6))).toBeLessThan(3);
+  expect(advanced.marker).toContain('dep-arrow');
+  await page.screenshot({path:`test-results/v27-route-B-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
+  await standard.click();
+  await expect(layer).toHaveAttribute('data-route-mode','standard');
+  await expect(standard).toHaveAttribute('aria-pressed','true');
+  const classic=await geometry();
+  expect(classic.d).not.toEqual(advanced.d);
+  expect(classic.d).not.toContain(' Q ');
+  expect(classic.deltaX).toBeGreaterThan(2);
+  expect(Math.abs(classic.deltaY)).toBeLessThan(0.5);
+  expect(Math.abs(classic.tipX-(classic.targetX-6))).toBeLessThan(3);
+  expect(await viewport.evaluate(el=>el.scrollLeft)).toBe(startingScroll);
+  await page.screenshot({path:`test-results/v27-route-A-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
+  await page.reload({waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  await expect(page.locator('.gantt-dependency-layer')).toHaveAttribute('data-route-mode','standard');
+  await page.locator('[data-route-option="optimized"]').click();
+  await expect(page.locator('.gantt-dependency-layer')).toHaveAttribute('data-route-mode','optimized');
+  expect(errors).toEqual([]);
+});
