@@ -111,3 +111,10 @@ This package has not passed a full `npm install` / Astro build in the assistant 
 - Brand image is a replaceable placeholder at `public/brand/mark.svg`.
 - Internal links to the unfinished institutional homepage (`/`) are removed; direct URL still serves its construction screen.
 - `npm run check:v28` and Chromium E2E tests protect these invariants.
+
+### V3.0 Dependency routing (single B engine)
+
+- Ports are invariant: predecessor **right-side center** to successor **left-side center**, even when schedule windows overlap.
+- Orthogonal visibility-grid Dijkstra minimizes turns first, then travel length, within a locally bounded obstacle-free search; expand bounds only if needed.
+- Shared 14px exit trunk. Marker stroke stops 8px before its tip; tip stops 6px before the successor bar.
+- Synthetic milestone and relationship fixtures remain DEMO only.

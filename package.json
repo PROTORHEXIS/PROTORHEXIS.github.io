@@ -1,6 +1,6 @@
 {
   "name": "protorhexis-public-web",
-  "version": "0.2.9",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -14,7 +14,8 @@
     "check:v25": "node scripts/check-v25.mjs",
     "test:e2e": "playwright test",
     "check:v26": "node scripts/check-v26.mjs",
-    "check:v29": "node --experimental-strip-types scripts/check-v29.mjs"
+    "check:v29": "node --experimental-strip-types scripts/check-v29.mjs",
+    "check:v30": "node --experimental-strip-types scripts/check-v30.mjs"
   },
   "dependencies": {
     "astro": "^7.4.0",

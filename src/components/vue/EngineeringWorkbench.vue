@@ -270,7 +270,9 @@ const currentLine=computed(()=>{
 });
 const ganttLayout=computed(()=>visibleRows(grouped.value,expanded.value));
 const focusedId=computed(()=>hoveredId.value || (chosenItem.value ? selectedId.value : null));
-const dependencyEdges=computed(()=>dependencyPaths(grouped.value, expanded.value, calendarWindow.value, trackWidth.value,focusedId.value));
+// Compute geometry only when bars, dates or visibility change, never on mouse hover.
+const routingEdges=computed(()=>dependencyPaths(grouped.value, expanded.value, calendarWindow.value, trackWidth.value,null));
+const dependencyEdges=computed(()=>routingEdges.value.map(edge=>({...edge,active:focusedId.value===edge.from||focusedId.value===edge.to})));
 const dependencyTrunks = computed(() => {
   const trunks = new Map<string,{key:string;d:string;active:boolean}>();
   for (const edge of dependencyEdges.value) {
@@ -376,7 +378,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
             <div class="gantt-canvas" :style="{'--tick-count':unitCount,'--gantt-label-width':`${labelWidth}px`,'--gantt-masked-height':`${ganttLayout.height+56}px`,minWidth:`${gridMinWidth}px`}"><div class="gantt-label-mask" aria-hidden="true"></div>
               <div class="gantt-head"><div class="gantt-head-name"><strong>{{tr('工作项 / 交付物','WORK PACKAGE / DELIVERABLE')}}</strong><small>WBS INDEX</small></div><div class="gantt-axis"><span v-for="(tick,i) in ticks" :key="i" :style="{width:`${tick.width}%`,flex:`0 0 ${tick.width}%`}">{{tick.label}}</span></div></div>
               <svg v-if="showDependencies && dependencyEdges.length" class="gantt-dependency-layer" :viewBox="`0 0 ${trackWidth} ${ganttLayout.height}`" :style="{height:`${ganttLayout.height}px`}" preserveAspectRatio="none" aria-hidden="true">
-                <defs><marker id="dep-arrow" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 1 L8 4 L0 7 Z" fill="#777781"/></marker><marker id="dep-arrow-active" markerUnits="userSpaceOnUse" viewBox="0 0 8 8" refX="8" refY="4" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 1 L8 4 L0 7 Z" fill="#ff453a"/></marker></defs>
+                <defs><marker id="dep-arrow" markerUnits="userSpaceOnUse" viewBox="0 0 10 8" refX="1" refY="4" markerWidth="10" markerHeight="8" orient="auto"><path d="M1 1 L9 4 L1 7 Z" fill="#777781"/></marker><marker id="dep-arrow-active" markerUnits="userSpaceOnUse" viewBox="0 0 10 8" refX="1" refY="4" markerWidth="10" markerHeight="8" orient="auto"><path d="M1 1 L9 4 L1 7 Z" fill="#ff453a"/></marker></defs>
                 <path v-for="trunk in dependencyTrunks" :key="`trunk-${trunk.key}`" class="gantt-dependency-trunk" :data-dependency-trunk="trunk.key" :class="{active:trunk.active}" :d="trunk.d" />
                 <path v-for="edge in dependencyEdges" :key="edge.key" :data-dependency-key="edge.key" :d="edge.d" :class="{active:edge.active}" :marker-end="edge.active?'url(#dep-arrow-active)':'url(#dep-arrow)'"/>
               </svg>
