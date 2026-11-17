@@ -16,7 +16,14 @@ assert.equal(new Set(reviewed.map(x=>x.reviewReceipt)).size,4,'Duplicate review 
 assert(reviewed.every(x=>x.publication==='approved' && !x.sources.length && x.schedule===null),'No raw/private source or invented schedule');
 assert.deepEqual(reviewed.map(x=>x.id).sort(),['MAX-PROGRESS-001','TAL-PROGRESS-001','TES-PROGRESS-001','THO-PROGRESS-001']);
 assert.equal(s.events.length,4);
-assert.equal(s.relations.length,0);
+assert.equal(s.relations.length,4);
+assert.deepEqual(s.relations.map(r=>r.id),['REL-ORG-MAXWELL','REL-ORG-TALOS','REL-ORG-TESSERACT','REL-ORG-THOULESS']);
+assert(s.relations.every(r=>r.publication==='approved' && r.kind==='contains' && r.from==='PROTORHEXIS' && r.to!=='PROTORHEXIS'));
+assert.equal(new Set(s.relations.map(r=>r.to)).size,4,'Every target must be unique');
+assert(s.relations.every(r=>r.sources.length>0 && r.sources.every(src=>{
+  const u=new URL(src.url);
+  return u.hostname==='github.com' && /^\/PROTORHEXIS\/(?:\.github|PROTORHEXIS\.github\.io)\//.test(u.pathname);
+})),'Organizational relations must have allowlisted public sources');
 assert(s.workItems.some(x=>x.schedule===null && x.phase==='planned'));
 assert(s.workItems.some(x=>x.program==='TALOS') && s.workItems.some(x=>x.program==='MAXWELL'));
 assert.equal(s.workItems.filter(x=>x.id.endsWith('PROGRESS-001')).length,4);

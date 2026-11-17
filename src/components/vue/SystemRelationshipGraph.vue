@@ -4,7 +4,7 @@ import { VueFlow, Position, Handle, type Node, type Edge } from '@vue-flow/core'
 import '@vue-flow/core/dist/style.css';
 
 interface Program { id:string; code:string; zh:string; en:string }
-interface Relation { id:string; from:string; to:string; kind:'contains'|'depends_on'|'integrates_with'; publication:'approved'|'draft' }
+interface Relation { id:string; from:string; to:string; kind:string; publication:string }
 const props = defineProps<{ programs:Program[]; relations:Relation[]; locale:'zh'|'en'; activeProgram:string }>();
 const emit = defineEmits<{ select:[id:string] }>();
 const compact = ref(false);
