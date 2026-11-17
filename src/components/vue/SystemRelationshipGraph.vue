@@ -21,14 +21,12 @@ const graphNodes = computed<Node[]>(() => [
     data:{id:p.id,code:p.code,zh:p.zh,en:p.en},
   }))
 ]);
-const graphEdges = shallowRef<Edge[]>(props.programs.filter(p=>p.id!=='PROTORHEXIS').map(p=>({
-  id:`illustrative-${p.id}`,source:'PROTORHEXIS',target:p.id,type:'smoothstep',
-  animated:false, selectable:false,style:{stroke:'#66636a',strokeWidth:1.5}
-})));
+// No approved evidence of cross-system interfaces: render nodes without invented links.
+const graphEdges = shallowRef<Edge[]>([]);
 </script>
 
 <template>
-  <div class="system-graph" role="region" :aria-label="locale==='zh'?'可缩放的示例系统关系图':'Zoomable illustrative system relationship graph'">
+  <div class="system-graph" role="region" :aria-label="locale==='zh'?'公开项目索引图（关系待审查）':'Public project index; no unverified connections'">
     <div class="system-graph-tools"><span>VUE FLOW / READ ONLY</span><span>{{locale==='zh'?'拖动画布平移 · 滚动页面不缩放':'Drag canvas to pan · Page scroll does not zoom'}}</span></div>
     <div class="system-graph-viewport">
       <VueFlow :key="compact?'vertical':'wide'" :nodes="graphNodes" :edges="graphEdges" :fit-view-on-init="true" :min-zoom="compact?0.25:0.45" :max-zoom="1.5"

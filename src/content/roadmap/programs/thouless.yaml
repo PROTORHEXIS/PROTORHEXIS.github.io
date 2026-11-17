@@ -1,0 +1,19 @@
+{
+  "id": "THOULESS",
+  "code": "PRD-01",
+  "title": {
+    "zh": "租赁产品",
+    "en": "Rental product"
+  },
+  "description": {
+    "zh": "项目索引条目；没有经审查的公开里程碑或排期。",
+    "en": "Project index entry; no approved public milestone or schedule."
+  },
+  "publication": "approved",
+  "order": 2,
+  "sources": [
+    {
+      "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/pull/1"
+    }
+  ]
+}

@@ -3,13 +3,13 @@ import { computed, ref, nextTick, onMounted, onBeforeUnmount, watch, shallowRef,
 import { AnimatePresence, motion } from 'motion-v';
 import { usePublicLocale } from './usePublicLocale';
 import EngineeringIcon from './EngineeringIcon.vue';
-import { demoItems, demoEvents, demoPrograms, type WorkItem, type ProgramId, type PublicEvent, type Stage, type Stream } from '../../data/workstation-demo';
+import { publicSnapshot, publicItems, publicEvents, publicPrograms, type WorkItem, type ProgramId, type PublicEvent, type Stage, type Stream } from '../../data/workstation-public';
 import { monthIndex, monthString, validateWindow, windowEnds, axisTicks, barPosition, visibleRows, dependencyPaths } from '../../lib/gantt';
 
 const props = defineProps<{ view: 'schedule' | 'board' | 'activity' | 'systems' }>();
 const graphComponent = shallowRef<Component | null>(null);
 const labelWidth = ref(256);
-function selectGraphProgram(id:string) { if (id==='all' || demoPrograms.some(p=>p.id===id)) switchProgram(id as ProgramId|'all'); }
+function selectGraphProgram(id:string) { if (id==='all' || publicPrograms.some(p=>p.id===id)) switchProgram(id as ProgramId|'all'); }
 
 const { locale } = usePublicLocale();
 const tr = (zh: string, en: string) => locale.value === 'zh' ? zh : en;
@@ -18,7 +18,7 @@ const search = ref('');
 const stream = ref<'all' | Stream>('all');
 const eventKind = ref<'all' | PublicEvent['kind']>('all');
 const eventKinds: Array<'all' | PublicEvent['kind']> = ['all','milestone','verification','decision'];
-const selectedId = ref(props.view === 'activity' ? 'EV-01' : 'TAL-01');
+const selectedId = ref(props.view === 'activity' ? (publicEvents[0]?.id??'') : (publicItems[0]?.id??''));
 const inspectorOpen = ref(false);
 const isNarrow = ref(false);
 const reducedMotion = ref(true); // Safe SSR default until the media query is known.
@@ -174,7 +174,7 @@ function measureGanttLabels() {
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
   ctx.font = strong ? getComputedStyle(strong).font : '500 12px Inter';
-  const titles = demoItems.map(item => tr(item.titleZh,item.titleEn));
+  const titles = publicItems.map(item => tr(item.titleZh,item.titleEn));
   const widest = titles.reduce((max,title)=>Math.max(max,ctx.measureText(title).width),0);
   const needed = Math.ceil(Math.max(156,widest + 34));
   const narrow = window.matchMedia('(max-width:740px)').matches;
@@ -200,27 +200,27 @@ const stageName = (stage: Stage) => { const s = stages.find(x => x.id === stage)
 const streamName = (s: Stream) => ({platform:tr('平台','PLATFORM'),product:tr('产品','PRODUCT'),infrastructure:tr('基础设施','INFRASTRUCTURE')})[s];
 const eventName = (k:PublicEvent['kind']) => ({milestone:tr('里程碑','MILESTONE'),verification:tr('验证','VERIFICATION'),decision:tr('决策变更','DECISION')})[k];
 const panelTitle = computed(() => ({schedule:tr('开发排期','Development schedule'),board:tr('交付状态看板','Release status board'),activity:tr('事件与证据轨迹','Activity & evidence trail'),systems:tr('系统关系图谱','System relationship map')})[props.view]);
-const panelSubtitle = computed(() => ({schedule:tr('时间窗口表示开发计划，并非发布日期承诺','Planning windows are not release-date commitments'),board:tr('按公开交付阶段组织，非内部 Issue 状态','Grouped by public delivery stage, not internal issue state'),activity:tr('按实际发生顺序追溯变更与核验','Trace change and verification events chronologically'),systems:tr('跨系统关系与依赖结构（示例）','Cross-system relations and dependencies (demo)')})[props.view]);
+const panelSubtitle = computed(() => ({schedule:tr('仅展示已核验的公开记录；历史 PR 日期不是未来交付承诺','Verified public records only; historical PR dates are not future release commitments'),board:tr('按公开交付阶段组织，非内部 Issue 状态','Grouped by public delivery stage, not internal issue state'),activity:tr('按实际发生顺序追溯变更与核验','Trace change and verification events chronologically'),systems:tr('公开项目索引；未审查的系统依赖不予绘制','Public project index; unreviewed system dependencies are not drawn')})[props.view]);
 const matching = (zh:string,en:string) => `${zh} ${en}`.toLowerCase().includes(search.value.trim().toLowerCase());
-const visibleItems = computed(() => demoItems.filter(item =>
+const visibleItems = computed(() => publicItems.filter(item =>
   (activeProgram.value==='all' || item.program===activeProgram.value) &&
   (stream.value==='all' || item.stream===stream.value) &&
   (!search.value || matching(item.titleZh+' '+item.id+' '+item.program,item.titleEn))
 ));
-const visibleEvents = computed(() => demoEvents.filter(event =>
+const visibleEvents = computed(() => publicEvents.filter(event =>
   (activeProgram.value==='all' || event.program===activeProgram.value) &&
   (eventKind.value==='all' || event.kind===eventKind.value) &&
   (!search.value || matching(event.titleZh+' '+event.id+' '+event.program,event.titleEn))
 ));
-const chosenItem = computed(() => demoItems.find(x => x.id === selectedId.value) ?? null);
-const chosenEvent = computed(() => demoEvents.find(x => x.id === selectedId.value) ?? null);
-const chosenProgram = computed(() => demoPrograms.find(x => x.id === activeProgram.value) ?? null);
-const dependents = computed(() => chosenItem.value ? demoItems.filter(x => x.deps.includes(chosenItem.value!.id)) : []);
+const chosenItem = computed(() => publicItems.find(x => x.id === selectedId.value) ?? null);
+const chosenEvent = computed(() => publicEvents.find(x => x.id === selectedId.value) ?? null);
+const chosenProgram = computed(() => publicPrograms.find(x => x.id === activeProgram.value) ?? null);
+const dependents = computed(() => chosenItem.value ? publicItems.filter(x => x.deps.includes(chosenItem.value!.id)) : []);
 function select(id:string) { if (document.activeElement instanceof HTMLElement) returnFocus = document.activeElement; selectedId.value=id; inspectorOpen.value=true; }
 function switchProgram(id:ProgramId|'all') { activeProgram.value=id; selectedId.value=''; inspectorOpen.value=false; closeRangePanel(); }
 function toggleGroup(id:string) { expanded.value[id] = expanded.value[id] === false ? true : false; }
 function groupExpanded(id:string) { return expanded.value[id] !== false; }
-const grouped = computed(() => demoPrograms.map(prog => ({...prog, items: visibleItems.value.filter(item=>item.program===prog.id)})).filter(group=>group.items.length));
+const grouped = computed(() => publicPrograms.map(prog => ({...prog, items: visibleItems.value.filter(item=>item.program===prog.id)})).filter(group=>group.items.length));
 const totalCount = computed(()=>props.view==='activity'? visibleEvents.value.length:visibleItems.value.length);
 const windowBounds = computed(() => windowEnds(calendarWindow.value));
 const ticks = computed(() => axisTicks(calendarWindow.value, zoom.value));
@@ -229,7 +229,7 @@ const gridMinWidth = computed(() => labelWidth.value + Math.max(8,unitCount.valu
 const rangeStart = computed(() => windowBounds.value.start);
 const rangeEnd = computed(() => windowBounds.value.end);
 function durationPosition(item:WorkItem) {
-  const bar = barPosition(item, calendarWindow.value);
+  const bar = item.start && item.end ? barPosition({start:item.start,end:item.end}, calendarWindow.value) : {hidden:true,left:0,width:0,right:0};
   return { hidden:bar.hidden, left:`${bar.left}%`, width:`${Math.max(0.6,bar.width)}%` };
 }
 function setPreset(months: 6 | 12 | 24) {
@@ -265,7 +265,7 @@ const rangeLabel=computed(()=>{
 });
 // Fixed reference date for a synthetic 2026 fixture, NOT today's actual date.
 const currentLine=computed(()=>{
-  const t=Date.UTC(2026,10,16);
+  const t=Date.parse(`${publicSnapshot.updatedAt ?? '2026-11-17'}T00:00:00Z`);
   return t >= rangeStart.value && t < rangeEnd.value?`${((t-rangeStart.value)/(rangeEnd.value-rangeStart.value))*100}%`:null;
 });
 const ganttLayout=computed(()=>visibleRows(grouped.value,expanded.value));
@@ -304,12 +304,13 @@ function panEnd(event:PointerEvent) {
   pan=null;
 }
 async function focusItem(id:string) {
-  const item=demoItems.find(x=>x.id===id);
+  const item=publicItems.find(x=>x.id===id);
   if (!item) return;
   if (activeProgram.value!=='all' && activeProgram.value!==item.program) activeProgram.value='all';
   if (stream.value!=='all' && stream.value!==item.stream) stream.value='all';
   search.value='';
   expanded.value[item.program]=true;
+  if(!item.start || !item.end) { selectedId.value=id; inspectorOpen.value=true; return; }
   const itemStart=Date.parse(`${item.start}T00:00:00Z`);
   const itemEnd=Date.parse(`${item.end}T00:00:00Z`);
   if (itemStart>=rangeEnd.value || itemEnd<rangeStart.value) {
@@ -332,14 +333,14 @@ async function focusItem(id:string) {
     }
   }
 }
-function fmtDate(s:string) { return s.replaceAll('-','.'); }
-function filteredCount(program:ProgramId){return demoItems.filter(x=>x.program===program).length;}
+function fmtDate(s:string|null) { return s ? s.replaceAll('-','.') : tr('未确定','NOT SCHEDULED'); }
+function filteredCount(program:ProgramId){return publicItems.filter(x=>x.program===program).length;}
 const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visibleItems.value.map(x=>x.program)).size,events:visibleEvents.value.length}));
 </script>
 
 <template>
   <section class="workbench" :data-view="view">
-    <div class="ws-notice"><span class="notice-indicator"><EngineeringIcon name="warning" /></span><strong>DEMONSTRATION DATA</strong><span>{{tr('当前所有日期、状态与事件均为界面测试样本，不代表 PROTORHEXIS 真实进度或发布承诺。','All dates, stages and events are synthetic UI fixtures, not real project progress or release commitments.')}}</span><span class="notice-tag">NOT VERIFIED</span></div>
+    <div class="ws-notice"><span class="notice-indicator"><EngineeringIcon name="warning" /></span><strong>VERIFIED PUBLIC RECORDS</strong><span>{{tr('只展示有公开来源的工程事实与明确标注的未来方向；其他项目进度尚未公开。历史 PR 日期不是交付承诺。','Publicly evidenced facts and clearly marked future directions only. Other projects have no published progress. Historical PR dates are not commitments.')}}</span><span class="notice-tag">PARTIAL COVERAGE</span></div>
     <div class="ws-commandbar">
       <div class="ws-command-title"><small>{{({schedule:'01 / PLANNING',board:'02 / DELIVERABLES',activity:'03 / HISTORY',systems:'04 / ARCHITECTURE'})[view]}}</small><h1>{{panelTitle}}</h1><p>{{panelSubtitle}}</p></div>
       <div class="ws-tools">
@@ -350,12 +351,12 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
     </div>
     <div class="ws-content-grid">
       <aside class="ws-project-index" :aria-label="tr('项目索引','Project index')">
-        <div class="rail-title"><span>PROJECT INDEX</span><span>05 / SYS</span></div>
-        <button class="rail-item" :class="{'is-current':activeProgram==='all'}" @click="switchProgram('all')"><span class="rail-symbol rail-symbol-all">✳</span><span class="rail-copy"><strong>{{tr('全部系统','ALL SYSTEMS')}}</strong><small>OVERVIEW / ALL</small></span><span class="rail-count">{{demoItems.length.toString().padStart(2,'0')}}</span></button>
+        <div class="rail-title"><span>PROJECT INDEX</span><span>{{String(publicPrograms.length).padStart(2,'0')}} / SYS</span></div>
+        <button class="rail-item" :class="{'is-current':activeProgram==='all'}" @click="switchProgram('all')"><span class="rail-symbol rail-symbol-all">✳</span><span class="rail-copy"><strong>{{tr('全部系统','ALL SYSTEMS')}}</strong><small>OVERVIEW / ALL</small></span><span class="rail-count">{{publicItems.length.toString().padStart(2,'0')}}</span></button>
         <div class="rail-separator">{{tr('系统与产品','SYSTEMS & PRODUCTS')}}</div>
-        <button v-for="program in demoPrograms" :key="program.id" class="rail-item" :class="{'is-current':activeProgram===program.id}" @click="switchProgram(program.id)"><span class="rail-symbol">{{program.id.slice(0,1)}}</span><span class="rail-copy"><strong>{{program.id}}</strong><small>{{tr(program.zh,program.en)}}</small></span><span class="rail-count">{{filteredCount(program.id).toString().padStart(2,'0')}}</span></button>
-        <div class="rail-block"><div class="rail-block-title">DATA SCOPE</div><div class="rail-block-value"><span class="ws-signal"></span> PUBLIC / SYNTHETIC</div><p>{{tr('公开页面仅读取独立的脱敏数据模型，不能直接读取内部仓库。','Public pages must use an independent reviewed feed, never internal repository access.')}}</p></div>
-        <div class="rail-bottom"><span>INDEX REV. 003</span><span>PROTORHEXIS</span></div>
+        <button v-for="program in publicPrograms" :key="program.id" class="rail-item" :class="{'is-current':activeProgram===program.id}" @click="switchProgram(program.id)"><span class="rail-symbol">{{program.id.slice(0,1)}}</span><span class="rail-copy"><strong>{{program.id}}</strong><small>{{tr(program.zh,program.en)}}</small></span><span class="rail-count">{{filteredCount(program.id).toString().padStart(2,'0')}}</span></button>
+        <div class="rail-block"><div class="rail-block-title">DATA SCOPE</div><div class="rail-block-value"><span class="ws-signal"></span> PUBLIC / REVIEWED</div><p>{{tr('公开页面仅读取独立的脱敏数据模型，不能直接读取内部仓库。','Public pages must use an independent reviewed feed, never internal repository access.')}}</p></div>
+        <div class="rail-bottom"><span>INDEX REV. 004</span><span>PROTORHEXIS</span></div>
       </aside>
 
       <div class="ws-primary">
@@ -363,7 +364,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
           <div v-if="view==='schedule'" class="ws-view-sub">{{rangeLabel}} <span class="v-divider">·</span> {{tr('拖动空白处平移 · 只读','Drag empty track to pan · read-only')}}</div>
           <div v-else-if="view==='board'" class="ws-view-sub">{{tr('状态代表公开交付阶段','PUBLIC DELIVERY STAGES')}}</div>
           <div v-else-if="view==='activity'" class="ws-view-sub">{{tr('按时间倒序排列','NEWEST FIRST')}}</div>
-          <div v-else class="ws-view-sub">{{tr('体系关联概览','SYSTEM RELATIONSHIP OVERVIEW')}}</div>
+          <div v-else class="ws-view-sub">{{tr('公开项目概览','PUBLIC PROGRAM OVERVIEW')}}</div>
         </div>
 
         <div v-if="view==='schedule'" class="ws-timeline">
@@ -384,7 +385,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
               </svg>
               <template v-for="group in grouped" :key="group.id">
                 <button class="gantt-group" type="button" @click="toggleGroup(group.id)" :aria-expanded="groupExpanded(group.id)"><span class="gantt-group-name"><span class="chevron" :class="{collapsed:!groupExpanded(group.id)}"><EngineeringIcon name="expand" :key="`${group.id}:${groupExpanded(group.id)}`" /></span><strong>{{group.id}}</strong><small>{{tr(group.zh,group.en)}}</small></span><span class="gantt-group-suffix">{{group.items.length}} {{tr('个工作项','WORK ITEMS')}}</span></button>
-                <template v-if="groupExpanded(group.id)"><div v-for="item in group.items" :key="item.id" class="gantt-row" :class="{selected:selectedId===item.id}"><button class="gantt-item-name" @click="focusItem(item.id)"><small>{{item.id}} <span>·</span> {{streamName(item.stream)}}</small><strong>{{tr(item.titleZh,item.titleEn)}}</strong></button><div class="gantt-track"><span v-for="(tick,i) in ticks" :key="i" class="gantt-gridline" :style="{left:`${tick.left}%`}"></span><span v-if="currentLine" class="gantt-today" :style="{left:currentLine}"></span><button v-if="!durationPosition(item).hidden" class="gantt-bar" :data-gantt-id="item.id" :class="[item.stage,{selected:selectedId===item.id,related:focusedId===item.id}]" @pointerenter="hoveredId=item.id" @pointerleave="hoveredId=null" :aria-pressed="selectedId===item.id" :aria-label="`${item.id} · ${tr(item.titleZh,item.titleEn)} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · ${stageName(item.stage)}`" :style="{left:durationPosition(item).left,width:durationPosition(item).width}" :title="`${item.id} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · DEMO`" @click="select(item.id)"><span>{{item.id}}</span></button></div></div></template>
+                <template v-if="groupExpanded(group.id)"><div v-for="item in group.items" :key="item.id" class="gantt-row" :class="{selected:selectedId===item.id}"><button class="gantt-item-name" @click="focusItem(item.id)"><small>{{item.id}} <span>·</span> {{streamName(item.stream)}}</small><strong>{{tr(item.titleZh,item.titleEn)}}</strong></button><div class="gantt-track"><span v-for="(tick,i) in ticks" :key="i" class="gantt-gridline" :style="{left:`${tick.left}%`}"></span><span v-if="currentLine" class="gantt-today" :style="{left:currentLine}"></span><button v-if="!durationPosition(item).hidden" class="gantt-bar" :data-gantt-id="item.id" :class="[item.stage,{selected:selectedId===item.id,related:focusedId===item.id}]" @pointerenter="hoveredId=item.id" @pointerleave="hoveredId=null" :aria-pressed="selectedId===item.id" :aria-label="`${item.id} · ${tr(item.titleZh,item.titleEn)} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · ${stageName(item.stage)}`" :style="{left:durationPosition(item).left,width:durationPosition(item).width}" :title="`${item.id} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · PUBLIC RECORD`" @click="select(item.id)"><span>{{item.id}}</span></button><span v-if="!item.start || !item.end" class="gantt-undated">{{tr('未安排公开时间','NO PUBLIC DATE')}}</span></div></div></template>
               </template>
               <div v-if="grouped.length===0" class="ws-no-results">{{tr('没有匹配的工作项。','No matching work items.')}}</div>
             </div>
@@ -406,7 +407,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
 
         <div v-else-if="view==='activity'" class="ws-activity"><div class="activity-filters"><span>{{tr('事件类型','EVENT TYPE')}}</span><div class="ws-toolset"><button v-for="kind in eventKinds" :key="kind" :class="{current:eventKind===kind}" @click="eventKind=kind">{{kind==='all'?tr('全部','ALL'):eventName(kind)}}</button></div></div><div class="event-stream"><button v-for="event in visibleEvents" :key="event.id" class="event-entry" :class="{selected:selectedId===event.id}" :aria-pressed="selectedId===event.id" @click="select(event.id)"><span class="event-date">{{fmtDate(event.date)}}<small>{{event.program}}</small></span><span class="event-marker"><i></i></span><span class="event-body"><span class="event-kind">{{eventName(event.kind)}} <span>/ {{event.id}}</span></span><strong>{{tr(event.titleZh,event.titleEn)}}</strong><span class="event-summary">{{tr(event.descZh,event.descEn)}}</span><span class="event-arrow" aria-hidden="true"><EngineeringIcon name="next" /></span></span></button><div v-if="visibleEvents.length===0" class="ws-no-results">{{tr('没有匹配的事件。','No matching events.')}}</div></div></div>
 
-        <div v-else class="ws-systemmap"><div class="systemmap-topline">PROTORHEXIS / DISTRIBUTED RESEARCH & ENGINEERING <span>RELATIONSHIP MODEL / DEMO</span></div><div class="systemmap-stage"><component :is="graphComponent" v-if="graphComponent" :programs="demoPrograms" :locale="locale" :active-program="activeProgram" @select="selectGraphProgram" /><div v-else class="systemmap-fallback" role="group" :aria-label="tr('系统列表','System list')"><button v-for="prog in demoPrograms" :key="prog.id" type="button" @click="selectGraphProgram(prog.id)">{{prog.id}}</button></div></div><p class="systemmap-note">{{tr('这是用于演示导航关系的抽象结构图；真实接口依赖必须在经过公开审查后才会显示。','This is an illustrative relationship diagram. Real integration dependencies require public review before publication.')}}</p></div>
+        <div v-else class="ws-systemmap"><div class="systemmap-topline">PROTORHEXIS / DISTRIBUTED RESEARCH & ENGINEERING <span>PUBLIC INDEX / VERIFIED ONLY</span></div><div class="systemmap-stage"><component :is="graphComponent" v-if="graphComponent" :programs="publicPrograms" :locale="locale" :active-program="activeProgram" @select="selectGraphProgram" /><div v-else class="systemmap-fallback" role="group" :aria-label="tr('系统列表','System list')"><button v-for="prog in publicPrograms" :key="prog.id" type="button" @click="selectGraphProgram(prog.id)">{{prog.id}}</button></div></div><p class="systemmap-note">{{tr('仅显示已公开项目；没有经证据审查的跨系统依赖，所以不画连线。','This lists public projects without unverified integration edges.')}}</p></div>
       </div>
 
       <button v-if="inspectorOpen" class="ws-inspector-scrim" type="button" :aria-label="tr('关闭详情面板','Close detail panel')" @click="closeInspector"></button>
@@ -417,14 +418,14 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
             :animate="{ opacity: 1, y: 0 }"
             :exit="reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -5 }"
             :transition="{ duration: reducedMotion ? 0 : 0.16, ease: 'easeOut' }">
-        <template v-if="chosenItem && view!=='activity' && view!=='systems'"><div class="inspector-hero"><small>{{chosenItem.id}} / {{chosenItem.program}}</small><h2>{{tr(chosenItem.titleZh,chosenItem.titleEn)}}</h2><span class="inspector-status"><i></i>{{stageName(chosenItem.stage)}}</span></div><div class="inspector-section"><span class="inspector-label">{{tr('工作概要','DESCRIPTION')}}</span><p>{{tr(chosenItem.descZh,chosenItem.descEn)}}</p></div><dl class="inspector-spec"><div><dt>{{tr('时间窗口','WINDOW')}}</dt><dd>{{fmtDate(chosenItem.start)}}<br/>— {{fmtDate(chosenItem.end)}}</dd></div><div><dt>{{tr('工作类别','STREAM')}}</dt><dd>{{streamName(chosenItem.stream)}}</dd></div><div class="inspector-dep-row"><dt>{{tr('前置依赖','PREDECESSORS')}}</dt><dd><template v-if="chosenItem.deps.length"><button v-for="dep in chosenItem.deps" :key="dep" class="inspector-dep-link" type="button" :title="tr('定位并打开依赖任务','Locate dependency')" @click="focusItem(dep)">{{dep}} <EngineeringIcon name="next" /></button></template><span v-else>{{tr('无','NONE')}}</span></dd></div><div class="inspector-dep-row"><dt>{{tr('后续工作','SUCCESSORS')}}</dt><dd><template v-if="dependents.length"><button v-for="next in dependents" :key="next.id" class="inspector-dep-link" type="button" :title="tr('定位后续任务','Locate successor')" @click="focusItem(next.id)">{{next.id}} <EngineeringIcon name="next" /></button></template><span v-else>{{tr('无','NONE')}}</span></dd></div><div><dt>{{tr('数据级别','PROVENANCE')}}</dt><dd>DEMO / SYNTHETIC</dd></div></dl></template>
-        <template v-else-if="chosenEvent && view==='activity'"><div class="inspector-hero"><small>{{chosenEvent.id}} / {{chosenEvent.program}}</small><h2>{{tr(chosenEvent.titleZh,chosenEvent.titleEn)}}</h2><span class="inspector-status"><i></i>{{eventName(chosenEvent.kind)}}</span></div><div class="inspector-section"><span class="inspector-label">{{tr('事件说明','EVENT DETAILS')}}</span><p>{{tr(chosenEvent.descZh,chosenEvent.descEn)}}</p></div><dl class="inspector-spec"><div><dt>{{tr('事件时间','EVENT DATE')}}</dt><dd>{{fmtDate(chosenEvent.date)}}</dd></div><div><dt>{{tr('证据状态','EVIDENCE')}}</dt><dd>NOT PROVIDED / DEMO</dd></div></dl></template>
-        <template v-else-if="view==='systems'"><div class="inspector-hero"><small>SYSTEM MAP / {{chosenProgram?.code??'OVERVIEW'}}</small><h2>{{chosenProgram?.id??'PROTORHEXIS'}}</h2><span class="inspector-status"><i></i>RELATIONSHIP / DEMO</span></div><div class="inspector-section"><span class="inspector-label">{{tr('系统范围','SYSTEM SCOPE')}}</span><p>{{chosenProgram?tr(chosenProgram.zh,chosenProgram.en):tr('分布式科研和工程协作网络','Distributed research and engineering network')}}</p></div><dl class="inspector-spec"><div><dt>PUBLICATION</dt><dd>NOT VERIFIED</dd></div></dl></template>
+        <template v-if="chosenItem && view!=='activity' && view!=='systems'"><div class="inspector-hero"><small>{{chosenItem.id}} / {{chosenItem.program}}</small><h2>{{tr(chosenItem.titleZh,chosenItem.titleEn)}}</h2><span class="inspector-status"><i></i>{{stageName(chosenItem.stage)}}</span></div><div class="inspector-section"><span class="inspector-label">{{tr('工作概要','DESCRIPTION')}}</span><p>{{tr(chosenItem.descZh,chosenItem.descEn)}}</p></div><dl class="inspector-spec"><div><dt>{{tr('公开时间记录','PUBLIC DATE RECORD')}}</dt><dd>{{fmtDate(chosenItem.start)}}<br/>— {{fmtDate(chosenItem.end)}}<small v-if="chosenItem.scheduleKind==='observed'">{{tr('公开 PR 观察窗口','Observed PR window')}}</small></dd></div><div><dt>{{tr('工作类别','STREAM')}}</dt><dd>{{streamName(chosenItem.stream)}}</dd></div><div class="inspector-dep-row"><dt>{{tr('前置依赖','PREDECESSORS')}}</dt><dd><template v-if="chosenItem.deps.length"><button v-for="dep in chosenItem.deps" :key="dep" class="inspector-dep-link" type="button" :title="tr('定位并打开依赖任务','Locate dependency')" @click="focusItem(dep)">{{dep}} <EngineeringIcon name="next" /></button></template><span v-else>{{tr('无','NONE')}}</span></dd></div><div class="inspector-dep-row"><dt>{{tr('后续工作','SUCCESSORS')}}</dt><dd><template v-if="dependents.length"><button v-for="next in dependents" :key="next.id" class="inspector-dep-link" type="button" :title="tr('定位后续任务','Locate successor')" @click="focusItem(next.id)">{{next.id}} <EngineeringIcon name="next" /></button></template><span v-else>{{tr('无','NONE')}}</span></dd></div><div><dt>{{tr('数据级别','PROVENANCE')}}</dt><dd>{{chosenItem.evidence.length ? 'PUBLIC / SOURCE-LINKED' : 'PLANNING INTENT / NO DATE'}}</dd></div><div v-if="chosenItem.evidence.length"><dt>{{tr('公开来源','PUBLIC SOURCES')}}</dt><dd><a v-for="src in chosenItem.evidence" :key="src.url" :href="src.url" target="_blank" rel="noopener noreferrer" class="inspector-dep-link">GitHub ↗</a></dd></div></dl></template>
+        <template v-else-if="chosenEvent && view==='activity'"><div class="inspector-hero"><small>{{chosenEvent.id}} / {{chosenEvent.program}}</small><h2>{{tr(chosenEvent.titleZh,chosenEvent.titleEn)}}</h2><span class="inspector-status"><i></i>{{eventName(chosenEvent.kind)}}</span></div><div class="inspector-section"><span class="inspector-label">{{tr('事件说明','EVENT DETAILS')}}</span><p>{{tr(chosenEvent.descZh,chosenEvent.descEn)}}</p></div><dl class="inspector-spec"><div><dt>{{tr('事件时间','EVENT DATE')}}</dt><dd>{{fmtDate(chosenEvent.date)}}</dd></div><div><dt>{{tr('公开来源','PUBLIC SOURCES')}}</dt><dd><a v-for="src in chosenEvent.evidence" :key="src.url" :href="src.url" target="_blank" rel="noopener noreferrer" class="inspector-dep-link">GitHub ↗</a></dd></div></dl></template>
+        <template v-else-if="view==='systems'"><div class="inspector-hero"><small>SYSTEM MAP / {{chosenProgram?.code??'OVERVIEW'}}</small><h2>{{chosenProgram?.id??'PROTORHEXIS'}}</h2><span class="inspector-status"><i></i>PUBLIC PROJECT / LIMITED RECORD</span></div><div class="inspector-section"><span class="inspector-label">{{tr('系统范围','SYSTEM SCOPE')}}</span><p>{{chosenProgram?tr(chosenProgram.zh,chosenProgram.en):tr('分布式科研和工程协作网络','Distributed research and engineering network')}}</p></div><dl class="inspector-spec"><div><dt>PUBLICATION</dt><dd>PUBLIC OVERVIEW ONLY</dd></div></dl></template>
         <template v-else><div class="inspector-placeholder"><span class="placeholder-cross">⌖</span><strong>{{tr('选择一个条目','Select an item')}}</strong><p>{{tr('在主视图中点击时间条、卡片或事件，查看对应详细信息。','Choose a bar, card or event to inspect its details.')}}</p></div></template>
           </motion.div>
         </AnimatePresence>
-        <div class="inspector-warning"><span><EngineeringIcon name="warning" /></span><p>{{tr('样例数据无任何发布承诺。真实项目记录将由公开审批的数据快照替换。','This synthetic fixture contains no release promise. Reviewed public data will replace it.')}}</p></div>
-        <div class="inspector-foot">INSPECTOR / REV 003 <span>STATIC PREVIEW</span></div>
+        <div class="inspector-warning"><span><EngineeringIcon name="warning" /></span><p>{{tr('公开事实由来源链接支持，未公布的项目没有推定进度或日期。','Public facts are source-linked. Undisclosed projects have no inferred status or dates.')}}</p></div>
+        <div class="inspector-foot">INSPECTOR / REV 004 <span>PUBLIC SNAPSHOT</span></div>
       </aside>
     </div>
     <Teleport v-if="portalReady" to="body">
@@ -442,6 +443,6 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
         </div>
       </Transition>
     </Teleport>
-    <div class="ws-statusline"><span><i class="ws-mini-square"></i>{{tr('演示工作台','DEMO WORKSTATION')}}</span><span>{{stats.programs.toString().padStart(2,'0')}} PROGRAMS</span><span>{{stats.items.toString().padStart(2,'0')}} WORK ITEMS</span><span>{{stats.events.toString().padStart(2,'0')}} EVENTS</span><span class="status-right">NO LIVE DATA / PUBLIC PREVIEW</span></div>
+    <div class="ws-statusline"><span><i class="ws-mini-square"></i>{{tr('公开记录工作台','PUBLIC RECORDS')}}</span><span>{{stats.programs.toString().padStart(2,'0')}} PROGRAMS</span><span>{{stats.items.toString().padStart(2,'0')}} WORK ITEMS</span><span>{{stats.events.toString().padStart(2,'0')}} EVENTS</span><span class="status-right">STATIC APPROVED PUBLIC SNAPSHOT</span></div>
   </section>
 </template>

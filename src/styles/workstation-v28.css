@@ -36,3 +36,8 @@
 /* V2.9: single production route; dependency visibility remains right-aligned. */
 .gantt-controls > .gantt-dep-toggle { margin-left:auto; }
 @media(max-width:740px) { .gantt-controls > .gantt-dep-toggle { margin-left:2px; } }
+
+/* V3.1: unknown schedule is explicit; do not invent bar dates. */
+.gantt-undated {display:inline-flex;position:absolute;top:50%;left:12px;transform:translateY(-50%);font:500 10px/1.2 'Space Mono',monospace;letter-spacing:.02em;color:#86868e;pointer-events:none;}
+.ws-notice .notice-tag {white-space:nowrap;}
+.inspector-spec a.inspector-dep-link {display:inline-flex;margin:2px 6px 2px 0;}

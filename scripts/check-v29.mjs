@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {dependencyPaths,validateWindow,barPosition,visibleRows} from '../src/lib/gantt.ts';
-import {demoItems,demoPrograms} from '../src/data/workstation-demo.ts';
+import {demoItems,demoPrograms} from '../tests/fixtures-geometry.ts';
 const source=readFileSync('src/lib/gantt.ts','utf8');
 const ui=readFileSync('src/components/vue/EngineeringWorkbench.vue','utf8');
 const layout=readFileSync('src/layouts/EngineeringLayout.astro','utf8');

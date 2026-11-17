@@ -1,0 +1,19 @@
+{
+  "id": "PROTORHEXIS",
+  "code": "ORG-01",
+  "title": {
+    "zh": "公共工程站点",
+    "en": "Public engineering web"
+  },
+  "description": {
+    "zh": "公开网站的实际 PR、构建与发布记录；不代表其他系统的生产资格。",
+    "en": "Verified public site PRs and releases; not production qualification for other systems."
+  },
+  "publication": "approved",
+  "order": 4,
+  "sources": [
+    {
+      "url": "https://github.com/PROTORHEXIS/.github/blob/main/profile/README.md"
+    }
+  ]
+}

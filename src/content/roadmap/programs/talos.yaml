@@ -1,0 +1,19 @@
+{
+  "id": "TALOS",
+  "code": "SYS-01",
+  "title": {
+    "zh": "通用系统平台",
+    "en": "System platform"
+  },
+  "description": {
+    "zh": "公开工程方向：可靠系统基础设施；内部实施状态尚未作为公开进度发布。",
+    "en": "Public direction: reliable systems infrastructure; implementation status is not publicly certified."
+  },
+  "publication": "approved",
+  "order": 0,
+  "sources": [
+    {
+      "url": "https://github.com/PROTORHEXIS/.github/blob/main/profile/README.md"
+    }
+  ]
+}
