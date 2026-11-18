@@ -462,3 +462,65 @@ test('navbar search remains reachable and within viewport on mobile',async({page
   await field.fill('TALOS');
   await expect(field).toHaveValue('TALOS');
 });
+
+
+test('notice hover opens transiently and closes after pointer leaves both trigger and popup',async({page,isMobile})=>{
+  test.skip(isMobile,'Hover is for fine-pointer desktop');
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  const notice=page.locator('.ws-header-notice');
+  const summary=notice.locator('summary');
+  await expect(notice).not.toHaveAttribute('open');
+  await summary.hover();
+  await expect(notice).toHaveAttribute('data-mode','hover');
+  await expect(notice).toHaveAttribute('open');
+  const popup=notice.locator('p');
+  await expect(popup).toBeVisible();
+  // Mouse must be able to cross the real 8px visual gap into the panel.
+  const triggerBox=await summary.boundingBox(), popupBox=await popup.boundingBox();
+  await page.mouse.move(triggerBox.x+Math.min(55,triggerBox.width/2),triggerBox.bottom-3);
+  await page.mouse.move(popupBox.x+Math.min(55,popupBox.width/2),popupBox.y+12,{steps:12});
+  await expect(notice).toHaveAttribute('data-mode','hover');
+  await page.mouse.move(3,350,{steps:8});
+  await expect(notice).not.toHaveAttribute('open');
+  await expect(notice).toHaveAttribute('data-mode','closed');
+});
+
+test('notice click pins open across pointer leave, and outside click dismisses it',async({page,isMobile})=>{
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  const notice=page.locator('.ws-header-notice');
+  const summary=notice.locator('summary');
+  await summary.click();
+  await expect(notice).toHaveAttribute('data-mode','pinned');
+  await expect(notice).toHaveAttribute('open');
+  if(!isMobile) await page.mouse.move(3,350,{steps:8});
+  await expect(notice.locator('p')).toBeVisible();
+  await page.locator('.ws-project-index .rail-item').first().click();
+  await expect(notice).toHaveAttribute('data-mode','closed');
+  await expect(notice).not.toHaveAttribute('open');
+  await summary.click();
+  await expect(notice).toHaveAttribute('data-mode','pinned');
+  await summary.click();
+  await expect(notice).not.toHaveAttribute('open');
+});
+
+test('notice Escape closes pinned and supports keyboard activation',async({page})=>{
+  await page.goto('/roadmap/systems/',{waitUntil:'domcontentloaded'});
+  const notice=page.locator('.ws-header-notice');
+  const summary=notice.locator('summary');
+  await summary.focus();
+  await page.keyboard.press('Enter');
+  await expect(notice).toHaveAttribute('data-mode','pinned');
+  await page.keyboard.press('Escape');
+  await expect(notice).not.toHaveAttribute('open');
+  await expect(summary).toBeFocused();
+});
+
+test('moving focus away closes a pinned notice without interrupting the target',async({page})=>{
+  await page.goto('/roadmap/evidence/',{waitUntil:'domcontentloaded'});
+  const notice=page.locator('.ws-header-notice');
+  await notice.locator('summary').click();
+  await expect(notice).toHaveAttribute('data-mode','pinned');
+  await page.locator('.ws-header .ws-search input').focus();
+  await expect(notice).not.toHaveAttribute('open');
+  await expect(page.locator('.ws-header .ws-search input')).toBeFocused();
+});
