@@ -30,7 +30,11 @@ const { title, active } = Astro.props;
         <p data-zh="仅展示已审查的工程事实与非承诺性 Future 方向；未获批准的私有进展不会公开，公开审核也不等于产品发布资格。"
            data-en="Only reviewed facts and noncommittal future directions appear. Unapproved private updates remain hidden; disclosure approval is not a product release gate.">仅展示已审查的工程事实与非承诺性 Future 方向；未获批准的私有进展不会公开，公开审核也不等于产品发布资格。</p>
       </details>
-      <div class="ws-header-right"><span class="ws-header-edition">WORKSTATION / V3.4</span><button class="ws-locale" type="button" data-lang-button aria-label="Switch language">EN</button></div>
+      <div class="ws-header-right">
+        <span class="ws-header-edition">WORKSTATION / V3.4</span>
+        <div id="ws-header-search-slot" class="ws-header-search-slot" aria-label="Roadmap search"></div>
+        <button class="ws-locale" type="button" data-lang-button aria-label="Switch language">EN</button>
+      </div>
     </header>
     <main id="main" class="ws-main"><h1 class="visually-hidden">{title}</h1><slot /></main>
     <footer class="ws-footer"><span>© PROTORHEXIS · ENGINEERING SURFACE</span><span data-zh="已公开记录 · 不代表其他系统发布资格或未来交付承诺" data-en="PUBLIC RECORDS · NO CROSS-SYSTEM RELEASE CLAIM OR FUTURE COMMITMENT">界面样本 · 不代表发布资格或时间承诺</span><span class="ws-footer-state">PUBLIC SNAPSHOT / LIMITED COVERAGE</span></footer>

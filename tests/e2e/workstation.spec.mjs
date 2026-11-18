@@ -398,3 +398,67 @@ test('V3.4 same work ID links between board and schedule without duplicating sou
   await expect(page).toHaveURL(/\/roadmap\/\?item=TAL-PROGRESS-001/);
   await expect(page.locator('#roadmap-inspector')).toContainText('TAL-PROGRESS-001');
 });
+
+
+test('navbar owns the only search input; no standalone tools band remains', async({page})=>{
+  for(const route of ['/roadmap/','/roadmap/board/','/roadmap/evidence/','/roadmap/systems/']){
+    await page.goto(route,{waitUntil:'domcontentloaded'});
+    await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+    await expect(page.locator('.ws-commandbar,.ws-tools')).toHaveCount(0);
+    await expect(page.locator('.ws-header #ws-header-search-slot .ws-search')).toBeVisible();
+    await expect(page.getByRole('searchbox',{name:/搜索|Search/})).toHaveCount(1);
+    await expect(page.locator('.ws-primary .ws-search')).toHaveCount(0);
+  }
+});
+
+test('navbar search still filters the board using Vue state',async({page})=>{
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  const field=page.locator('.ws-header .ws-search input');
+  await expect(field).toBeVisible();
+  await field.fill('TAL-PROGRESS-001');
+  await expect(page.locator('.kanban-card')).toHaveCount(1);
+  await expect(page.locator('.kanban-card')).toContainText('TAL-PROGRESS-001');
+  await field.fill('');
+  await expect(page.locator('.kanban-card')).toHaveCount(15);
+});
+
+test('Gantt month-quarter and pager are inside the timeline, left of dependencies',async({page,isMobile})=>{
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const actions=page.locator('.ws-timeline .gantt-control-actions');
+  await expect(actions).toBeVisible();
+  await expect(actions.locator('.gantt-scale-switch button')).toHaveCount(2);
+  await expect(actions.locator('.gantt-period-pager button')).toHaveCount(3);
+  await expect(actions.locator('.gantt-dep-toggle')).toHaveCount(1);
+  await actions.getByRole('button',{name:/季度|QUARTER/}).click();
+  await expect(actions.getByRole('button',{name:/季度|QUARTER/})).toHaveAttribute('aria-pressed','true');
+  await actions.getByRole('button',{name:/月|MONTH/,exact:true}).click();
+  await expect(actions.getByRole('button',{name:/月|MONTH/,exact:true})).toHaveAttribute('aria-pressed','true');
+  const scroller=page.locator('.gantt-viewport');
+  await actions.getByRole('button',{name:/后移时间轴|Next period/}).click();
+  await actions.getByRole('button',{name:/复位|RESET/}).click();
+  if(!isMobile){
+    const [scale,pager,dep]=await Promise.all([
+      actions.locator('.gantt-scale-switch').boundingBox(),
+      actions.locator('.gantt-period-pager').boundingBox(),
+      actions.locator('.gantt-dep-toggle').boundingBox()
+    ]);
+    expect(scale.x + scale.width).toBeLessThanOrEqual(pager.x+2);
+    expect(pager.x + pager.width).toBeLessThanOrEqual(dep.x+2);
+  }
+  await expect(scroller).toBeVisible();
+});
+
+test('navbar search remains reachable and within viewport on mobile',async({page,isMobile})=>{
+  test.skip(!isMobile,'mobile navbar layout');
+  await page.goto('/roadmap/evidence/',{waitUntil:'domcontentloaded'});
+  const field=page.locator('.ws-header .ws-search input');
+  await expect(field).toBeVisible();
+  const info=await field.evaluate(el=>{const r=el.getBoundingClientRect();const h=el.closest('.ws-header').getBoundingClientRect();return {input:r.toJSON(),header:h.toJSON(),w:innerWidth}});
+  expect(info.input.left).toBeGreaterThanOrEqual(0);
+  expect(info.input.right).toBeLessThanOrEqual(info.w+1);
+  expect(info.input.top).toBeGreaterThanOrEqual(info.header.top);
+  expect(info.input.bottom).toBeLessThanOrEqual(info.header.bottom+1);
+  await field.fill('TALOS');
+  await expect(field).toHaveValue('TALOS');
+});

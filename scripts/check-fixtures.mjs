@@ -53,6 +53,9 @@ assert(gateStyle.includes('clip-path:polygon') && gateScript.includes('animateCl
 assert(!gateComponent.includes('gate-percent') && !gateScript.includes('Math.random'),'Do not simulate a quantitative loading percentage');
 assert(brand.includes('fill="currentColor"') && brand.includes('class="site-brand-vector"') && !brand.includes('#262626'),'Brand geometry must inherit CSS color');
 assert(!component.includes('class="ws-notice"') && !component.includes('ws-command-title') && component.includes('ws-view-nav'), 'No redundant warning band or generic page description; sidebar navigation required');
+assert(!component.includes('class="ws-commandbar"') && !component.includes('class="ws-tools"'), 'No standalone tools bar may remain in the workbench');
+assert(layout.includes('id="ws-header-search-slot"') && component.includes('to="#ws-header-search-slot"'), 'Navbar must host the Vue-owned search portal');
+assert(component.includes('class="gantt-control-actions"') && component.indexOf('class="gantt-control-actions"') < component.indexOf('class="gantt-dep-toggle"'), 'Gantt scale/pager controls must precede dependencies in the view');
 assert(component.includes('inspector-crossviews') && component.includes('new URLSearchParams(window.location.search)'),'Stable-ID cross-view navigation is required');
 assert(component.includes('import { publicSnapshot,') && component.includes('publicSnapshot.updatedAt'), 'public content snapshot must be imported before SSR rendering');
 assert(layout.includes('PARTIAL') && layout.includes('data-zh="已审查公开内容"'), 'partial coverage must remain available in the header');
