@@ -598,7 +598,8 @@ test('Gantt last row, zero results and collapsed group never create a phantom ro
   gap=await page.locator('.gantt-viewport').evaluate(el=>el.getBoundingClientRect().bottom-el.querySelector('.gantt-canvas').getBoundingClientRect().bottom);
   expect(gap).toBeLessThanOrEqual(22);
   await search.fill('');
-  await expect(page.locator('.gantt-row')).toHaveCount(15);
+  // Schedule hides six Future cards; it shows nine actual public rows.
+  await expect(page.locator('.gantt-row')).toHaveCount(9);
   const sizes=await page.locator('.gantt-viewport').evaluate(el=>({height:el.clientHeight,scrollHeight:el.scrollHeight}));
   expect(sizes.scrollHeight).toBeGreaterThan(sizes.height);
 });
