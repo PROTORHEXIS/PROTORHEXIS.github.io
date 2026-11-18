@@ -1,0 +1,21 @@
+---
+// Shared whole-site loading transition. Uses the same canonical vector as every header.
+// Two diagonal clip-path slabs reproduce the transition mechanism of the supplied TALOS demo.
+import SiteBrand from './SiteBrand.astro';
+---
+<div id="site-loading-gate" class="site-loading-gate" data-state="entry" data-progress="loading"
+  role="status" aria-label="页面正在加载 / Loading page" aria-hidden="true">
+  <div class="site-loading-gate__slab site-loading-gate__slab--back" aria-hidden="true"></div>
+  <div class="site-loading-gate__slab site-loading-gate__slab--front" aria-hidden="true"></div>
+  <div class="site-loading-gate__grid" aria-hidden="true"></div>
+  <div class="site-loading-gate__content">
+    <div class="site-loading-gate__lockup">
+      <SiteBrand />
+      <div class="site-loading-gate__track" role="progressbar"
+        aria-label="页面就绪进度 / Page readiness" aria-valuetext="加载中 / Loading">
+        <span class="site-loading-gate__fill"></span>
+      </div>
+    </div>
+    <span class="visually-hidden">正在加载页面 / Loading page</span>
+  </div>
+</div>

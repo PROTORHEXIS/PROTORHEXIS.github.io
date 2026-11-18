@@ -1,5 +1,7 @@
 ---
 import '../styles/site.css';
+import '../styles/site-loading.css';
+import SiteLoadingGate from '../components/SiteLoadingGate.astro';
 interface Props {
   title: string;
   description?: string;
@@ -11,6 +13,17 @@ const { title, description = 'PROTORHEXIS public engineering roadmap. Public mil
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
+    <script is:inline>
+      // Cover first paint before the shared transition bundle is ready.
+      // This limited watchdog preserves page access if client JS fails.
+      document.documentElement.classList.add('site-gate-boot');
+      window.setTimeout(() => {
+        if (!document.documentElement.classList.contains('site-gate-boot')) return;
+        const gate = document.getElementById('site-loading-gate');
+        if (gate) { gate.dataset.state = 'idle'; gate.setAttribute('aria-hidden', 'true'); }
+        document.documentElement.classList.remove('site-gate-boot', 'site-gate-busy');
+      }, 11000);
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#0D0D0F" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -22,8 +35,9 @@ const { title, description = 'PROTORHEXIS public engineering roadmap. Public mil
     <title>{title} · PROTORHEXIS</title>
   </head>
   <body data-page-title={title}>
+    <SiteLoadingGate />
     <a class="skip" href="#main">Skip to content / 跳到正文</a>
     <slot />
-    <script>import '../scripts/locale.ts';</script>
+    <script>import '../scripts/locale.ts'; import '../scripts/site-loading.ts';</script>
   </body>
 </html>
