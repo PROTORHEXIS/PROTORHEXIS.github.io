@@ -68,6 +68,12 @@ assert(v34.includes('.ws-header-notice[open]::after') && v34.includes('height:9p
 assert(noticeLogic.includes("setMode('closing')") && noticeLogic.includes("cancelPendingClose"), 'Animated exit must be cancelable and restore hover');
 assert(v34.includes('ws-notice-appear') && v34.includes('ws-notice-disappear'), 'Notice must animate opening and closing');
 assert(v34.includes('.workbench[data-view="schedule"] .gantt-viewport') && v34.includes('flex:0 0 auto'), 'Gantt viewport must size to actual content and remove trailing phantom row');
+const v35 = read('src/styles/workstation-v35.css');
+assert(layout.includes('workstation-v35.css') && v35.includes('grid-template-columns:var(--ws-rail) minmax(0,1fr) minmax(0,var(--ws-inspector-track))'), 'Three outer panes must be flush with an animatable inspector track');
+assert(v35.includes('padding:0!important') && v35.includes('gap:0!important') && v35.includes('border-radius:0!important'), 'Only exterior pane spacing and radii are removed');
+assert(component.includes('class="ws-inspector-handle"') && component.includes('aria-controls="roadmap-inspector"') && component.includes('@click="toggleInspector"'), 'Right-edge handle must toggle inspector and expose accessibility state');
+assert(component.includes("const selectedId = ref('')") && component.includes('inspector-empty-state'), 'Inspector cannot start with an implicitly selected public record');
+assert(v35.includes('prefers-reduced-motion:reduce') && v35.includes('ws-inspector-handle:hover'), 'Handle must animate with a reduced-motion fallback');
 const stylesheet = read('src/styles/workstation.css');
 assert(!/(?:^|[;{\s])box-shadow\s*:\s*(?!none\s*!important)/m.test(stylesheet), 'workstation must not introduce shadows');
 assert(!/filter\s*:\s*drop-shadow\s*\(/.test(stylesheet), 'no drop-shadow in workstation');
