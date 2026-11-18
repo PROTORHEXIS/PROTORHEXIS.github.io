@@ -117,7 +117,11 @@
       "dependsOn": [],
       "sources": [],
       "updatedAt": "2026-11-18",
-      "publication": "approved"
+      "publication": "approved",
+      "delivery": {
+        "state": "unassigned"
+      },
+      "verifiedAt": null
     },
     {
       "id": "MAX-PROGRESS-001",
@@ -137,7 +141,11 @@
       "sources": [],
       "updatedAt": "2026-11-18",
       "publication": "approved",
-      "reviewReceipt": "PUB-RM-20261118-MAX"
+      "reviewReceipt": "PUB-RM-20261118-MAX",
+      "delivery": {
+        "state": "unassigned"
+      },
+      "verifiedAt": null
     },
     {
       "id": "PRO-FUTURE-001",
@@ -156,7 +164,11 @@
       "dependsOn": [],
       "sources": [],
       "updatedAt": "2026-11-18",
-      "publication": "approved"
+      "publication": "approved",
+      "delivery": {
+        "state": "unassigned"
+      },
+      "verifiedAt": null
     },
     {
       "id": "PRO-FUTURE-002",
@@ -175,7 +187,11 @@
       "dependsOn": [],
       "sources": [],
       "updatedAt": "2026-11-18",
-      "publication": "approved"
+      "publication": "approved",
+      "delivery": {
+        "state": "unassigned"
+      },
+      "verifiedAt": null
     },
     {
       "id": "TAL-FUTURE-001",
@@ -194,7 +210,11 @@
       "dependsOn": [],
       "sources": [],
       "updatedAt": "2026-11-18",
-      "publication": "approved"
+      "publication": "approved",
+      "delivery": {
+        "state": "unassigned"
+      },
+      "verifiedAt": null
     },
     {
       "id": "TAL-PROGRESS-001",
@@ -214,7 +234,11 @@
       "sources": [],
       "updatedAt": "2026-11-18",
       "publication": "approved",
-      "reviewReceipt": "PUB-RM-20261118-TAL"
+      "reviewReceipt": "PUB-RM-20261118-TAL",
+      "delivery": {
+        "state": "unassigned"
+      },
+      "verifiedAt": null
     },
     {
       "id": "TES-FUTURE-001",
@@ -233,7 +257,11 @@
       "dependsOn": [],
       "sources": [],
       "updatedAt": "2026-11-18",
-      "publication": "approved"
+      "publication": "approved",
+      "delivery": {
+        "state": "unassigned"
+      },
+      "verifiedAt": null
     },
     {
       "id": "TES-PROGRESS-001",
@@ -253,7 +281,11 @@
       "sources": [],
       "updatedAt": "2026-11-18",
       "publication": "approved",
-      "reviewReceipt": "PUB-RM-20261118-TES"
+      "reviewReceipt": "PUB-RM-20261118-TES",
+      "delivery": {
+        "state": "unassigned"
+      },
+      "verifiedAt": null
     },
     {
       "id": "THO-FUTURE-001",
@@ -272,7 +304,11 @@
       "dependsOn": [],
       "sources": [],
       "updatedAt": "2026-11-18",
-      "publication": "approved"
+      "publication": "approved",
+      "delivery": {
+        "state": "unassigned"
+      },
+      "verifiedAt": null
     },
     {
       "id": "THO-PROGRESS-001",
@@ -292,7 +328,11 @@
       "sources": [],
       "updatedAt": "2026-11-18",
       "publication": "approved",
-      "reviewReceipt": "PUB-RM-20261118-THO"
+      "reviewReceipt": "PUB-RM-20261118-THO",
+      "delivery": {
+        "state": "unassigned"
+      },
+      "verifiedAt": null
     },
     {
       "id": "WEB-SITE-001",
@@ -319,7 +359,11 @@
         }
       ],
       "updatedAt": "2026-11-17",
-      "publication": "approved"
+      "publication": "approved",
+      "delivery": {
+        "state": "released"
+      },
+      "verifiedAt": null
     },
     {
       "id": "WEB-SITE-002",
@@ -346,7 +390,11 @@
         }
       ],
       "updatedAt": "2026-11-17",
-      "publication": "approved"
+      "publication": "approved",
+      "delivery": {
+        "state": "released"
+      },
+      "verifiedAt": null
     },
     {
       "id": "WEB-SITE-003",
@@ -373,7 +421,11 @@
         }
       ],
       "updatedAt": "2026-11-17",
-      "publication": "approved"
+      "publication": "approved",
+      "delivery": {
+        "state": "released"
+      },
+      "verifiedAt": null
     },
     {
       "id": "WEB-SITE-004",
@@ -403,7 +455,11 @@
         }
       ],
       "updatedAt": "2026-11-17",
-      "publication": "approved"
+      "publication": "approved",
+      "delivery": {
+        "state": "released"
+      },
+      "verifiedAt": null
     },
     {
       "id": "WEB-SITE-005",
@@ -422,7 +478,11 @@
       "dependsOn": [],
       "sources": [],
       "updatedAt": "2026-11-17",
-      "publication": "approved"
+      "publication": "approved",
+      "delivery": {
+        "state": "unassigned"
+      },
+      "verifiedAt": null
     }
   ],
   "events": [
@@ -585,5 +645,5 @@
       "publication": "approved"
     }
   ],
-  "sourceRevision": "sha256:ccbaf97bd146c5697c055a2c8267a165c84a606caa1a7f6f1b5476573afa25fa"
+  "sourceRevision": "sha256:4b7d0ece0814163823395238d20d8a8fe9c884e2031e9d6fdf8197395ed9a41a"
 }
