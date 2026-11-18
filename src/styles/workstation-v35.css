@@ -100,7 +100,7 @@
     top:0;bottom:0;right:0;
     width:min(370px,96vw);
     height:100dvh;
-    z-index:45;
+    z-index:var(--ws-layer-drawer);
     border:0;
     border-radius:0!important;
     opacity:1;
@@ -119,7 +119,7 @@
     position:fixed;
     top:50%;
     right:0;
-    z-index:46;
+    z-index:calc(var(--ws-layer-drawer) + 1);
   }
   .ws-content-grid[data-inspector-open="true"] > .ws-inspector-handle {
     right:calc(min(370px,96vw) - var(--ws-handle-width) / 2);

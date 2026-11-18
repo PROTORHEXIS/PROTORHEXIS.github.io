@@ -524,7 +524,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
       </aside>
       <button class="ws-inspector-handle" type="button"
         :aria-label="inspectorOpen ? tr('收起右侧详情栏','Collapse detail sidebar') : tr('展开右侧详情栏','Expand detail sidebar')"
-        aria-controls="roadmap-inspector" :aria-expanded="inspectorOpen"
+        aria-controls="roadmap-inspector" :aria-expanded="inspectorOpen ? 'true' : 'false'"
         :title="inspectorOpen ? tr('收起详情','Collapse details') : tr('展开详情','Expand details')"
         @click="toggleInspector">
         <EngineeringIcon :name="inspectorOpen ? 'next' : 'back'" />
