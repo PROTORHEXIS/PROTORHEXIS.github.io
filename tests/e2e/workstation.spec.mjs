@@ -293,3 +293,48 @@ test('global brand color is controlled by a CSS custom property on every layout'
     expect(color.color).toBe(color.fill);
   }
 });
+
+
+test('global loading gate is composed as logo above progress bar on all public routes',async({page})=>{
+  const all=['/','/404.html','/roadmap/','/roadmap/board/','/roadmap/evidence/','/roadmap/systems/'];
+  for(const route of all){
+    await page.goto(route,{waitUntil:'domcontentloaded'});
+    const gate=page.locator('#site-loading-gate');
+    await expect(gate).toHaveCount(1);
+    const brand=gate.locator('.site-brand svg.site-brand-vector');
+    await expect(brand).toHaveCount(1);
+    await expect(brand.locator('path,polygon')).toHaveCount(20);
+    const bar=gate.locator('[role="progressbar"]');
+    await expect(bar).toHaveCount(1);
+    await expect(bar).not.toHaveAttribute('aria-valuenow', /./);
+    const relative=await gate.evaluate(el=>{
+      const logo=el.querySelector('.site-brand-vector').getBoundingClientRect();
+      const track=el.querySelector('.site-loading-gate__track').getBoundingClientRect();
+      return {logoY:logo.y,logoBottom:logo.bottom,barY:track.y};
+    });
+    expect(relative.barY).toBeGreaterThan(relative.logoBottom);
+    await expect(gate).toHaveAttribute('data-state','idle',{timeout:13000});
+    await expect(page.locator('body')).toHaveAttribute('aria-busy','false');
+  }
+});
+
+test('same-origin navigation uses the orbital mask and reveals the new route',async({page})=>{
+  await page.goto('/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('#site-loading-gate')).toHaveAttribute('data-state','idle',{timeout:13000});
+  await page.getByRole('link',{name:/进入开发路线图|Open roadmap/}).click({noWaitAfter:true});
+  await expect(page).toHaveURL(/\/roadmap\/?$/,{timeout:13000});
+  await expect(page.locator('#site-loading-gate')).toHaveAttribute('data-state','idle',{timeout:13000});
+  await expect(page.locator('.ws-root')).toBeVisible();
+  expect(await page.locator('body').getAttribute('aria-busy')).toBe('false');
+});
+
+test('reduced-motion mode bypasses the clip-path sweep and still navigates',async({page})=>{
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await page.goto('/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('#site-loading-gate')).toHaveAttribute('data-state','idle');
+  await page.getByRole('link',{name:/进入开发路线图|Open roadmap/}).click({noWaitAfter:true});
+  await expect(page).toHaveURL(/\/roadmap\/?$/,{timeout:13000});
+  await expect(page.locator('#site-loading-gate')).toHaveAttribute('data-state','idle',{timeout:13000});
+  const motion=await page.locator('.site-loading-gate__fill').evaluate(el=>getComputedStyle(el).animationName);
+  expect(motion).toBe('none');
+});
