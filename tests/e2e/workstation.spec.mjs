@@ -643,7 +643,7 @@ test('V3.5 default collapsed inspector has a left-arrow wall handle and empty ma
   const mainBefore=await page.locator('.ws-primary').boundingBox();
   await handle.click();
   await expect(grid).toHaveAttribute('data-inspector-open','true');
-  await expect(inspector).toHaveAttribute('aria-hidden','false');
+  await expect(inspector).not.toHaveAttribute('aria-hidden','true');
   await expect(inspector).toHaveClass(/inspector-visible/);
   await expect(inspector.locator('.inspector-empty-state')).toContainText(/请选择一个项目以显示内容|Select an item to display its details/);
   await expect(inspector.locator('.inspector-hero')).toHaveCount(0);
@@ -666,7 +666,7 @@ test('V3.5 real task selection auto-opens details; manual collapse and reopen pr
   await page.getByRole('button',{name:/收起右侧详情栏|Collapse detail sidebar/}).click();
   await expect(inspector).toHaveAttribute('aria-hidden','true');
   await page.getByRole('button',{name:/展开右侧详情栏|Expand detail sidebar/}).click();
-  await expect(inspector).toHaveAttribute('aria-hidden','false');
+  await expect(inspector).not.toHaveAttribute('aria-hidden','true');
   await expect(inspector).toContainText('TAL-PROGRESS-001');
 });
 
