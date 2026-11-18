@@ -82,3 +82,46 @@
 .inspector-crossviews a:hover{border-color:#ff756b;color:#fff}
 .inspector-crossviews a:focus-visible{outline:2px solid #ff453a;outline-offset:2px}
 @media(max-width:740px){.kanban-card-foot .kanban-delivery{font-size:8px}}
+
+/* V3.4.1 — navbar search; remove the standalone strip and keep per-view
+   controls in the view they operate on. Existing global focus styles stay. */
+.ws-header-right{gap:12px;min-width:0}
+.ws-header-search-slot{display:flex;align-items:center;width:clamp(190px,21vw,310px);min-width:0}
+.ws-header-search-slot .ws-search{width:100%;min-width:0;flex:1;height:40px}
+.ws-header-search-slot .ws-search input{min-width:0;flex:1}
+.ws-header .ws-locale{flex:0 0 auto}
+.gantt-controls .gantt-control-actions{display:flex;align-items:center;justify-content:flex-end;
+  gap:8px;flex-wrap:wrap;margin-left:auto;min-width:0}
+.gantt-control-actions .ws-toolset{min-height:36px;padding:3px}
+.gantt-control-actions .ws-toolset button{min-height:29px}
+.gantt-control-actions .gantt-dep-toggle{flex:0 0 auto;white-space:nowrap}
+.ws-content-grid{min-height:calc(100dvh - 156px)}
+@media(max-width:1180px){
+  .ws-header-title,.ws-header-sep{display:none}
+  .ws-header-search-slot{width:clamp(175px,24vw,270px)}
+}
+@media(max-width:740px){
+  /* The mobile search lives INSIDE the navbar's second row, not in a
+     separate full-width toolbar or within an individual view. */
+  .ws-header{display:grid;grid-template-columns:minmax(0,1fr) auto auto;
+    grid-template-areas:"brand notice locale" "search search search";
+    gap:7px 9px;height:auto;min-height:105px;flex:0 0 auto;padding:8px 12px}
+  .ws-header>.site-brand{grid-area:brand;--site-brand-width:clamp(110px,32vw,158px);min-width:0}
+  .ws-header-notice{grid-area:notice;justify-self:end;margin:0}
+  .ws-header-right{display:contents}
+  .ws-header-edition{display:none}
+  .ws-header-right>.ws-locale{grid-area:locale;justify-self:end}
+  .ws-header-search-slot{grid-area:search;width:100%;min-width:0}
+  .ws-header-search-slot .ws-search{min-height:38px;height:38px;width:100%}
+  .gantt-controls .gantt-control-actions{width:100%;justify-content:flex-start;margin-left:0;
+    gap:6px}
+  .gantt-control-actions .ws-toolset{min-height:36px}
+  .gantt-control-actions .gantt-dep-toggle{margin-left:0}
+  .ws-content-grid{min-height:0}
+}
+@media(max-width:420px){
+  .ws-header{gap:6px}
+  .ws-header>.site-brand{--site-brand-width:110px}
+  .ws-header-notice>summary{gap:5px;padding:6px}
+  .gantt-control-actions .ws-toolset button{padding:5px 7px}
+}

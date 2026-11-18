@@ -369,13 +369,14 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
 
 <template>
   <section class="workbench" :data-view="view">
-    <div class="ws-commandbar" role="toolbar" :aria-label="tr('视图操作','View controls')">
-      <div class="ws-tools">
-        <label class="ws-search"><EngineeringIcon name="search" /><input v-model="search" type="search" :placeholder="tr('搜索项目 / 任务 / 编号','Search project / task / ID')" :aria-label="tr('搜索','Search')" /></label>
-        <div v-if="view==='schedule'" class="ws-toolset" :aria-label="tr('时间粒度','Time scale')"><button :class="{current:zoom==='month'}" @click="zoom='month'">{{tr('月','MONTH')}}</button><button :class="{current:zoom==='quarter'}" @click="zoom='quarter'">{{tr('季度','QUARTER')}}</button></div>
-        <div v-if="view==='schedule'" class="ws-toolset ws-pager"><button :aria-label="tr('前移时间轴','Previous period')" @click="shift(-1)"><EngineeringIcon name="back" /></button><button @click="resetAxis"><EngineeringIcon name="reset" />{{tr('复位','RESET')}}</button><button :aria-label="tr('后移时间轴','Next period')" @click="shift(1)"><EngineeringIcon name="next" /></button></div>
-      </div>
-    </div>
+    <!-- The header owns the search position; Vue owns its reactive filtering state.
+         Portal after hydration to avoid Astro SSR/Teleport mismatch. -->
+    <Teleport v-if="portalReady" to="#ws-header-search-slot">
+      <label class="ws-search">
+        <EngineeringIcon name="search" />
+        <input v-model="search" type="search" :placeholder="tr('搜索项目 / 任务 / 编号','Search project / task / ID')" :aria-label="tr('搜索','Search')" />
+      </label>
+    </Teleport>
     <div class="ws-content-grid">
       <aside class="ws-project-index" :aria-label="tr('路线图导航与项目索引','Roadmap navigation and project index')">
         <nav class="ws-view-nav" :aria-label="tr('路线图视图','Roadmap views')">
@@ -415,7 +416,18 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
               <button v-for="m in presets" :key="m" type="button" :class="{current:activePreset===`${m}m`}" :aria-pressed="activePreset===`${m}m`" @click="setPreset(m)">{{m}}M</button>
               <button ref="rangeTrigger" type="button" class="gantt-range-trigger" :class="{current:activePreset==='custom'}" :aria-expanded="showRangePanel" aria-controls="gantt-range-panel" aria-haspopup="dialog" @click="toggleRangePanel"><EngineeringIcon name="expand" />{{tr('自定义','CUSTOM')}}</button>
             </div>
-            <button type="button" class="gantt-dep-toggle" :aria-pressed="showDependencies" @click="showDependencies=!showDependencies"><span class="ws-dep-dot"></span>{{tr('依赖关系','DEPENDENCIES')}}<strong>{{showDependencies?tr('显示','ON'):tr('隐藏','OFF')}}</strong></button>
+            <div class="gantt-control-actions">
+              <div class="ws-toolset gantt-scale-switch" :aria-label="tr('时间粒度','Time scale')">
+                <button type="button" :aria-pressed="zoom==='month'" :class="{current:zoom==='month'}" @click="zoom='month'">{{tr('月','MONTH')}}</button>
+                <button type="button" :aria-pressed="zoom==='quarter'" :class="{current:zoom==='quarter'}" @click="zoom='quarter'">{{tr('季度','QUARTER')}}</button>
+              </div>
+              <div class="ws-toolset ws-pager gantt-period-pager" :aria-label="tr('时间轴位置','Timeline position')">
+                <button type="button" :aria-label="tr('前移时间轴','Previous period')" @click="shift(-1)"><EngineeringIcon name="back" /></button>
+                <button type="button" @click="resetAxis"><EngineeringIcon name="reset" />{{tr('复位','RESET')}}</button>
+                <button type="button" :aria-label="tr('后移时间轴','Next period')" @click="shift(1)"><EngineeringIcon name="next" /></button>
+              </div>
+              <button type="button" class="gantt-dep-toggle" :aria-pressed="showDependencies" @click="showDependencies=!showDependencies"><span class="ws-dep-dot"></span>{{tr('依赖关系','DEPENDENCIES')}}<strong>{{showDependencies?tr('显示','ON'):tr('隐藏','OFF')}}</strong></button>
+            </div>
           </div>
           <div ref="ganttViewport" class="gantt-viewport" tabindex="0" :aria-label="tr('可横向滚动的只读甘特排期图','Scrollable read-only Gantt timeline')" @pointerdown="panStart" @pointermove="panMove" @pointerup="panEnd" @pointercancel="panEnd" @lostpointercapture="panEnd">
             <div class="gantt-canvas" :style="{'--tick-count':unitCount,'--gantt-label-width':`${labelWidth}px`,'--gantt-masked-height':`${ganttLayout.height+56}px`,minWidth:`${gridMinWidth}px`}"><div class="gantt-label-mask" aria-hidden="true"></div>
