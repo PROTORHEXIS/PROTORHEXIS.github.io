@@ -24,7 +24,11 @@
     }
   ],
   "updatedAt": "2026-11-17",
-  "publication": "approved"
+  "publication": "approved",
+  "delivery": {
+    "state": "released"
+  },
+  "verifiedAt": null
 }
 ---
 仅显示已公开且可核验的信息；未公开的内部进度与证据不在此文档中。

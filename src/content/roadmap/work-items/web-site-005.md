@@ -16,7 +16,11 @@
   "dependsOn": [],
   "sources": [],
   "updatedAt": "2026-11-17",
-  "publication": "approved"
+  "publication": "approved",
+  "delivery": {
+    "state": "unassigned"
+  },
+  "verifiedAt": null
 }
 ---
 未来方向，无已承诺日期；不表示已实现。
