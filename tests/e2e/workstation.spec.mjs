@@ -9,7 +9,8 @@ for (const route of routes) {
     await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
     await expect(page.locator('.ws-root')).toBeVisible();
     await expect(page.locator('.workbench')).toBeVisible();
-    await expect(page.getByText('VERIFIED PUBLIC RECORDS')).toBeVisible();
+    await expect(page.locator('header .ws-header-notice')).toBeVisible();
+    await expect(page.locator('header .ws-header-notice')).toContainText('PARTIAL');
     await expect(page.locator('.ws-project-index')).toBeVisible();
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
     expect(errors).toEqual([]);
@@ -75,8 +76,10 @@ test('desktop navigation lives in the project sidebar without page-description h
 
 test('search keeps one parent focus indication without a second native input outline', async({page})=>{
   await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
   const input=page.getByRole('searchbox',{name:/搜索|Search/});
   await input.focus();
+  await expect(input).toBeFocused();
   const css=await input.evaluate(el=>({
     inner:getComputedStyle(el).outlineStyle,
     parentBorder:getComputedStyle(el.closest('.ws-search')).borderTopColor,
@@ -84,7 +87,7 @@ test('search keeps one parent focus indication without a second native input out
   }));
   expect(css.inner).toBe('none');
   expect(css.parentOutline).toBe('none');
-  expect(css.parentBorder).toBe('rgb(255, 117, 110)');
+  await expect.poll(()=>input.evaluate(el=>getComputedStyle(el.closest('.ws-search')).borderTopColor),{timeout:3000}).toBe('rgb(255, 117, 110)');
   await input.fill('TALOS');
   await expect(input).toHaveValue('TALOS');
 });
@@ -179,7 +182,8 @@ test('system map renders four reviewed organizational edges without inferred dep
 test('actual records never display invented Gantt dependencies or promised dates',async({page})=>{
   await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
   await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
-  await expect(page.getByText('VERIFIED PUBLIC RECORDS')).toBeVisible();
+  await expect(page.locator('header .ws-header-notice')).toBeVisible();
+    await expect(page.locator('header .ws-header-notice')).toContainText('PARTIAL');
   await expect(page.locator('[data-gantt-id="TAL-01"]')).toHaveCount(0);
   await expect(page.locator('.gantt-bar')).toHaveCount(4);
   await expect(page.locator('.gantt-undated')).toHaveCount(5);

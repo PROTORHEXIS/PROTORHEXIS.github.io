@@ -77,5 +77,5 @@ try{
 const roundup=cli('roundup','--since','2026-11-17');
 assert.equal(roundup.status,0,roundup.stderr);
 assert(roundup.stdout.includes('SITE-EV-004') && roundup.stdout.includes('Sources:'),'Roundup must cite already-approved events');
-assert(!roundup.stdout.includes('HoshiriAki/'),'No private links may appear');
+assert(!/https:\/\/github\.com\/(?!PROTORHEXIS\/)/.test(roundup.stdout),'Only approved public GitHub sources may appear');
 console.log('ROADMAP_V3.4_PASS: separate delivery and disclosure, source-backed roundup, agent constraints and review boundaries');
