@@ -7,6 +7,13 @@ export const source = z.object({url:z.url().refine(s=>s.startsWith('https://'),'
 export const publication = z.enum(['approved','draft']);
 export const phase = z.enum(['future','planned','development','qualification','review','published']);
 export const category = z.enum(['platform','product','infrastructure']);
+export const deliveryStatus = z.enum(['unassigned','tentative','committed','released']);
+// Disclosure approval is not a Release Gate.
+export const delivery = z.object({
+  state:deliveryStatus,
+  target:z.string().min(1).max(90).optional(),
+  gateReceipt:z.string().min(6).max(160).optional()
+}).strict();
 export const programSchema=z.object({
   id:identifier, code:z.string().min(1).max(24), title:localized, description:localized,
   publication, order:z.number().int().min(0), sources:z.array(source).min(1)
@@ -16,11 +23,14 @@ export const workSchema=z.object({
   id:identifier, program:identifier, title:localized, description:localized,
   phase, category, schedule, dependsOn:z.array(identifier), sources:z.array(source),
   updatedAt:date, publication, documentation:z.string().max(1200).optional(),
-  reviewReceipt:z.string().regex(/^PUB-RM-[A-Z0-9-]{6,80}$/).optional()
+  reviewReceipt:z.string().regex(/^PUB-RM-[A-Z0-9-]{6,80}$/).optional(),
+  delivery, verifiedAt:date.nullable()
 }).strict();
 export const eventSchema=z.object({
   id:identifier, program:identifier, item:identifier.optional(), date, kind:z.enum(['milestone','verification','decision']),
-  title:localized, description:localized, sources:z.array(source).min(1), publication
+  title:localized, description:localized, sources:z.array(source).min(1), publication,
+  change:z.object({field:z.enum(['phase','delivery','schedule','scope']),before:z.string().max(140),
+    after:z.string().max(140),reason:localized}).strict().optional()
 }).strict();
 export const relationSchema=z.object({
   id:identifier, from:identifier,to:identifier,kind:z.enum(['contains','depends_on','integrates_with']),
