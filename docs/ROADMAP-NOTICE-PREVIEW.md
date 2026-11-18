@@ -10,3 +10,17 @@ The reviewed-data `PARTIAL` notice has two modes without changing its bilingual 
 `<details><summary>` remain native for semantics and script-failure fallback. The client script prevents native toggle only for the clicked summary once hydrated, preserving the hover→pinned transition. One source script is loaded by the shared EngineeringLayout across all four roadmap routes; the CSS remains isolated to workstation V3.4. No global loading or website data changes.
 
 Playwright checks cover desktop hover + interstitial gap, pinned click, outside dismissal, click toggle, keyboard/ Escape, focus-out, and touchscreen click.
+
+## Follow-up: animation and variable-height Gantt
+
+The disclosure now animates in with opacity + a 7px upward offset, then out
+with a 150ms opacity/5px upward exit. The closing state delays removal of
+`details[open]` only until this short transition ends, and new hover events
+cancel pending closing timers. Reduced-motion closes immediately.
+
+An unrelated layout regression was identified from the user screenshot:
+`.gantt-viewport` had `flex:1` and `min-height:485px`, producing an
+apparently empty row underneath the last work item. The viewport now
+uses intrinsic height when short, with a viewport-relative maximum only
+for long lists. No work row heights or dependency layout calculations changed.
+Testing covers one item, empty results, collapsed groups and long scroll.

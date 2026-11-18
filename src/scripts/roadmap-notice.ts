@@ -1,55 +1,78 @@
 /**
- * Navbar disclosure has two deliberate interaction modes:
- * - Pointer-hover: transient; closes when the pointer leaves both trigger and panel.
- * - Click/keyboard activation: pinned; closes on outside pointer interaction,
- *   moving keyboard focus outside, Escape or activating the trigger again.
- *
- * Keep the native <details>/<summary> for accessible semantics and script-failure
- * fallback. The summary's native click toggle is suppressed only after binding,
- * so a hovered disclosure can be promoted to pinned without closing.
+ * Reviewed-public-data disclosure. Two interaction modes:
+ * hover is transient; click/keyboard activation is pinned.
+ * A short closing phase retains <details open> long enough to animate the
+ * contents out without interrupting clicks or keyboard focus elsewhere.
  */
 const notice = document.querySelector<HTMLDetailsElement>('.ws-header-notice');
 if (notice) {
   const trigger = notice.querySelector<HTMLElement>('summary');
   if (trigger) {
+    type Mode = 'closed' | 'hover' | 'pinned' | 'closing';
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const CLOSE_MS = 150;
     let pinned = false;
-    let hovered = false;
+    let closeTimer: number | undefined;
 
-    function sync(mode: 'closed' | 'hover' | 'pinned') {
-      notice!.open = mode !== 'closed';
-      notice!.dataset.mode = mode;
+    function cancelPendingClose() {
+      if (closeTimer !== undefined) {
+        window.clearTimeout(closeTimer);
+        closeTimer = undefined;
+      }
     }
+
+    function setMode(mode: Mode) {
+      if (!notice) return;
+      notice.open = mode !== 'closed';
+      notice.dataset.mode = mode;
+    }
+
+    function open(mode: 'hover' | 'pinned') {
+      cancelPendingClose();
+      pinned = mode === 'pinned';
+      setMode(mode);
+    }
+
     function dismiss() {
+      cancelPendingClose();
       pinned = false;
-      hovered = false;
-      sync('closed');
+      if (!notice || !notice.open) {
+        setMode('closed');
+        return;
+      }
+      if (reduceMotion.matches) {
+        setMode('closed');
+        return;
+      }
+      // Animate the popover out before finally clearing the native open state.
+      setMode('closing');
+      closeTimer = window.setTimeout(() => {
+        closeTimer = undefined;
+        if (notice?.dataset.mode === 'closing') setMode('closed');
+      }, CLOSE_MS);
     }
 
-    notice.dataset.mode = notice.open ? 'pinned' : 'closed';
+    setMode(notice.open ? 'pinned' : 'closed');
+    pinned = notice.open;
 
     notice.addEventListener('pointerenter', event => {
       if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') return;
-      hovered = true;
-      if (!pinned) sync('hover');
+      if (!pinned) open('hover');
     });
+
     notice.addEventListener('pointerleave', event => {
       if (event.pointerType !== 'mouse' && event.pointerType !== 'pen') return;
-      hovered = false;
-      if (!pinned) sync('closed');
+      if (!pinned) dismiss();
     });
 
     trigger.addEventListener('click', event => {
-      event.preventDefault(); // Do not let the native summary toggle undo pinned state.
-      if (pinned) {
-        dismiss();
-      } else {
-        pinned = true;
-        sync('pinned');
-      }
+      event.preventDefault(); // Keep native toggle from undoing hover -> pin.
+      if (pinned) dismiss();
+      else open('pinned');
     });
 
     document.addEventListener('pointerdown', event => {
-      if (!notice.contains(event.target as Node) && notice.open) dismiss();
+      if (notice.open && !notice.contains(event.target as Node)) dismiss();
     }, {capture: true});
 
     document.addEventListener('focusin', event => {
@@ -58,10 +81,10 @@ if (notice) {
 
     document.addEventListener('keydown', event => {
       if (event.key !== 'Escape' || !notice.open) return;
-      const hadInternalFocus = notice.contains(document.activeElement);
+      const restoreFocus = notice.contains(document.activeElement);
       event.preventDefault();
       dismiss();
-      if (hadInternalFocus) trigger.focus();
+      if (restoreFocus) trigger.focus();
     });
   }
 }

@@ -524,3 +524,81 @@ test('moving focus away closes a pinned notice without interrupting the target',
   await expect(notice).not.toHaveAttribute('open');
   await expect(page.locator('.ws-header .ws-search input')).toBeFocused();
 });
+
+
+test('notice animates open and closed without disturbing click-pinned mode',async({page,isMobile})=>{
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  const notice=page.locator('.ws-header-notice'),trigger=notice.locator('summary');
+  await trigger.click();
+  await expect(notice).toHaveAttribute('data-mode','pinned');
+  const panel=notice.locator('p');
+  await expect(panel).toBeVisible();
+  if(!isMobile) {
+    const openMotion=await panel.evaluate(el=>getComputedStyle(el).animationName);
+    expect(openMotion).toContain('ws-notice-appear');
+  }
+  await page.locator('.ws-project-index .rail-item').first().click();
+  if(!isMobile){
+    await expect(notice).toHaveAttribute('data-mode','closing',{timeout:1000});
+    await expect(panel).toHaveCSS('animation-name','ws-notice-disappear');
+  }
+  await expect(notice).not.toHaveAttribute('open',{timeout:2000});
+  await expect(notice).toHaveAttribute('data-mode','closed');
+});
+
+test('moving back into the notice cancels exit animation and restores transient hover',async({page,isMobile})=>{
+  test.skip(isMobile,'Pointer-hover only');
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  const notice=page.locator('.ws-header-notice'),trigger=notice.locator('summary'),panel=notice.locator('p');
+  await trigger.hover();
+  await expect(notice).toHaveAttribute('data-mode','hover');
+  await page.mouse.move(4,360);
+  await expect(notice).toHaveAttribute('data-mode','closing');
+  await trigger.hover();
+  await expect(notice).toHaveAttribute('data-mode','hover');
+  await expect(panel).toBeVisible();
+  await page.mouse.move(4,360);
+  await expect(notice).not.toHaveAttribute('open',{timeout:3000});
+});
+
+test('Gantt bottom edge hugs its actual final row after filtering to one item',async({page})=>{
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const input=page.locator('.ws-header .ws-search input');
+  await input.fill('TAL-PROGRESS-001');
+  await expect(page.locator('.gantt-row')).toHaveCount(1);
+  const geometry=await page.locator('.gantt-viewport').evaluate(view=>{
+    const canvas=view.querySelector('.gantt-canvas');
+    const last=view.querySelector('.gantt-row:last-of-type');
+    const v=view.getBoundingClientRect(),c=canvas.getBoundingClientRect(),l=last.getBoundingClientRect();
+    return {viewportHeight:v.height,canvasHeight:c.height,
+      afterLast:c.bottom-l.bottom,extraBelowCanvas:v.bottom-c.bottom,
+      scrollHeight:view.scrollHeight,clientHeight:view.clientHeight};
+  });
+  expect(geometry.afterLast).toBeGreaterThanOrEqual(-2);
+  expect(geometry.afterLast).toBeLessThanOrEqual(2);
+  // Extra scrollbar allowance is okay; a ~62px phantom row is not.
+  expect(geometry.extraBelowCanvas).toBeGreaterThanOrEqual(-3);
+  expect(geometry.extraBelowCanvas).toBeLessThanOrEqual(22);
+});
+
+test('Gantt last row, zero results and collapsed group never create a phantom row',async({page})=>{
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const search=page.locator('.ws-header .ws-search input');
+  await search.fill('TAL-PROGRESS-001');
+  await expect(page.locator('.gantt-row')).toHaveCount(1);
+  const group=page.locator('.gantt-group');
+  await group.click();
+  await expect(page.locator('.gantt-row')).toHaveCount(0);
+  let gap=await page.locator('.gantt-viewport').evaluate(el=>el.getBoundingClientRect().bottom-el.querySelector('.gantt-canvas').getBoundingClientRect().bottom);
+  expect(gap).toBeLessThanOrEqual(22);
+  await search.fill('NO_SUCH_PUBLIC_WORK_ITEM_000');
+  await expect(page.locator('.ws-no-results')).toBeVisible();
+  gap=await page.locator('.gantt-viewport').evaluate(el=>el.getBoundingClientRect().bottom-el.querySelector('.gantt-canvas').getBoundingClientRect().bottom);
+  expect(gap).toBeLessThanOrEqual(22);
+  await search.fill('');
+  await expect(page.locator('.gantt-row')).toHaveCount(15);
+  const sizes=await page.locator('.gantt-viewport').evaluate(el=>({height:el.clientHeight,scrollHeight:el.scrollHeight}));
+  expect(sizes.scrollHeight).toBeGreaterThan(sizes.height);
+});

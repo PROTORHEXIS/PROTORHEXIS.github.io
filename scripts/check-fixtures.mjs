@@ -63,8 +63,11 @@ assert(component.includes('import { publicSnapshot,') && component.includes('pub
 assert(layout.includes('PARTIAL') && layout.includes('data-zh="已审查公开内容"'), 'partial coverage must remain available in the header');
 assert(layout.includes('roadmap-notice.ts') && layout.includes('data-mode="closed"'), 'Shared disclosure must mount its hover / pin controller');
 assert(noticeLogic.includes("pointerenter") && noticeLogic.includes("pointerleave") && noticeLogic.includes("pointerdown") && noticeLogic.includes("keydown"), 'Disclosure must support hover, leave, outside click and Escape');
-assert(noticeLogic.includes("event.preventDefault()") && noticeLogic.includes("sync('pinned')"), 'Click must pin instead of toggling native details from hover');
+assert(noticeLogic.includes("event.preventDefault()") && noticeLogic.includes("open('pinned')"), 'Click must pin instead of toggling native details from hover');
 assert(v34.includes('.ws-header-notice[open]::after') && v34.includes('height:9px'), 'Hover bridge must cover the trigger-to-popover gap');
+assert(noticeLogic.includes("setMode('closing')") && noticeLogic.includes("cancelPendingClose"), 'Animated exit must be cancelable and restore hover');
+assert(v34.includes('ws-notice-appear') && v34.includes('ws-notice-disappear'), 'Notice must animate opening and closing');
+assert(v34.includes('.workbench[data-view="schedule"] .gantt-viewport') && v34.includes('flex:0 0 auto'), 'Gantt viewport must size to actual content and remove trailing phantom row');
 const stylesheet = read('src/styles/workstation.css');
 assert(!/(?:^|[;{\s])box-shadow\s*:\s*(?!none\s*!important)/m.test(stylesheet), 'workstation must not introduce shadows');
 assert(!/filter\s*:\s*drop-shadow\s*\(/.test(stylesheet), 'no drop-shadow in workstation');
