@@ -1,4 +1,4 @@
-/* V3.3 — stage-count-safe horizontal lanes, public graph edges and CSS-colored vector lockup. */
+/* V3.3 — stage-count-safe horizontal lanes, public graph edges; brand styling is global in site.css. */
 .ws-board-viewport{overflow-x:auto;overflow-y:auto;overscroll-behavior-inline:contain;}
 .ws-board{
   display:grid;
@@ -9,20 +9,7 @@
   align-items:stretch;
 }
 .kanban-column{min-width:0;}
-.ws-brand{
-  min-width:0;
-  flex:0 0 auto;
-  width:clamp(174px,15vw,226px);
-  gap:0;
-  color:#ececf0;
-  transition:color 150ms ease;
-}
-.ws-brand:hover{color:#ff635b;}
-.ws-brand-lockup{display:block;width:100%;height:auto;max-height:44px;fill:currentColor;}
 .system-graph-flow .vue-flow__edge-path{stroke:#b67d79;stroke-width:1.8px;stroke-linecap:round;fill:none;}
 @media(max-width:740px){
-  .ws-brand{width:158px;}
-  .ws-brand-lockup{max-height:35px;}
   .ws-board{min-height:485px;}
 }
-@media(prefers-reduced-motion:reduce){.ws-brand{transition:none;}}
