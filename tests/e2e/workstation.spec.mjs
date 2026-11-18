@@ -604,3 +604,94 @@ test('Gantt last row, zero results and collapsed group never create a phantom ro
   const sizes=await page.locator('.gantt-viewport').evaluate(el=>({height:el.clientHeight,scrollHeight:el.scrollHeight}));
   expect(sizes.scrollHeight).toBeGreaterThan(sizes.height);
 });
+
+
+test('V3.5 exterior panels are flush, radius-free, and internal cards keep their corners',async({page,isMobile})=>{
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const dimensions=await page.locator('.ws-content-grid').evaluate(grid=>{
+    const rail=grid.querySelector('.ws-project-index'),main=grid.querySelector('.ws-primary'),card=grid.querySelector('.kanban-card');
+    const outer=grid.getBoundingClientRect(),left=rail.getBoundingClientRect(),center=main.getBoundingClientRect();
+    return {outerLeft:outer.left,outerRight:outer.right,leftLeft:left.left,leftRight:left.right,
+      centerLeft:center.left,centerRight:center.right,
+      padding:getComputedStyle(grid).paddingLeft,
+      gap:getComputedStyle(grid).columnGap,
+      leftRadius:getComputedStyle(rail).borderTopLeftRadius,
+      centerRadius:getComputedStyle(main).borderTopLeftRadius,
+      cardRadius:getComputedStyle(card).borderTopLeftRadius};
+  });
+  expect(dimensions.padding).toBe('0px');
+  expect(dimensions.leftRadius).toBe('0px');
+  expect(dimensions.centerRadius).toBe('0px');
+  expect(parseFloat(dimensions.cardRadius)).toBeGreaterThan(0);
+  expect(Math.abs(dimensions.outerLeft-dimensions.leftLeft)).toBeLessThanOrEqual(1);
+  if(!isMobile){
+    expect(Math.abs(dimensions.leftRight-dimensions.centerLeft)).toBeLessThanOrEqual(1);
+    expect(Math.abs(dimensions.centerRight-dimensions.outerRight)).toBeLessThanOrEqual(1);
+  }
+});
+
+test('V3.5 default collapsed inspector has a left-arrow wall handle and empty manual opening',async({page,isMobile})=>{
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const grid=page.locator('.ws-content-grid'),inspector=page.locator('#roadmap-inspector');
+  const handle=page.getByRole('button',{name:/展开右侧详情栏|Expand detail sidebar/});
+  await expect(grid).toHaveAttribute('data-inspector-open','false');
+  await expect(inspector).toHaveAttribute('aria-hidden','true');
+  await expect(handle).toBeVisible();
+  await expect(handle).toHaveAttribute('aria-expanded','false');
+  const mainBefore=await page.locator('.ws-primary').boundingBox();
+  await handle.click();
+  await expect(grid).toHaveAttribute('data-inspector-open','true');
+  await expect(inspector).toHaveAttribute('aria-hidden','false');
+  await expect(inspector).toHaveClass(/inspector-visible/);
+  await expect(inspector.locator('.inspector-empty-state')).toContainText(/请选择一个项目以显示内容|Select an item to display its details/);
+  await expect(inspector.locator('.inspector-hero')).toHaveCount(0);
+  if(!isMobile) {
+    await expect.poll(()=>page.locator('.ws-primary').evaluate(el=>el.getBoundingClientRect().width)).toBeLessThan(mainBefore.width-150);
+  }
+  await page.getByRole('button',{name:/收起右侧详情栏|Collapse detail sidebar/}).click();
+  await expect(grid).toHaveAttribute('data-inspector-open','false');
+  await expect(inspector).toHaveAttribute('aria-hidden','true');
+});
+
+test('V3.5 real task selection auto-opens details; manual collapse and reopen preserve selection',async({page})=>{
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const inspector=page.locator('#roadmap-inspector');
+  await page.locator('.kanban-card').filter({hasText:'TAL-PROGRESS-001'}).click();
+  await expect(inspector).toHaveClass(/inspector-visible/);
+  await expect(inspector).toContainText('TAL-PROGRESS-001');
+  await expect(inspector.locator('.inspector-empty-state')).toHaveCount(0);
+  await page.getByRole('button',{name:/收起右侧详情栏|Collapse detail sidebar/}).click();
+  await expect(inspector).toHaveAttribute('aria-hidden','true');
+  await page.getByRole('button',{name:/展开右侧详情栏|Expand detail sidebar/}).click();
+  await expect(inspector).toHaveAttribute('aria-hidden','false');
+  await expect(inspector).toContainText('TAL-PROGRESS-001');
+});
+
+test('V3.5 handle hover visibly increases opacity and reduced-motion closes instantly',async({page,isMobile})=>{
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const handle=page.locator('.ws-inspector-handle');
+  await expect(handle).toBeVisible();
+  if(!isMobile){
+    const opacity=await handle.evaluate(el=>Number(getComputedStyle(el).opacity));
+    await handle.hover();
+    await expect.poll(()=>handle.evaluate(el=>Number(getComputedStyle(el).opacity))).toBeGreaterThan(opacity+.25);
+  }
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await handle.click();
+  await expect(page.locator('#roadmap-inspector')).toHaveAttribute('aria-hidden','false');
+  await expect(handle).toHaveCSS('transition-duration',/^0s(, 0s)*$/);
+});
+
+test('V3.5 a system-map node explicitly selects and opens its inspector',async({page})=>{
+  await page.goto('/roadmap/systems/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  await expect(page.locator('#roadmap-inspector')).toHaveAttribute('aria-hidden','true');
+  await page.locator('.system-graph-node').filter({hasText:'TALOS'}).click();
+  const inspector=page.locator('#roadmap-inspector');
+  await expect(inspector).toHaveClass(/inspector-visible/);
+  await expect(inspector).toContainText('TALOS');
+});
