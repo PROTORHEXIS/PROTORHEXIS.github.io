@@ -200,8 +200,13 @@ const stages: {id:Stage,zh:string,en:string,code:string}[] = [
 const stageName = (stage: Stage) => { const s = stages.find(x => x.id === stage); return s ? tr(s.zh, s.en) : stage; };
 const streamName = (s: Stream) => ({platform:tr('平台','PLATFORM'),product:tr('产品','PRODUCT'),infrastructure:tr('基础设施','INFRASTRUCTURE')})[s];
 const eventName = (k:PublicEvent['kind']) => ({milestone:tr('里程碑','MILESTONE'),verification:tr('验证','VERIFICATION'),decision:tr('决策变更','DECISION')})[k];
-const panelTitle = computed(() => ({schedule:tr('开发排期','Development schedule'),board:tr('交付状态看板','Release status board'),activity:tr('事件与证据轨迹','Activity & evidence trail'),systems:tr('系统关系图谱','System relationship map')})[props.view]);
-const panelSubtitle = computed(() => ({schedule:tr('仅展示已核验的公开记录；历史 PR 日期不是未来交付承诺','Verified public records only; historical PR dates are not future release commitments'),board:tr('按公开交付阶段组织，非内部 Issue 状态','Grouped by public delivery stage, not internal issue state'),activity:tr('按实际发生顺序追溯变更与核验','Trace change and verification events chronologically'),systems:tr('公开项目索引；未审查的系统依赖不予绘制','Public project index; unreviewed system dependencies are not drawn')})[props.view]);
+const viewLinks = [
+  {id:'schedule',href:'/roadmap/',code:'01',zh:'开发排期',en:'PROGRESS TRACKER'},
+  {id:'board',href:'/roadmap/board/',code:'02',zh:'交付看板',en:'RELEASE BOARD'},
+  {id:'activity',href:'/roadmap/evidence/',code:'03',zh:'事件时间线',en:'ACTIVITY'},
+  {id:'systems',href:'/roadmap/systems/',code:'04',zh:'系统图谱',en:'SYSTEM MAP'},
+] as const;
+const activeView = computed(() => viewLinks.find(v=>v.id===props.view)!);
 const matching = (zh:string,en:string) => `${zh} ${en}`.toLowerCase().includes(search.value.trim().toLowerCase());
 const visibleItems = computed(() => publicItems.filter(item =>
   (props.view !== 'schedule' || item.stage !== 'future') &&
@@ -342,9 +347,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
 
 <template>
   <section class="workbench" :data-view="view">
-    <div class="ws-notice"><span class="notice-indicator"><EngineeringIcon name="warning" /></span><strong>VERIFIED PUBLIC RECORDS</strong><span>{{tr('仅展示已审查的工程事实与 Future 方向；未获批准的私有进展不会公开。','Reviewed public facts and noncommittal Future directions only. Unapproved private updates remain hidden.')}}</span><span class="notice-tag">PARTIAL COVERAGE</span></div>
-    <div class="ws-commandbar">
-      <div class="ws-command-title"><small>{{({schedule:'01 / PLANNING',board:'02 / DELIVERABLES',activity:'03 / HISTORY',systems:'04 / ARCHITECTURE'})[view]}}</small><h1>{{panelTitle}}</h1><p>{{panelSubtitle}}</p></div>
+    <div class="ws-commandbar" role="toolbar" :aria-label="tr('视图操作','View controls')">
       <div class="ws-tools">
         <label class="ws-search"><EngineeringIcon name="search" /><input v-model="search" type="search" :placeholder="tr('搜索项目 / 任务 / 编号','Search project / task / ID')" :aria-label="tr('搜索','Search')" /></label>
         <div v-if="view==='schedule'" class="ws-toolset" :aria-label="tr('时间粒度','Time scale')"><button :class="{current:zoom==='month'}" @click="zoom='month'">{{tr('月','MONTH')}}</button><button :class="{current:zoom==='quarter'}" @click="zoom='quarter'">{{tr('季度','QUARTER')}}</button></div>
@@ -352,13 +355,28 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
       </div>
     </div>
     <div class="ws-content-grid">
-      <aside class="ws-project-index" :aria-label="tr('项目索引','Project index')">
+      <aside class="ws-project-index" :aria-label="tr('路线图导航与项目索引','Roadmap navigation and project index')">
+        <nav class="ws-view-nav" :aria-label="tr('路线图视图','Roadmap views')">
+          <div class="rail-title"><span>VIEWS</span><span>04 / NAV</span></div>
+          <a v-for="link in viewLinks" :key="link.id" class="ws-view-link" :class="{'is-current':view===link.id}"
+            :href="link.href" :aria-current="view===link.id?'page':undefined">
+            <span class="ws-view-index">{{link.code}}</span><span>{{tr(link.zh,link.en)}}</span>
+          </a>
+        </nav>
+        <details class="ws-view-mobile">
+          <summary><span>{{tr('视图','VIEW')}}</span><strong>{{tr(activeView.zh,activeView.en)}}</strong><span class="ws-view-mobile-chevron" aria-hidden="true">⌄</span></summary>
+          <nav class="ws-view-mobile-list" :aria-label="tr('路线图视图','Roadmap views')">
+            <a v-for="link in viewLinks" :key="link.id" :href="link.href" :aria-current="view===link.id?'page':undefined">{{link.code}} / {{tr(link.zh,link.en)}}</a>
+          </nav>
+        </details>
+        <div class="ws-project-filters">
         <div class="rail-title"><span>PROJECT INDEX</span><span>{{String(publicPrograms.length).padStart(2,'0')}} / SYS</span></div>
         <button class="rail-item" :class="{'is-current':activeProgram==='all'}" @click="switchProgram('all')"><span class="rail-symbol rail-symbol-all">✳</span><span class="rail-copy"><strong>{{tr('全部系统','ALL SYSTEMS')}}</strong><small>OVERVIEW / ALL</small></span><span class="rail-count">{{publicItems.length.toString().padStart(2,'0')}}</span></button>
         <div class="rail-separator">{{tr('系统与产品','SYSTEMS & PRODUCTS')}}</div>
         <button v-for="program in publicPrograms" :key="program.id" class="rail-item" :class="{'is-current':activeProgram===program.id}" @click="switchProgram(program.id)"><span class="rail-symbol">{{program.id.slice(0,1)}}</span><span class="rail-copy"><strong>{{program.id}}</strong><small>{{tr(program.zh,program.en)}}</small></span><span class="rail-count">{{filteredCount(program.id).toString().padStart(2,'0')}}</span></button>
         <div class="rail-block"><div class="rail-block-title">DATA SCOPE</div><div class="rail-block-value"><span class="ws-signal"></span> PUBLIC / REVIEWED</div><p>{{tr('公开页面仅读取独立的脱敏数据模型，不能直接读取内部仓库。','Public pages must use an independent reviewed feed, never internal repository access.')}}</p></div>
         <div class="rail-bottom"><span>INDEX REV. 004</span><span>PROTORHEXIS</span></div>
+        </div>
       </aside>
 
       <div class="ws-primary">

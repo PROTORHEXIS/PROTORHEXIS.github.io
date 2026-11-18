@@ -23,7 +23,7 @@ assert(snapshot.workItems.every(x=>x.schedule===null || x.schedule.kind==='obser
 assert(!existsSync(resolve(root,'src/data/workstation-demo.ts')), 'Synthetic demo feed must be removed from production');
 assert(existsSync(resolve(root,'src/data/roadmap.generated.json')), 'Generated public data missing');
 const layout = read('src/layouts/EngineeringLayout.astro');
-assert(layout.includes('PUBLIC RECORDS / LIMITED') && layout.includes('PUBLIC SNAPSHOT / LIMITED COVERAGE'),'public data must not retain DEMO labels');
+assert(layout.includes('ws-header-notice') && layout.includes('PUBLIC SNAPSHOT / LIMITED COVERAGE'),'review disclosure must live in header, not in a stacked banner');
 const component = read('src/components/vue/EngineeringWorkbench.vue');
 const graph = read('src/components/vue/SystemRelationshipGraph.vue');
 const brand = read('src/components/BrandLockup.astro');
@@ -49,9 +49,9 @@ assert(gateComponent.includes('<SiteBrand />') && gateComponent.includes('site-l
 assert(gateStyle.includes('clip-path:polygon') && gateScript.includes('animateClip') && gateScript.includes('awaitHydration'),'Global transition must adapt supplied polygon mask and await real readiness');
 assert(!gateComponent.includes('gate-percent') && !gateScript.includes('Math.random'),'Do not simulate a quantitative loading percentage');
 assert(brand.includes('fill="currentColor"') && brand.includes('class="site-brand-vector"') && !brand.includes('#262626'),'Brand geometry must inherit CSS color');
-assert(component.includes('VERIFIED PUBLIC RECORDS'), 'public partial coverage banner missing');
+assert(!component.includes('class="ws-notice"') && !component.includes('ws-command-title') && component.includes('ws-view-nav'), 'No redundant warning band or generic page description; sidebar navigation required');
 assert(component.includes('import { publicSnapshot,') && component.includes('publicSnapshot.updatedAt'), 'public content snapshot must be imported before SSR rendering');
-assert(component.includes('PARTIAL COVERAGE'), 'missing partial coverage warning');
+assert(layout.includes('PARTIAL') && layout.includes('data-zh="已审查公开内容"'), 'partial coverage must remain available in the header');
 const stylesheet = read('src/styles/workstation.css');
 assert(!/(?:^|[;{\s])box-shadow\s*:\s*(?!none\s*!important)/m.test(stylesheet), 'workstation must not introduce shadows');
 assert(!/filter\s*:\s*drop-shadow\s*\(/.test(stylesheet), 'no drop-shadow in workstation');
