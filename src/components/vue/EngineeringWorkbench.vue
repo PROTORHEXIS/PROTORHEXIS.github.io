@@ -9,7 +9,14 @@ import { monthIndex, monthString, validateWindow, windowEnds, axisTicks, barPosi
 const props = defineProps<{ view: 'schedule' | 'board' | 'activity' | 'systems' }>();
 const graphComponent = shallowRef<Component | null>(null);
 const labelWidth = ref(256);
-function selectGraphProgram(id:string) { if (id==='all' || publicPrograms.some(p=>p.id===id)) switchProgram(id as ProgramId|'all'); }
+function selectGraphProgram(id:string) {
+  if (id === 'all') { switchProgram('all'); return; }
+  if (publicPrograms.some(p=>p.id===id)) {
+    activeProgram.value = id as ProgramId;
+    selectedId.value = id;
+    inspectorOpen.value = true;
+  }
+}
 
 const { locale } = usePublicLocale();
 const tr = (zh: string, en: string) => locale.value === 'zh' ? zh : en;
@@ -18,7 +25,8 @@ const search = ref('');
 const stream = ref<'all' | Stream>('all');
 const eventKind = ref<'all' | PublicEvent['kind']>('all');
 const eventKinds: Array<'all' | PublicEvent['kind']> = ['all','milestone','verification','decision'];
-const selectedId = ref(props.view === 'activity' ? (publicEvents[0]?.id??'') : (publicItems[0]?.id??''));
+// Do not confuse a public record's existence with an explicit selection.
+const selectedId = ref('');
 const inspectorOpen = ref(false);
 const isNarrow = ref(false);
 const reducedMotion = ref(true); // Safe SSR default until the media query is known.
@@ -76,7 +84,8 @@ watch([inspectorOpen, isNarrow], async ([open, narrow]) => {
     if (previousBodyOverflow === null) previousBodyOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     await nextTick();
-    inspectorRef.value?.querySelector<HTMLElement>('.inspector-close')?.focus();
+    if (hasInspectorSelection.value) inspectorRef.value?.querySelector<HTMLElement>('.inspector-close')?.focus();
+    else inspectorRef.value?.focus();
   } else restoreBodyScroll();
 });
 function closeInspector() {
@@ -84,10 +93,16 @@ function closeInspector() {
   if (returnFocus?.isConnected) returnFocus.focus();
   returnFocus = null;
 }
+function toggleInspector() {
+  if (inspectorOpen.value) { closeInspector(); return; }
+  if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement)
+    returnFocus = document.activeElement;
+  inspectorOpen.value = true;
+}
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
     if (showRangePanel.value) { event.preventDefault(); closeRangePanel(true); return; }
-    if (inspectorOpen.value && isNarrow.value) { event.preventDefault(); closeInspector(); }
+    if (inspectorOpen.value) { event.preventDefault(); closeInspector(); }
   }
   if (event.key === 'Tab' && inspectorOpen.value && isNarrow.value && inspectorRef.value) {
     const controls = [...inspectorRef.value.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
@@ -244,6 +259,11 @@ const visibleEvents = computed(() => publicEvents.filter(event =>
 const chosenItem = computed(() => publicItems.find(x => x.id === selectedId.value) ?? null);
 const chosenEvent = computed(() => publicEvents.find(x => x.id === selectedId.value) ?? null);
 const chosenProgram = computed(() => publicPrograms.find(x => x.id === activeProgram.value) ?? null);
+const hasInspectorSelection = computed(() => props.view === 'activity'
+  ? Boolean(chosenEvent.value)
+  : props.view === 'systems'
+    ? Boolean(chosenProgram.value && selectedId.value === chosenProgram.value.id)
+    : Boolean(chosenItem.value));
 const dependents = computed(() => chosenItem.value ? publicItems.filter(x => x.deps.includes(chosenItem.value!.id)) : []);
 function select(id:string) { if (document.activeElement instanceof HTMLElement) returnFocus = document.activeElement; selectedId.value=id; inspectorOpen.value=true; }
 function switchProgram(id:ProgramId|'all') { activeProgram.value=id; selectedId.value=''; inspectorOpen.value=false; closeRangePanel(); }
@@ -377,7 +397,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
         <input v-model="search" type="search" :placeholder="tr('搜索项目 / 任务 / 编号','Search project / task / ID')" :aria-label="tr('搜索','Search')" />
       </label>
     </Teleport>
-    <div class="ws-content-grid">
+    <div class="ws-content-grid" :data-inspector-open="inspectorOpen ? 'true' : 'false'">
       <aside class="ws-project-index" :aria-label="tr('路线图导航与项目索引','Roadmap navigation and project index')">
         <nav class="ws-view-nav" :aria-label="tr('路线图视图','Roadmap views')">
           <div class="rail-title"><span>VIEWS</span><span>04 / NAV</span></div>
@@ -465,7 +485,13 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
       </div>
 
       <button v-if="inspectorOpen" class="ws-inspector-scrim" type="button" :aria-label="tr('关闭详情面板','Close detail panel')" @click="closeInspector"></button>
-      <aside ref="inspectorRef" id="roadmap-inspector" class="ws-inspector" :class="{'inspector-visible':inspectorOpen}" :aria-label="tr('详情检查器','Inspector')" :aria-hidden="isNarrow && !inspectorOpen ? 'true' : undefined" :inert="isNarrow && !inspectorOpen" tabindex="-1"><div class="inspector-title"><span>DETAIL INSPECTOR</span><button type="button" class="inspector-close" :aria-label="tr('关闭详情','Close inspector')" @click="closeInspector"><EngineeringIcon name="close" /></button></div>
+      <aside ref="inspectorRef" id="roadmap-inspector" class="ws-inspector" :class="{'inspector-visible':inspectorOpen}" :aria-label="tr('详情检查器','Inspector')" :aria-hidden="!inspectorOpen ? 'true' : undefined" :inert="!inspectorOpen" tabindex="-1">
+        <div v-if="!hasInspectorSelection" class="inspector-empty-state" role="status">
+          <span class="inspector-empty-symbol" aria-hidden="true">⌖</span>
+          <p>{{tr('请选择一个项目以显示内容','Select an item to display its details')}}</p>
+        </div>
+        <template v-else>
+        <div class="inspector-title"><span>DETAIL INSPECTOR</span><button type="button" class="inspector-close" :aria-label="tr('关闭详情','Close inspector')" @click="closeInspector"><EngineeringIcon name="close" /></button></div>
         <AnimatePresence mode="wait">
           <motion.div :key="`${view}:${selectedId}:${activeProgram}`" class="inspector-motion-body"
             :initial="reducedMotion ? false : { opacity: 0, y: 8 }"
@@ -489,7 +515,15 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
         </AnimatePresence>
         <div class="inspector-warning"><span><EngineeringIcon name="warning" /></span><p>{{tr('公开事实由来源链接支持，未公布的项目没有推定进度或日期。','Public facts are source-linked. Undisclosed projects have no inferred status or dates.')}}</p></div>
         <div class="inspector-foot">INSPECTOR / REV 004 <span>PUBLIC SNAPSHOT</span></div>
+        </template>
       </aside>
+      <button class="ws-inspector-handle" type="button"
+        :aria-label="inspectorOpen ? tr('收起右侧详情栏','Collapse detail sidebar') : tr('展开右侧详情栏','Expand detail sidebar')"
+        aria-controls="roadmap-inspector" :aria-expanded="inspectorOpen"
+        :title="inspectorOpen ? tr('收起详情','Collapse details') : tr('展开详情','Expand details')"
+        @click="toggleInspector">
+        <EngineeringIcon :name="inspectorOpen ? 'next' : 'back'" />
+      </button>
     </div>
     <Teleport v-if="portalReady" to="body">
       <Transition name="ws-pop">
