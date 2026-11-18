@@ -491,7 +491,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
       </div>
 
       <button v-if="inspectorOpen" class="ws-inspector-scrim" type="button" :aria-label="tr('关闭详情面板','Close detail panel')" @click="closeInspector"></button>
-      <aside ref="inspectorRef" id="roadmap-inspector" class="ws-inspector" :class="{'inspector-visible':inspectorOpen}" :aria-label="tr('详情检查器','Inspector')" :aria-hidden="!inspectorOpen ? 'true' : undefined" :inert="!inspectorOpen" tabindex="-1">
+      <aside ref="inspectorRef" id="roadmap-inspector" class="ws-inspector" :class="{'inspector-visible':inspectorOpen}" :aria-label="tr('详情检查器','Inspector')" :aria-hidden="inspectorOpen ? 'false' : 'true'" :inert="!inspectorOpen" tabindex="-1">
         <div v-if="!hasInspectorSelection" class="inspector-empty-state" role="status">
           <p>{{tr('请选择一个项目以显示内容','Select an item to display its details')}}</p>
         </div>
