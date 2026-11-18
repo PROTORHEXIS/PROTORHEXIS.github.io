@@ -286,10 +286,10 @@ test('global brand color is controlled by a CSS custom property on every layout'
     const brand=page.locator('header .site-brand');
     await expect(brand).toBeVisible();
     await brand.evaluate(el=>el.style.setProperty('--site-brand-color','rgb(72, 152, 209)'));
-    const color=await brand.locator('svg.site-brand-vector').evaluate(el=>({
-      fill:getComputedStyle(el).fill,color:getComputedStyle(el).color
-    }));
-    expect(color.fill).toBe('rgb(72, 152, 209)');
+    const svg=brand.locator('svg.site-brand-vector');
+    // Global brand intentionally animates color changes for 150ms.
+    await expect.poll(()=>svg.evaluate(el=>getComputedStyle(el).fill),{timeout:3000}).toBe('rgb(72, 152, 209)');
+    const color=await svg.evaluate(el=>({fill:getComputedStyle(el).fill,color:getComputedStyle(el).color}));
     expect(color.color).toBe(color.fill);
   }
 });
