@@ -477,7 +477,7 @@ test('notice hover opens transiently and closes after pointer leaves both trigge
   await expect(popup).toBeVisible();
   // Mouse must be able to cross the real 8px visual gap into the panel.
   const triggerBox=await summary.boundingBox(), popupBox=await popup.boundingBox();
-  await page.mouse.move(triggerBox.x+Math.min(55,triggerBox.width/2),triggerBox.bottom-3);
+  await page.mouse.move(triggerBox.x+Math.min(55,triggerBox.width/2),triggerBox.y+triggerBox.height-3);
   await page.mouse.move(popupBox.x+Math.min(55,popupBox.width/2),popupBox.y+12,{steps:12});
   await expect(notice).toHaveAttribute('data-mode','hover');
   await page.mouse.move(3,350,{steps:8});
