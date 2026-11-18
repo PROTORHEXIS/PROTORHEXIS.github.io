@@ -107,7 +107,13 @@ function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Tab' && inspectorOpen.value && isNarrow.value && inspectorRef.value) {
     const controls = [...inspectorRef.value.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
       .filter(el => !el.hasAttribute('inert') && el.getClientRects().length > 0);
-    if (!controls.length) { event.preventDefault(); return; }
+    if (!controls.length) {
+      // Empty inspector has no inner links; make the always-visible edge toggle
+      // the keyboard escape route instead of trapping Tab on an empty drawer.
+      event.preventDefault();
+      document.querySelector<HTMLElement>('.ws-inspector-handle')?.focus();
+      return;
+    }
     const first = controls[0], last = controls[controls.length - 1];
     if (event.shiftKey && (document.activeElement === first || !inspectorRef.value.contains(document.activeElement))) {
       event.preventDefault(); last.focus();
