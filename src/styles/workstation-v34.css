@@ -65,3 +65,20 @@
 @media(prefers-reduced-motion:reduce){
   .ws-view-link,.ws-view-mobile-chevron{transition:none!important}
 }
+
+/* Delivery state is not inferred from a work item's engineering phase. */
+.kanban-card-foot .kanban-delivery{margin-left:auto;margin-right:6px;font:700 9px 'Space Mono','Microsoft YaHei',monospace;color:#abaeb7}
+.kanban-card-foot .kanban-delivery[data-delivery="released"],
+.inspector-delivery[data-delivery="released"]{color:#a4d9b8}
+.kanban-card-foot .kanban-delivery[data-delivery="committed"],
+.inspector-delivery[data-delivery="committed"]{color:#94c6df}
+.kanban-card-foot .kanban-delivery[data-delivery="tentative"],
+.inspector-delivery[data-delivery="tentative"]{color:#e3c38f}
+.inspector-spec .inspector-delivery small,
+.inspector-spec dd>small{display:block;font-size:9px;color:#81818b;letter-spacing:0}
+.inspector-crossviews{padding:12px 17px;border-top:1px solid #36363d;display:flex;flex-wrap:wrap;gap:7px}
+.inspector-crossviews a{display:inline-flex;align-items:center;border:1px solid #45454b;border-radius:6px;
+  padding:7px 9px;background:#242428;color:#dddde4;font:10px 'Space Mono','Microsoft YaHei',monospace}
+.inspector-crossviews a:hover{border-color:#ff756b;color:#fff}
+.inspector-crossviews a:focus-visible{outline:2px solid #ff453a;outline-offset:2px}
+@media(max-width:740px){.kanban-card-foot .kanban-delivery{font-size:8px}}

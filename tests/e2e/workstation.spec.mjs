@@ -367,3 +367,30 @@ test('reduced-motion mode bypasses the clip-path sweep and still navigates',asyn
   const motion=await page.locator('.site-loading-gate__fill').evaluate(el=>getComputedStyle(el).animationName);
   expect(motion).toBe('none');
 });
+
+
+test('V3.4 public delivery confidence never treats private progress as committed release',async({request,page})=>{
+  const response=await request.get('/api/roadmap/v1.json');
+  const data=await response.json();
+  expect(data.workItems.filter(x=>x.reviewReceipt)).toHaveLength(4);
+  expect(data.workItems.filter(x=>x.reviewReceipt).every(x=>x.delivery.state==='unassigned' && x.verifiedAt===null)).toBe(true);
+  expect(data.workItems.filter(x=>x.phase==='published').every(x=>x.program==='PROTORHEXIS' && x.delivery.state==='released')).toBe(true);
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  const card=page.locator('.kanban-card').filter({hasText:'TAL-PROGRESS-001'});
+  await expect(card.locator('.kanban-delivery')).toHaveAttribute('data-delivery','unassigned');
+  await card.click();
+  const inspector=page.locator('#roadmap-inspector');
+  await expect(inspector).toContainText(/未指定交付|UNASSIGNED/);
+  await expect(inspector).toContainText(/未单独核验|NOT SEPARATELY VERIFIED/);
+});
+
+test('V3.4 same work ID links between board and schedule without duplicating source',async({page})=>{
+  await page.goto('/roadmap/board/?item=TAL-PROGRESS-001&program=TALOS',{waitUntil:'domcontentloaded'});
+  const inspector=page.locator('#roadmap-inspector');
+  await expect(inspector).toHaveClass(/inspector-visible/);
+  await expect(inspector).toContainText('TAL-PROGRESS-001');
+  const target=inspector.getByRole('link',{name:/查看排期|Open schedule/});
+  await target.click({noWaitAfter:true});
+  await expect(page).toHaveURL(/\/roadmap\/\?item=TAL-PROGRESS-001/);
+  await expect(page.locator('#roadmap-inspector')).toContainText('TAL-PROGRESS-001');
+});

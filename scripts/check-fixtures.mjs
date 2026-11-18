@@ -20,6 +20,9 @@ assert.equal(snapshot.relations.length,4,'Public graph must have four reviewed o
 assert(snapshot.relations.every(x=>x.kind==='contains' && x.from==='PROTORHEXIS'),'Unverified technical dependencies must not be drawn');
 assert(snapshot.workItems.every(x=>x.sources.length || x.phase==='planned' || x.phase==='future' || Boolean(x.reviewReceipt)), 'Public facts must have provenance');
 assert(snapshot.workItems.every(x=>x.schedule===null || x.schedule.kind==='observed' || x.schedule.kind==='tentative'), 'No invented committed dates');
+assert(snapshot.workItems.every(x=>x.delivery && x.verifiedAt===null),'Separate release status and unknown verification date required');
+assert(snapshot.workItems.filter(x=>x.reviewReceipt).every(x=>x.delivery.state==='unassigned'),'Private disclosure does not authorize a release');
+assert(read('src/data/workstation-public.ts').includes('deliveryState:i.delivery.state'),'Separate delivery status must reach browser adapter');
 assert(!existsSync(resolve(root,'src/data/workstation-demo.ts')), 'Synthetic demo feed must be removed from production');
 assert(existsSync(resolve(root,'src/data/roadmap.generated.json')), 'Generated public data missing');
 const layout = read('src/layouts/EngineeringLayout.astro');
@@ -50,6 +53,7 @@ assert(gateStyle.includes('clip-path:polygon') && gateScript.includes('animateCl
 assert(!gateComponent.includes('gate-percent') && !gateScript.includes('Math.random'),'Do not simulate a quantitative loading percentage');
 assert(brand.includes('fill="currentColor"') && brand.includes('class="site-brand-vector"') && !brand.includes('#262626'),'Brand geometry must inherit CSS color');
 assert(!component.includes('class="ws-notice"') && !component.includes('ws-command-title') && component.includes('ws-view-nav'), 'No redundant warning band or generic page description; sidebar navigation required');
+assert(component.includes('inspector-crossviews') && component.includes('new URLSearchParams(window.location.search)'),'Stable-ID cross-view navigation is required');
 assert(component.includes('import { publicSnapshot,') && component.includes('publicSnapshot.updatedAt'), 'public content snapshot must be imported before SSR rendering');
 assert(layout.includes('PARTIAL') && layout.includes('data-zh="已审查公开内容"'), 'partial coverage must remain available in the header');
 const stylesheet = read('src/styles/workstation.css');
