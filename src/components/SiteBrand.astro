@@ -1,0 +1,9 @@
+---
+// Single site-wide brand rendering entry point.
+// The source SVG geometry lives only in BrandLockup.astro.
+// Width and colors are set via --site-brand-width / --site-brand-color CSS variables.
+import BrandLockup from './BrandLockup.astro';
+---
+<span class="site-brand" role="img" aria-label="PROTORHEXIS / 源爆点">
+  <BrandLockup />
+</span>

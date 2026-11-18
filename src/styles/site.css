@@ -60,3 +60,39 @@ button,article,section,.module,.surface,.badge,.hero-note,.nav-link,.system-row{
 .evidence-empty{margin-top:22px}.red{color:var(--accent)}
 @media(max-width:1000px){.explorer-grid{grid-template-columns:1fr 1fr}.system-explorer{grid-template-columns:1fr}}
 @media(max-width:650px){.explorer-grid{grid-template-columns:1fr}.explorer-controls{display:block}.explorer-search{max-width:none;margin-bottom:18px}.system-detail{min-height:230px}.evidence-model .method-row{display:block}.evidence-model .method-status{display:block;margin-top:12px;text-align:left}}
+
+
+/* Shared, site-wide logo renderer. Every page/header imports SiteBrand.astro.
+   No page duplicates the wordmark or owns separate vector geometry. */
+.site-brand {
+  --site-brand-width: clamp(174px, 15vw, 226px);
+  --site-brand-height: 44px;
+  --site-brand-color: #ececf0;
+  --site-brand-hover-color: var(--accent-hover);
+  display: inline-flex;
+  align-items: center;
+  flex: 0 0 auto;
+  width: var(--site-brand-width);
+  min-width: 0;
+  color: var(--site-brand-color);
+  transition: color 150ms var(--ease);
+}
+.site-brand:hover { color: var(--site-brand-hover-color); }
+.site-brand .site-brand-vector {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: var(--site-brand-height);
+  fill: currentColor;
+}
+.construction-head .site-brand {
+  --site-brand-width: clamp(200px, 21vw, 278px);
+  --site-brand-height: 54px;
+}
+@media (max-width: 740px) {
+  .ws-header .site-brand { --site-brand-width: 158px; --site-brand-height: 35px; }
+  .construction-head .site-brand { --site-brand-width: clamp(166px, 48vw, 238px); --site-brand-height: 42px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .site-brand { transition: none; }
+}

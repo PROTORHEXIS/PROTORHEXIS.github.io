@@ -198,10 +198,10 @@ test('V2.8: hovering a timeline card does not move its date or axis marker', asy
 
 test('V2.8: brand uses replaceable SVG and has no entry to the unpublished home', async ({page}) => {
   await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
-  const brand=page.locator('.ws-header .ws-brand');
+  const brand=page.locator('.ws-header .site-brand');
   await expect(brand).toBeVisible();
-  expect(await brand.evaluate(el=>el.tagName)).toBe('DIV');
-  const mark=brand.locator('svg.ws-brand-lockup');
+  expect(await brand.evaluate(el=>el.tagName)).toBe('SPAN');
+  const mark=brand.locator('svg.site-brand-vector');
   await expect(mark).toBeVisible();
   await expect(brand.locator('.ws-brandtext')).toHaveCount(0);
   await expect(brand.getByText('ENGINEERING INTERFACE')).toHaveCount(0);
@@ -248,4 +248,48 @@ test('six board stages occupy one horizontal row and the rightmost Published col
   await expect.poll(()=>viewport.evaluate(el=>el.scrollLeft)).toBeGreaterThan(0);
   await expect(lanes.last().locator('.kanban-heading')).toBeInViewport();
   await page.screenshot({path:`test-results/v33-published-stage-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
+});
+
+
+test('global SiteBrand renders identical SVG on home, 404 and all roadmap routes', async ({page}) => {
+  const routes=['/','/404.html','/roadmap/','/roadmap/board/','/roadmap/evidence/','/roadmap/systems/'];
+  let canonicalMarkup;
+  for(const route of routes){
+    await page.goto(route,{waitUntil:'domcontentloaded'});
+    const header=page.locator('header').first();
+    const brand=header.locator('.site-brand');
+    await expect(brand).toHaveCount(1);
+    await expect(brand).toBeVisible();
+    const svg=brand.locator('svg.site-brand-vector');
+    await expect(svg).toBeVisible();
+    await expect(svg.locator('path,polygon')).toHaveCount(20);
+    await expect(header.locator('img[src="/brand/mark.svg"], .ws-brandtext, .identity-copy, .mark')).toHaveCount(0);
+    expect(await header.getByText('ENGINEERING INTERFACE').count()).toBe(0);
+    const markup=await svg.innerHTML();
+    if(canonicalMarkup === undefined) canonicalMarkup=markup;
+    else expect(markup).toBe(canonicalMarkup);
+    const colors=await svg.evaluate(el=>({
+      fill:getComputedStyle(el).fill,
+      color:getComputedStyle(el).color,
+      width:el.getBoundingClientRect().width,
+      viewport:document.documentElement.clientWidth
+    }));
+    expect(colors.fill).toBe(colors.color);
+    expect(colors.width).toBeGreaterThan(100);
+    expect(colors.width).toBeLessThan(colors.viewport);
+  }
+});
+
+test('global brand color is controlled by a CSS custom property on every layout',async({page})=>{
+  for(const route of ['/','/roadmap/']){
+    await page.goto(route,{waitUntil:'domcontentloaded'});
+    const brand=page.locator('header .site-brand');
+    await expect(brand).toBeVisible();
+    await brand.evaluate(el=>el.style.setProperty('--site-brand-color','rgb(72, 152, 209)'));
+    const svg=brand.locator('svg.site-brand-vector');
+    // Global brand intentionally animates color changes for 150ms.
+    await expect.poll(()=>svg.evaluate(el=>getComputedStyle(el).fill),{timeout:3000}).toBe('rgb(72, 152, 209)');
+    const color=await svg.evaluate(el=>({fill:getComputedStyle(el).fill,color:getComputedStyle(el).color}));
+    expect(color.color).toBe(color.fill);
+  }
 });

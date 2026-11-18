@@ -1,6 +1,6 @@
 ---
 import BaseLayout from './BaseLayout.astro';
-import BrandLockup from '../components/BrandLockup.astro';
+import SiteBrand from '../components/SiteBrand.astro';
 import '../styles/workstation.css';
 import '../styles/workstation-refinements.css';
 import '../styles/workstation-layer-motion.css';
@@ -22,9 +22,7 @@ const tabs = [
 <BaseLayout title={title} description="PROTORHEXIS reviewed public engineering summaries and undated future directions. No product release guarantees." noIndex={true}>
   <div class="ws-root">
     <header class="ws-header">
-      <div class="ws-brand" role="img" aria-label="PROTORHEXIS 标识 / PROTORHEXIS logo">
-        <BrandLockup />
-      </div>
+      <SiteBrand />
       <span class="ws-header-sep" aria-hidden="true"></span>
       <div class="ws-header-title"><span class="ws-signal"></span><span data-zh="公共开发路线图" data-en="PUBLIC DEVELOPMENT ROADMAP">公共开发路线图</span></div>
       <div class="ws-header-right"><span class="ws-header-edition">WORKSTATION / V3.1</span><span class="ws-live"><span class="ws-spot"></span>PUBLIC RECORDS / LIMITED</span><button class="ws-locale" type="button" data-lang-button aria-label="Switch language">EN</button></div>
