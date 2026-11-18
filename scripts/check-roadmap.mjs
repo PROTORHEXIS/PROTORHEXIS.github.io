@@ -10,6 +10,10 @@ assert.equal(s.programs.length,5);
 assert.equal(s.workItems.length,15);
 assert.equal(s.workItems.filter(x=>x.phase==='future').length,6);
 assert(s.workItems.filter(x=>x.phase==='future').every(x=>x.schedule===null && x.sources.length===0));
+assert(s.workItems.every(x=>x.delivery && x.verifiedAt===null),'No invented independent verification date');
+assert(s.workItems.filter(x=>x.reviewReceipt).every(x=>x.delivery.state==='unassigned'),'Private source disclosure never proves product release readiness');
+assert(s.workItems.filter(x=>x.phase==='published').every(x=>x.program==='PROTORHEXIS' && x.delivery.state==='released'),'Only evidenced public website artifacts are released');
+assert(s.workItems.filter(x=>x.phase==='future').every(x=>x.delivery.state==='unassigned'));
 const reviewed=s.workItems.filter(x=>x.reviewReceipt);
 assert.equal(reviewed.length,4,'Four approved sanitized private-source summaries expected');
 assert.equal(new Set(reviewed.map(x=>x.reviewReceipt)).size,4,'Duplicate review receipt');
@@ -54,7 +58,7 @@ try{
   const candidate={op:'append',kind:'work',id:'SAMPLE-STATUS-001',record:{
     id:'SAMPLE-STATUS-001',program:'TALOS',title:{zh:'测试候选',en:'Test candidate'},
     description:{zh:'仅用于测试。',en:'Test only.'},phase:'development',category:'platform',
-    schedule:null,dependsOn:[],sources:[],updatedAt:'2026-11-18'
+    schedule:null,dependsOn:[],sources:[],updatedAt:'2026-11-18',delivery:{state:'unassigned'},verifiedAt:null
   }};
   writeFileSync(input,JSON.stringify(header)+'\n'+JSON.stringify(candidate)+'\n');
   r=cli('intake','--input',input);assert.equal(r.status,0,r.stderr);
@@ -62,8 +66,16 @@ try{
   writeFileSync(input,JSON.stringify(header)+'\n'+JSON.stringify(candidate)+'\n');
   r=cli('intake','--input',input);assert.notEqual(r.status,0);
   delete candidate.record.reviewReceipt;
+  candidate.record.delivery={state:'committed',target:'NEXT',gateReceipt:'UNVERIFIED'};
+  writeFileSync(input,JSON.stringify(header)+'\n'+JSON.stringify(candidate)+'\n');
+  r=cli('intake','--input',input);assert.notEqual(r.status,0);
+  candidate.record.delivery={state:'unassigned'};
   candidate.record.publication='approved';
   writeFileSync(input,JSON.stringify(header)+'\n'+JSON.stringify(candidate)+'\n');
   r=cli('intake','--input',input);assert.notEqual(r.status,0);
 }finally{rmSync(input,{force:true})}
-console.log('ROADMAP_V3.2_PASS: approved data, unknown dates, agent delta, stale revision, forbidden fields and evidence gate');
+const roundup=cli('roundup','--since','2026-11-17');
+assert.equal(roundup.status,0,roundup.stderr);
+assert(roundup.stdout.includes('SITE-EV-004') && roundup.stdout.includes('Sources:'),'Roundup must cite already-approved events');
+assert(!/https:\/\/github\.com\/(?!PROTORHEXIS\/)/.test(roundup.stdout),'Only approved public GitHub sources may appear');
+console.log('ROADMAP_V3.4_PASS: separate delivery and disclosure, source-backed roundup, agent constraints and review boundaries');

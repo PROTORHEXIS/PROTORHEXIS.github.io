@@ -8,16 +8,12 @@ import '../styles/workstation-v25.css';
 import '../styles/workstation-v26.css';
 import '../styles/workstation-v28.css';
 import '../styles/workstation-v33.css';
+import '../styles/workstation-v34.css';
 interface Props {
   title: string;
   active: 'schedule' | 'board' | 'activity' | 'systems';
 }
 const { title, active } = Astro.props;
-const tabs = [
-  {id:'schedule',href:'/roadmap/',code:'01',zh:'排期视图',en:'SCHEDULE'},
-  {id:'board',href:'/roadmap/board/',code:'02',zh:'发布看板',en:'RELEASE BOARD'},
-  {id:'activity',href:'/roadmap/evidence/',code:'03',zh:'事件时间线',en:'ACTIVITY'},
-] as const;
 ---
 <BaseLayout title={title} description="PROTORHEXIS reviewed public engineering summaries and undated future directions. No product release guarantees." noIndex={true}>
   <div class="ws-root">
@@ -25,18 +21,18 @@ const tabs = [
       <SiteBrand />
       <span class="ws-header-sep" aria-hidden="true"></span>
       <div class="ws-header-title"><span class="ws-signal"></span><span data-zh="公共开发路线图" data-en="PUBLIC DEVELOPMENT ROADMAP">公共开发路线图</span></div>
-      <div class="ws-header-right"><span class="ws-header-edition">WORKSTATION / V3.1</span><span class="ws-live"><span class="ws-spot"></span>PUBLIC RECORDS / LIMITED</span><button class="ws-locale" type="button" data-lang-button aria-label="Switch language">EN</button></div>
+      <details class="ws-header-notice">
+        <summary aria-label="公开数据范围说明 / Public data scope">
+          <span class="ws-spot" aria-hidden="true"></span>
+          <span data-zh="已审查公开内容" data-en="REVIEWED PUBLIC DATA">已审查公开内容</span>
+          <span class="ws-header-notice-status">PARTIAL</span>
+        </summary>
+        <p data-zh="仅展示已审查的工程事实与非承诺性 Future 方向；未获批准的私有进展不会公开，公开审核也不等于产品发布资格。"
+           data-en="Only reviewed facts and noncommittal future directions appear. Unapproved private updates remain hidden; disclosure approval is not a product release gate.">仅展示已审查的工程事实与非承诺性 Future 方向；未获批准的私有进展不会公开，公开审核也不等于产品发布资格。</p>
+      </details>
+      <div class="ws-header-right"><span class="ws-header-edition">WORKSTATION / V3.4</span><button class="ws-locale" type="button" data-lang-button aria-label="Switch language">EN</button></div>
     </header>
-    <nav class="ws-tabbar" aria-label="Engineering roadmap views">
-      <div class="ws-tabs">
-        {tabs.map(item => <a class:list={['ws-tab', {'is-active':active===item.id}]} href={item.href} aria-current={active===item.id?'page':undefined}><small>{item.code}</small><span data-zh={item.zh} data-en={item.en}>{item.zh}</span></a>)}
-        <a class:list={['ws-tab','ws-tab-aux', {'is-active':active==='systems'}]} href="/roadmap/systems/" aria-current={active==='systems'?'page':undefined}><small>04</small><span data-zh="系统图谱" data-en="SYSTEM MAP">系统图谱</span></a>
-      </div>
-      <button class="ws-tabs-more" type="button" hidden aria-label="更多视图 / Scroll to more views"><span aria-hidden="true">→</span></button>
-      <div class="ws-tab-context">PROTORHEXIS <span>/</span> ROADMAP <span>/</span> {active.toUpperCase()}</div>
-    </nav>
-    <script>import '../scripts/roadmap-hints.ts';</script>
-    <main id="main" class="ws-main"><slot /></main>
+    <main id="main" class="ws-main"><h1 class="visually-hidden">{title}</h1><slot /></main>
     <footer class="ws-footer"><span>© PROTORHEXIS · ENGINEERING SURFACE</span><span data-zh="已公开记录 · 不代表其他系统发布资格或未来交付承诺" data-en="PUBLIC RECORDS · NO CROSS-SYSTEM RELEASE CLAIM OR FUTURE COMMITMENT">界面样本 · 不代表发布资格或时间承诺</span><span class="ws-footer-state">PUBLIC SNAPSHOT / LIMITED COVERAGE</span></footer>
   </div>
 </BaseLayout>

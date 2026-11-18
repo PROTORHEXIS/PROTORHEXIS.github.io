@@ -1,0 +1,84 @@
+/* V3.4 — left-side view navigation + compact public warning in top nav.
+   Preserves the existing project index, workbench, inspector and routes. */
+.ws-tabbar{display:none!important}
+.ws-header{position:relative;gap:14px}
+.ws-header-notice{position:relative;flex:0 1 auto;min-width:0;margin-left:clamp(8px,1vw,24px)}
+.ws-header-notice>summary{display:flex;align-items:center;gap:8px;cursor:pointer;color:#d0c1c1;
+  border:1px solid #463236;border-radius:6px;padding:5px 10px;background:#211c1e;
+  font:700 10px 'Space Mono','Microsoft YaHei',monospace;list-style:none;white-space:nowrap}
+.ws-header-notice>summary::-webkit-details-marker{display:none}
+.ws-header-notice>summary:hover{border-color:#7a4c49}
+.ws-header-notice>summary:focus-visible{outline:2px solid #ff453a;outline-offset:3px}
+.ws-header-notice-status{color:#ff9389;font-size:9px;letter-spacing:.06em}
+.ws-header-notice>p{position:absolute;top:calc(100% + 8px);left:0;z-index:20;
+  width:min(380px,calc(100vw - 36px));padding:15px;margin:0;background:#252125;color:#e3d2d1;
+  border:1px solid #6f4845;border-radius:8px;font:12px/1.7 Inter,'Microsoft YaHei',sans-serif}
+.ws-commandbar{min-height:58px;padding:8px 17px;justify-content:flex-end;border-bottom:1px solid #313137}
+.ws-tools{width:100%;justify-content:flex-end}
+.ws-content-grid{min-height:calc(100dvh - 214px)}
+.ws-view-nav{display:flex;flex-direction:column;padding-bottom:12px;border-bottom:1px solid #35353b}
+.ws-view-nav .rail-title{border-bottom:0;height:42px;min-height:42px}
+.ws-view-link{display:flex;align-items:center;gap:12px;min-height:44px;padding:9px 16px;
+  border-left:3px solid transparent;color:#a5a5ae;font:600 11px 'Space Mono','Microsoft YaHei',monospace}
+.ws-view-link:hover{color:#fff;background:#262629}
+.ws-view-link.is-current{color:#fff;border-left-color:#ff453a;background:#2b2428}
+.ws-view-index{font:10px 'Space Mono',monospace;color:#ff786e;min-width:24px}
+.ws-project-filters{display:flex;flex-direction:column;min-height:0;flex:1}
+.ws-view-mobile{display:none}
+.ws-search input:focus-visible,.ws-search input:focus{outline:none!important;outline-offset:0!important;box-shadow:none!important}
+.ws-search:focus-within{outline:none!important;border-color:#ff756e}
+/* Desktop sidebar tabs use visible focus, unlike inner search controls. */
+.ws-view-link:focus-visible,.ws-view-mobile summary:focus-visible,.ws-view-mobile a:focus-visible{
+  outline:2px solid #ff453a;outline-offset:-2px}
+@media(max-width:1300px){
+  .ws-header-notice{margin-left:2px}
+  .ws-header-notice>summary{font-size:9px}
+}
+@media(max-width:740px){
+  .ws-header{gap:8px}
+  .ws-header-notice{margin-left:0}
+  .ws-header-notice>summary{padding:7px 8px}
+  .ws-header-notice>summary [data-zh]{display:none}
+  .ws-header-notice-status{font-size:9px}
+  .ws-header-notice>p{left:auto;right:-72px}
+  .ws-commandbar{min-height:56px;padding:8px 10px}
+  .ws-tools{flex-wrap:wrap;gap:7px}
+  .ws-content-grid{min-height:0}
+  .ws-project-index{display:flex;flex-direction:column;padding:0;gap:0;overflow:visible;min-height:auto}
+  .ws-view-nav{display:none}
+  .ws-view-mobile{display:block;width:100%;border-bottom:1px solid #35353b}
+  .ws-view-mobile>summary{display:flex;align-items:center;gap:10px;cursor:pointer;list-style:none;
+    padding:12px 14px;min-height:46px;color:#a5a5ad;font:10px 'Space Mono','Microsoft YaHei',monospace}
+  .ws-view-mobile>summary::-webkit-details-marker{display:none}
+  .ws-view-mobile>summary strong{color:#f4f4f5;font-size:12px}
+  .ws-view-mobile-chevron{margin-left:auto;font-size:18px;color:#ff786e}
+  .ws-view-mobile[open] .ws-view-mobile-chevron{transform:rotate(180deg)}
+  .ws-view-mobile-list{display:flex;flex-direction:column;border-top:1px solid #35353b}
+  .ws-view-mobile-list a{padding:12px 16px;color:#bcbcc5;border-left:3px solid transparent;min-height:42px;font:11px 'Space Mono','Microsoft YaHei',monospace}
+  .ws-view-mobile-list a[aria-current="page"]{background:#2b2428;color:#fff;border-left-color:#ff453a}
+  .ws-project-filters{flex-direction:row;align-items:stretch;overflow-x:auto;overflow-y:hidden;
+    min-height:61px;padding:6px;gap:5px;flex:0 0 auto;scrollbar-width:thin}
+  .ws-project-filters .rail-title,.ws-project-filters .rail-separator,.ws-project-filters .rail-block,.ws-project-filters .rail-bottom{display:none}
+  .ws-project-filters .rail-item{flex:0 0 auto;min-width:125px;width:auto;min-height:48px}
+  .ws-primary{min-height:540px}
+}
+@media(prefers-reduced-motion:reduce){
+  .ws-view-link,.ws-view-mobile-chevron{transition:none!important}
+}
+
+/* Delivery state is not inferred from a work item's engineering phase. */
+.kanban-card-foot .kanban-delivery{margin-left:auto;margin-right:6px;font:700 9px 'Space Mono','Microsoft YaHei',monospace;color:#abaeb7}
+.kanban-card-foot .kanban-delivery[data-delivery="released"],
+.inspector-delivery[data-delivery="released"]{color:#a4d9b8}
+.kanban-card-foot .kanban-delivery[data-delivery="committed"],
+.inspector-delivery[data-delivery="committed"]{color:#94c6df}
+.kanban-card-foot .kanban-delivery[data-delivery="tentative"],
+.inspector-delivery[data-delivery="tentative"]{color:#e3c38f}
+.inspector-spec .inspector-delivery small,
+.inspector-spec dd>small{display:block;font-size:9px;color:#81818b;letter-spacing:0}
+.inspector-crossviews{padding:12px 17px;border-top:1px solid #36363d;display:flex;flex-wrap:wrap;gap:7px}
+.inspector-crossviews a{display:inline-flex;align-items:center;border:1px solid #45454b;border-radius:6px;
+  padding:7px 9px;background:#242428;color:#dddde4;font:10px 'Space Mono','Microsoft YaHei',monospace}
+.inspector-crossviews a:hover{border-color:#ff756b;color:#fff}
+.inspector-crossviews a:focus-visible{outline:2px solid #ff453a;outline-offset:2px}
+@media(max-width:740px){.kanban-card-foot .kanban-delivery{font-size:8px}}

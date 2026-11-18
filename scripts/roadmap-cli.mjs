@@ -59,6 +59,16 @@ function loadContent(){
     if(w.phase==='future' && (w.schedule!==null || w.reviewReceipt))fail(`Future must be undated intent without a review receipt: ${w.id}`);
     if(['development','qualification','review'].includes(w.phase)&&!w.sources.length&&!w.reviewReceipt)fail(`Active public work needs sources or a reviewed receipt: ${w.id}`);
     if(w.phase==='planned'&&w.schedule?.kind==='committed')fail(`Unverified planned item cannot promise a deadline ${w.id}`);
+    const d=w.delivery;
+    if(d.state==='unassigned' && (d.target||d.gateReceipt))fail(`Unassigned release must not carry a target or Gate receipt: ${w.id}`);
+    if(d.state==='tentative' && (!d.target||!w.sources.length))fail(`Tentative delivery requires target and public source: ${w.id}`);
+    if(d.state==='committed' && (!d.target||!d.gateReceipt||!w.sources.length))fail(`Committed delivery requires a target, distinct release Gate receipt and public source: ${w.id}`);
+    if(d.state==='released' && (w.phase!=='published'||!w.sources.length))fail(`Released delivery requires published phase and public evidence: ${w.id}`);
+    if(d.state==='released' && w.program!=='PROTORHEXIS' && !d.gateReceipt)fail(`Products require a separate public release Gate: ${w.id}`);
+    if(w.phase==='published' && d.state!=='released')fail(`Published phase needs separately declared delivery state: ${w.id}`);
+    if(w.phase==='future' && d.state!=='unassigned')fail(`Future cannot promise a release: ${w.id}`);
+    if(w.reviewReceipt && d.state!=='unassigned')fail(`A sanitized disclosure receipt does not authorize release: ${w.id}`);
+    if(w.schedule?.kind==='committed' && !['committed','released'].includes(d.state))fail(`Committed schedule needs release Gate: ${w.id}`);
   }
   for(const w of store.work)for(const dep of w.dependsOn){if(!works.has(dep)||dep===w.id)fail(`Missing/self dependency: ${w.id} => ${dep}`)}
   const visiting=new Set(),visited=new Set();
@@ -116,6 +126,8 @@ function parseIntake(path){
       if(op.record.id!==op.id)fail(`Append id mismatch: ${op.id}`);
       if('reviewReceipt' in op.record || 'publication' in op.record)fail(`Agent cannot issue review receipts or publication approval: ${op.id}`);
       if(op.kind==='work' && op.record.sources?.some(s=>!s.url||!/^https:\/\/github\.com\/PROTORHEXIS\/(?:\.github|PROTORHEXIS\.github\.io)\//.test(s.url)))fail(`Agent work candidate sources must be allowlisted public URLs: ${op.id}`);
+      if(op.kind==='work' && (op.record.delivery?.state!=='unassigned' || op.record.verifiedAt!==null))
+        fail(`Agent candidate may not claim release Gate readiness or independent verification: ${op.id}`);
       if(Object.keys(op).some(k=>!['op','id','kind','record'].includes(k)))fail(`Unknown append field: ${op.id}`);
       const r=schemas[op.kind].safeParse({...op.record,publication:'draft'});
       if(!r.success)fail(`Invalid append: ${op.id}: ${r.error.message}`);
@@ -130,6 +142,20 @@ try{
     const serialized=JSON.stringify(data,null,2)+'\n';
     if(action==='compile'){writeFileSync(generated(),serialized);console.log(`PUBLIC_SNAPSHOT_WRITTEN ${data.sourceRevision} programs=${data.programs.length} work=${data.workItems.length} events=${data.events.length} relations=${data.relations.length}`)}
     else {if(!existsSync(generated())||readFileSync(generated(),'utf8')!==serialized)fail('Generated snapshot differs: run roadmap:compile');console.log(`PUBLIC_SNAPSHOT_VALID ${data.sourceRevision}`)}
+  } else if(action==='roundup'){
+    // Read-only roundup of already approved, publicly sourced event facts.
+    const since=option('--since',null);
+    if(since && !/^\d{4}-\d{2}-\d{2}$/.test(since))fail('--since requires an ISO YYYY-MM-DD date');
+    const events=loadContent().event.filter(x=>!since||x.date>=since);
+    const lines=['# PROTORHEXIS Roadmap Roundup','','Previously approved public events only. No inferred delay, completion, release or reason.',''];
+    for(const e of events){
+      lines.push(`- **${e.date} · ${e.id} · ${e.program}** — ${e.title.zh} / ${e.title.en}`);
+      lines.push(`  ${e.description.zh}`);
+      if(e.change)lines.push(`  ${e.change.field}: ${e.change.before} → ${e.change.after}; ${e.change.reason.zh} / ${e.change.reason.en}`);
+      lines.push(`  Sources: ${e.sources.map(s=>s.url).join(' , ')}`);
+    }
+    if(!events.length)lines.push('No approved public events in this period.');
+    console.log(lines.join('\n'));
   } else if(action==='context'){
     const id=option('--id');if(!id)fail('--id required');
     console.log(JSON.stringify(recordContext(id)));
@@ -138,7 +164,7 @@ try{
     if(!schemas[kind]||!identifier.safeParse(id).success)fail('Specify --kind program|work|event|relation --id ID');
     const def=definitions.find(x=>x[0]===kind);const file=join(contentRoot,def[1],`${id.toLowerCase()}${def[2]}`);
     if(existsSync(file))fail('Refusing to overwrite existing content');
-    const stub={id,publication:'draft'};
+    const stub={id,publication:'draft',...(kind==='work'?{delivery:{state:'unassigned'},verifiedAt:null}:{})};
     writeFileSync(file,def[2]==='.md'?`---\n${yamlStringify(stub)}---\n\n待填写内容。\n`:yamlStringify(stub));
     console.log(file);
   } else if(action==='intake'){
@@ -153,6 +179,6 @@ try{
         console.log(`IDEMPOTENT_NOOP ${packet.batch}`);
       } else {writeFileSync(target,JSON.stringify(packet,null,2)+'\n');console.log(`PRIVATE_CANDIDATE_STAGED ${target} (never auto-published)`)}
     } else console.log(JSON.stringify({batch:packet.batch,digest:packet.digest,changes:packet.changes.map(x=>({op:x.op,id:x.id,kind:x.kind}))}));
-  } else if(action==='help') console.log('roadmap-cli: compile | validate | new --kind work --id XXX | context --id XXX | intake --input changes.jsonl [--stage]');
+  } else if(action==='help') console.log('roadmap-cli: compile | validate | new --kind work --id XXX | context --id XXX | roundup [--since YYYY-MM-DD] | intake --input changes.jsonl [--stage]');
   else fail(`Unknown action ${action}`);
 }catch(e){console.error('ROADMAP_REJECTED:',e.message);process.exitCode=1}

@@ -3,17 +3,21 @@ import snapshot from './roadmap.generated.json';
 export type ProgramId = 'TALOS'|'MAXWELL'|'THOULESS'|'TESSERACT'|'PROTORHEXIS';
 export type Stage = 'future'|'planned'|'development'|'qualification'|'review'|'published';
 export type Stream = 'platform'|'product'|'infrastructure';
+export type DeliveryState = 'unassigned'|'tentative'|'committed'|'released';
 export type Source = { url:string; sha?:string;note?:string };
-export interface WorkItem { id:string;program:ProgramId;titleZh:string;titleEn:string;descZh:string;descEn:string;start:string|null;end:string|null;stage:Stage;stream:Stream;deps:string[];evidence:Source[];scheduleKind:string|null;reviewReceipt:string|null; }
-export interface PublicEvent { id:string; date:string;program:ProgramId;kind:'milestone'|'verification'|'decision';titleZh:string;titleEn:string;descZh:string;descEn:string;evidence:Source[]; }
+export interface WorkItem { id:string;program:ProgramId;titleZh:string;titleEn:string;descZh:string;descEn:string;start:string|null;end:string|null;stage:Stage;stream:Stream;deps:string[];evidence:Source[];scheduleKind:string|null;reviewReceipt:string|null;deliveryState:DeliveryState;releaseTarget:string|null;verifiedAt:string|null;updatedAt:string; }
+export interface PublicEvent { id:string; date:string;program:ProgramId;itemId:string|null;kind:'milestone'|'verification'|'decision';titleZh:string;titleEn:string;descZh:string;descEn:string;evidence:Source[];change:null|{field:string;before:string;after:string;reason:{zh:string;en:string}}; }
 export const publicSnapshot=snapshot;
 export const publicPrograms = snapshot.programs.map(p=>({id:p.id as ProgramId, code:p.code,zh:p.title.zh,en:p.title.en,summaryZh:p.description.zh,summaryEn:p.description.en}));
 export const publicItems:WorkItem[] = snapshot.workItems.map(i=>({
   id:i.id,program:i.program as ProgramId,titleZh:i.title.zh,titleEn:i.title.en,
   descZh:i.description.zh,descEn:i.description.en,start:i.schedule?.start??null,end:i.schedule?.end??null,
-  stage:i.phase as Stage,stream:i.category as Stream,deps:i.dependsOn,evidence:i.sources,scheduleKind:i.schedule?.kind??null,reviewReceipt:'reviewReceipt' in i && typeof i.reviewReceipt === 'string' ? i.reviewReceipt : null
+  stage:i.phase as Stage,stream:i.category as Stream,deps:i.dependsOn,evidence:i.sources,scheduleKind:i.schedule?.kind??null,reviewReceipt:'reviewReceipt' in i && typeof i.reviewReceipt === 'string' ? i.reviewReceipt : null,
+  deliveryState:i.delivery.state as DeliveryState,releaseTarget:'target' in i.delivery ? i.delivery.target??null : null,
+  verifiedAt:i.verifiedAt,updatedAt:i.updatedAt
 }));
 export const publicEvents:PublicEvent[] = snapshot.events.map(e=>({
-  id:e.id,date:e.date,program:e.program as ProgramId,kind:e.kind as PublicEvent['kind'],
-  titleZh:e.title.zh,titleEn:e.title.en,descZh:e.description.zh,descEn:e.description.en,evidence:e.sources
+  id:e.id,date:e.date,program:e.program as ProgramId,itemId:'item' in e ? e.item??null:null,kind:e.kind as PublicEvent['kind'],
+  titleZh:e.title.zh,titleEn:e.title.en,descZh:e.description.zh,descEn:e.description.en,evidence:e.sources,
+  change:'change' in e ? e.change??null:null
 }));

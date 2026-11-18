@@ -9,7 +9,8 @@ for (const route of routes) {
     await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
     await expect(page.locator('.ws-root')).toBeVisible();
     await expect(page.locator('.workbench')).toBeVisible();
-    await expect(page.getByText('VERIFIED PUBLIC RECORDS')).toBeVisible();
+    await expect(page.locator('header .ws-header-notice')).toBeVisible();
+    await expect(page.locator('header .ws-header-notice')).toContainText('PARTIAL');
     await expect(page.locator('.ws-project-index')).toBeVisible();
     await expect(page.locator('meta[name="robots"]')).toHaveAttribute('content', /noindex/);
     expect(errors).toEqual([]);
@@ -44,20 +45,51 @@ test('board scroll advances by a stage using an accessible control', async ({ pa
   await expect(page.getByRole('progressbar', {name:/看板横向滚动进度|Board horizontal scroll progress/})).toHaveAttribute('aria-valuenow', /[1-9]/);
 });
 
-test('small-screen navigation gives a working hint for clipped tabs', async ({ page, isMobile }) => {
-  test.skip(!isMobile, 'overflow navigation is a mobile affordance');
-  await page.goto('/roadmap/', { waitUntil: 'domcontentloaded' });
-  const more = page.locator('.ws-tabs-more');
-  await expect(more).toBeVisible();
-  // Locale script must not replace the compact arrow with a multi-line label.
-  await expect(more).toHaveText('→');
-  const bounds = await more.boundingBox();
-  const navBounds = await page.locator('.ws-tabbar').boundingBox();
-  expect(bounds && navBounds && bounds.y + bounds.height <= navBounds.y + navBounds.height + 1 && bounds.y >= navBounds.y - 1).toBeTruthy();
-  const strip = page.locator('.ws-tabs');
-  const before = await strip.evaluate(el => el.scrollLeft);
-  await more.click();
-  await expect.poll(() => strip.evaluate(el => el.scrollLeft)).toBeGreaterThan(before);
+test('mobile sidebar view selector replaces clipped horizontal top navigation', async ({page,isMobile}) => {
+  test.skip(!isMobile,'mobile sidebar dropdown');
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('.ws-tabbar')).toHaveCount(0);
+  await expect(page.locator('.ws-view-nav')).toBeHidden();
+  const selector=page.locator('.ws-view-mobile');
+  await expect(selector.locator('summary')).toBeVisible();
+  await selector.locator('summary').click();
+  const target=selector.getByRole('link',{name:/02 \/ (交付看板|RELEASE BOARD)/});
+  await expect(target).toBeVisible();
+  await target.click({noWaitAfter:true});
+  await expect(page).toHaveURL(/\/roadmap\/board\/?$/);
+  await expect(page.locator('.ws-view-mobile summary')).toContainText(/交付看板|RELEASE BOARD/);
+});
+
+test('desktop navigation lives in the project sidebar without page-description header',async({page,isMobile})=>{
+  test.skip(isMobile,'desktop sidebar');
+  await page.goto('/roadmap/systems/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('.ws-tabbar,.ws-notice,.ws-command-title')).toHaveCount(0);
+  const nav=page.locator('.ws-project-index .ws-view-nav');
+  await expect(nav).toBeVisible();
+  await expect(nav.locator('a')).toHaveCount(4);
+  await expect(nav.locator('a[aria-current="page"]')).toHaveCount(1);
+  await expect(nav.locator('a[aria-current="page"]')).toContainText(/系统图谱|SYSTEM MAP/);
+  await expect(page.locator('header .ws-header-notice')).toBeVisible();
+  await nav.getByRole('link',{name:/02.*(交付看板|RELEASE BOARD)/}).click({noWaitAfter:true});
+  await expect(page).toHaveURL(/\/roadmap\/board\/?$/);
+});
+
+test('search keeps one parent focus indication without a second native input outline', async({page})=>{
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const input=page.getByRole('searchbox',{name:/搜索|Search/});
+  await input.focus();
+  await expect(input).toBeFocused();
+  const css=await input.evaluate(el=>({
+    inner:getComputedStyle(el).outlineStyle,
+    parentBorder:getComputedStyle(el.closest('.ws-search')).borderTopColor,
+    parentOutline:getComputedStyle(el.closest('.ws-search')).outlineStyle
+  }));
+  expect(css.inner).toBe('none');
+  expect(css.parentOutline).toBe('none');
+  await expect.poll(()=>input.evaluate(el=>getComputedStyle(el.closest('.ws-search')).borderTopColor),{timeout:3000}).toBe('rgb(255, 117, 110)');
+  await input.fill('TALOS');
+  await expect(input).toHaveValue('TALOS');
 });
 
 test('mobile inspector can close via Escape and return focus', async ({page,isMobile}) => {
@@ -150,7 +182,8 @@ test('system map renders four reviewed organizational edges without inferred dep
 test('actual records never display invented Gantt dependencies or promised dates',async({page})=>{
   await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
   await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
-  await expect(page.getByText('VERIFIED PUBLIC RECORDS')).toBeVisible();
+  await expect(page.locator('header .ws-header-notice')).toBeVisible();
+    await expect(page.locator('header .ws-header-notice')).toContainText('PARTIAL');
   await expect(page.locator('[data-gantt-id="TAL-01"]')).toHaveCount(0);
   await expect(page.locator('.gantt-bar')).toHaveCount(4);
   await expect(page.locator('.gantt-undated')).toHaveCount(5);
@@ -337,4 +370,31 @@ test('reduced-motion mode bypasses the clip-path sweep and still navigates',asyn
   await expect(page.locator('#site-loading-gate')).toHaveAttribute('data-state','idle',{timeout:13000});
   const motion=await page.locator('.site-loading-gate__fill').evaluate(el=>getComputedStyle(el).animationName);
   expect(motion).toBe('none');
+});
+
+
+test('V3.4 public delivery confidence never treats private progress as committed release',async({request,page})=>{
+  const response=await request.get('/api/roadmap/v1.json');
+  const data=await response.json();
+  expect(data.workItems.filter(x=>x.reviewReceipt)).toHaveLength(4);
+  expect(data.workItems.filter(x=>x.reviewReceipt).every(x=>x.delivery.state==='unassigned' && x.verifiedAt===null)).toBe(true);
+  expect(data.workItems.filter(x=>x.phase==='published').every(x=>x.program==='PROTORHEXIS' && x.delivery.state==='released')).toBe(true);
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  const card=page.locator('.kanban-card').filter({hasText:'TAL-PROGRESS-001'});
+  await expect(card.locator('.kanban-delivery')).toHaveAttribute('data-delivery','unassigned');
+  await card.click();
+  const inspector=page.locator('#roadmap-inspector');
+  await expect(inspector).toContainText(/未指定交付|UNASSIGNED/);
+  await expect(inspector).toContainText(/未单独核验|NOT SEPARATELY VERIFIED/);
+});
+
+test('V3.4 same work ID links between board and schedule without duplicating source',async({page})=>{
+  await page.goto('/roadmap/board/?item=TAL-PROGRESS-001&program=TALOS',{waitUntil:'domcontentloaded'});
+  const inspector=page.locator('#roadmap-inspector');
+  await expect(inspector).toHaveClass(/inspector-visible/);
+  await expect(inspector).toContainText('TAL-PROGRESS-001');
+  const target=inspector.getByRole('link',{name:/查看排期|Open schedule/});
+  await target.click({noWaitAfter:true});
+  await expect(page).toHaveURL(/\/roadmap\/\?item=TAL-PROGRESS-001/);
+  await expect(page.locator('#roadmap-inspector')).toContainText('TAL-PROGRESS-001');
 });

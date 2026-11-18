@@ -17,7 +17,11 @@
   "sources": [],
   "updatedAt": "2026-11-18",
   "publication": "approved",
-  "reviewReceipt": "PUB-RM-20261118-THO"
+  "reviewReceipt": "PUB-RM-20261118-THO",
+  "delivery": {
+    "state": "unassigned"
+  },
+  "verifiedAt": null
 }
 ---
 这份公开摘要只代表已审核的限定工程进度；不包含私有证据，且不构成产品发布承诺。

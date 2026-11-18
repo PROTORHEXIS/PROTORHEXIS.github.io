@@ -23,7 +23,8 @@
     "roadmap:new": "node scripts/roadmap-cli.mjs new",
     "prebuild": "npm run roadmap:compile",
     "check:roadmap": "node scripts/check-roadmap.mjs",
-    "predev": "npm run roadmap:compile"
+    "predev": "npm run roadmap:compile",
+    "roadmap:roundup": "node scripts/roadmap-cli.mjs roundup"
   },
   "dependencies": {
     "astro": "^7.4.0",
