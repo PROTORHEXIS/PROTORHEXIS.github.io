@@ -70,7 +70,10 @@ assert(noticeLogic.includes("event.preventDefault()") && noticeLogic.includes("o
 assert(v34.includes('.ws-header-notice[open]::after') && v34.includes('height:9px'), 'Hover bridge must cover the trigger-to-popover gap');
 assert(noticeLogic.includes("setMode('closing')") && noticeLogic.includes("cancelPendingClose"), 'Animated exit must be cancelable and restore hover');
 assert(v34.includes('ws-notice-appear') && v34.includes('ws-notice-disappear'), 'Notice must animate opening and closing');
-assert(v34.includes('.workbench[data-view="schedule"] .gantt-viewport') && v34.includes('flex:0 0 auto'), 'Gantt viewport must size to actual content and remove trailing phantom row');
+const v363=read('src/styles/workstation-v363.css');
+assert(layout.includes('workstation-v363.css') && v363.includes('height:100dvh') && v363.includes('flex:1 1 0') && v363.includes('overflow:auto'),'V3.6.3 Gantt must stretch to browser viewport with independent canvas scroll');
+assert(v363.includes('.ws-chart-foot') && v363.includes('flex:0 0 auto'),'Legend must be anchored to workstation bottom');
+assert(!v34.includes('Gantt: content-driven height.') && !v34.includes('flex:0 0 auto'),'Remove stale intrinsic-height Gantt override');
 const v35 = read('src/styles/workstation-v35.css');
 assert(layout.includes('workstation-v35.css') && v35.includes('grid-template-columns:var(--ws-rail) minmax(0,1fr) minmax(0,var(--ws-inspector-track))'), 'Three outer panes must be flush with an animatable inspector track');
 assert(v35.includes('padding:0!important') && v35.includes('gap:0!important') && v35.includes('border-radius:0!important'), 'Only exterior pane spacing and radii are removed');

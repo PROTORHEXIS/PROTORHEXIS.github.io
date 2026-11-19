@@ -577,9 +577,9 @@ test('Gantt bottom edge hugs its actual final row after filtering to one item',a
   });
   expect(geometry.afterLast).toBeGreaterThanOrEqual(-2);
   expect(geometry.afterLast).toBeLessThanOrEqual(2);
-  // Extra scrollbar allowance is okay; a ~62px phantom row is not.
-  expect(geometry.extraBelowCanvas).toBeGreaterThanOrEqual(-3);
-  expect(geometry.extraBelowCanvas).toBeLessThanOrEqual(22);
+  // The canvas ends at the last real task. Free viewport area is not a
+  // second row; it belongs to the scroll surface and keeps the legend docked.
+  expect(geometry.extraBelowCanvas).toBeGreaterThan(40);
 });
 
 test('Gantt last row, zero results and collapsed group never create a phantom row',async({page})=>{
@@ -592,11 +592,11 @@ test('Gantt last row, zero results and collapsed group never create a phantom ro
   await group.click();
   await expect(page.locator('.gantt-row')).toHaveCount(0);
   let gap=await page.locator('.gantt-viewport').evaluate(el=>el.getBoundingClientRect().bottom-el.querySelector('.gantt-canvas').getBoundingClientRect().bottom);
-  expect(gap).toBeLessThanOrEqual(22);
+  expect(gap).toBeGreaterThan(40);
   await search.fill('NO_SUCH_PUBLIC_WORK_ITEM_000');
   await expect(page.locator('.ws-no-results')).toBeVisible();
   gap=await page.locator('.gantt-viewport').evaluate(el=>el.getBoundingClientRect().bottom-el.querySelector('.gantt-canvas').getBoundingClientRect().bottom);
-  expect(gap).toBeLessThanOrEqual(22);
+  expect(gap).toBeGreaterThan(40);
   await search.fill('');
   // Count the current reviewed public rows; never hardcode the quantity
   // because Future, planned and filtered records vary independently of layout.
@@ -971,4 +971,56 @@ test('V3.6.2 header publishes source-backed data update immediately left of the 
     await expect(page.locator('.ws-header-data-updated')).toBeHidden();
     await expect(page.locator('.ws-header-edition')).toBeHidden();
   }
+});
+
+test('V3.6.3 Gantt keeps chart legend at the pane bottom independent of task count and window height',async({page,isMobile})=>{
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const search=page.locator('.ws-header .ws-search input');
+  await search.fill('TAL-PROGRESS-001');
+  await expect(page.locator('.gantt-row')).toHaveCount(1);
+
+  const metrics=()=>page.evaluate(()=>{
+    const select=s=>document.querySelector(s).getBoundingClientRect();
+    const pane=select('.ws-primary'),chart=select('.gantt-viewport'),
+      canvas=select('.gantt-canvas'),legend=select('.ws-chart-foot'),
+      last=select('.gantt-row:last-of-type'),status=select('.ws-statusline');
+    return {paneBottom:pane.bottom,legendBottom:legend.bottom,
+      canvasLastGap:canvas.bottom-last.bottom,viewportHeight:chart.height,
+      canvasHeight:canvas.height,belowLast:chart.bottom-last.bottom,
+      statusTop:status.top,legendTop:legend.top,
+      scrollHeight:document.querySelector('.gantt-viewport').scrollHeight,
+      clientHeight:document.querySelector('.gantt-viewport').clientHeight};
+  });
+  let first=await metrics();
+  expect(Math.abs(first.canvasLastGap)).toBeLessThan(2);
+  expect(Math.abs(first.paneBottom-first.legendBottom)).toBeLessThan(3);
+  expect(first.belowLast).toBeGreaterThan(40);
+  if(!isMobile){
+    expect(Math.abs(first.statusTop-first.paneBottom)).toBeLessThan(3);
+    for(const height of [680,1020]){
+      await page.setViewportSize({width:1440,height});
+      const m=await metrics();
+      expect(Math.abs(m.paneBottom-m.legendBottom)).toBeLessThan(3);
+      expect(Math.abs(m.statusTop-m.paneBottom)).toBeLessThan(3);
+      expect(m.viewportHeight).toBeGreaterThan(280);
+      expect(Math.abs(m.canvasLastGap)).toBeLessThan(2);
+      expect(m.belowLast).toBeGreaterThan(40);
+      if(height===1020)expect(m.viewportHeight).toBeGreaterThan(first.viewportHeight+50);
+    }
+  }
+  // Collapsing the only group keeps the footer at the viewport bottom.
+  await page.locator('.gantt-group').first().click();
+  await expect(page.locator('.gantt-row')).toHaveCount(0);
+  let empty=await metrics();
+  expect(Math.abs(empty.paneBottom-empty.legendBottom)).toBeLessThan(3);
+  await search.fill('NO_SUCH_PUBLIC_WORK_ITEM_000');
+  await expect(page.locator('.ws-no-results')).toBeVisible();
+  empty=await metrics();
+  expect(Math.abs(empty.paneBottom-empty.legendBottom)).toBeLessThan(3);
+  await search.fill('');
+  await expect.poll(()=>page.locator('.gantt-row').count()).toBeGreaterThan(1);
+  const long=await metrics();
+  expect(Math.abs(long.paneBottom-long.legendBottom)).toBeLessThan(3);
+  expect(long.scrollHeight).toBeGreaterThan(long.clientHeight);
 });

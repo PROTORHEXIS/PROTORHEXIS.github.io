@@ -171,20 +171,3 @@
 @media(prefers-reduced-motion:reduce) {
   .ws-header-notice>p {animation:none!important;transform:none!important}
 }
-/* Gantt: content-driven height. The old min-height:485px + flex:1 kept one
-   extra-looking empty row under the final item, even with only one item.
-   Preserve intrinsic row sizes and edge geometry; cap height only for long lists.
-   The horizontal scrollbar stays immediately beneath the final visible row. */
-.workbench[data-view="schedule"] .ws-timeline{flex:0 0 auto;min-height:0}
-.workbench[data-view="schedule"] .gantt-viewport{
-  flex:0 0 auto;
-  min-height:0;
-  height:auto;
-  max-height:max(260px,calc(100dvh - 250px));
-}
-@media(max-width:740px){
-  .workbench[data-view="schedule"] .gantt-viewport{
-    min-height:0;
-    max-height:max(230px,calc(100dvh - 300px));
-  }
-}
