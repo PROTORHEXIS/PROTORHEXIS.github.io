@@ -462,3 +462,304 @@ test('navbar search remains reachable and within viewport on mobile',async({page
   await field.fill('TALOS');
   await expect(field).toHaveValue('TALOS');
 });
+
+
+test('notice hover opens transiently and closes after pointer leaves both trigger and popup',async({page,isMobile})=>{
+  test.skip(isMobile,'Hover is for fine-pointer desktop');
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  const notice=page.locator('.ws-header-notice');
+  const summary=notice.locator('summary');
+  await expect(notice).not.toHaveAttribute('open');
+  await summary.hover();
+  await expect(notice).toHaveAttribute('data-mode','hover');
+  await expect(notice).toHaveAttribute('open');
+  const popup=notice.locator('p');
+  await expect(popup).toBeVisible();
+  // Mouse must be able to cross the real 8px visual gap into the panel.
+  const triggerBox=await summary.boundingBox(), popupBox=await popup.boundingBox();
+  await page.mouse.move(triggerBox.x+Math.min(55,triggerBox.width/2),triggerBox.y+triggerBox.height-3);
+  await page.mouse.move(popupBox.x+Math.min(55,popupBox.width/2),popupBox.y+12,{steps:12});
+  await expect(notice).toHaveAttribute('data-mode','hover');
+  await page.mouse.move(3,350,{steps:8});
+  await expect(notice).not.toHaveAttribute('open');
+  await expect(notice).toHaveAttribute('data-mode','closed');
+});
+
+test('notice click pins open across pointer leave, and outside click dismisses it',async({page,isMobile})=>{
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  const notice=page.locator('.ws-header-notice');
+  const summary=notice.locator('summary');
+  await summary.click();
+  await expect(notice).toHaveAttribute('data-mode','pinned');
+  await expect(notice).toHaveAttribute('open');
+  if(!isMobile) await page.mouse.move(3,350,{steps:8});
+  await expect(notice.locator('p')).toBeVisible();
+  await page.locator('.ws-project-index .rail-item').first().click();
+  await expect(notice).toHaveAttribute('data-mode','closed');
+  await expect(notice).not.toHaveAttribute('open');
+  await summary.click();
+  await expect(notice).toHaveAttribute('data-mode','pinned');
+  await summary.click();
+  await expect(notice).not.toHaveAttribute('open');
+});
+
+test('notice Escape closes pinned and supports keyboard activation',async({page})=>{
+  await page.goto('/roadmap/systems/',{waitUntil:'domcontentloaded'});
+  const notice=page.locator('.ws-header-notice');
+  const summary=notice.locator('summary');
+  await summary.focus();
+  await page.keyboard.press('Enter');
+  await expect(notice).toHaveAttribute('data-mode','pinned');
+  await page.keyboard.press('Escape');
+  await expect(notice).not.toHaveAttribute('open');
+  await expect(summary).toBeFocused();
+});
+
+test('moving focus away closes a pinned notice without interrupting the target',async({page})=>{
+  await page.goto('/roadmap/evidence/',{waitUntil:'domcontentloaded'});
+  const notice=page.locator('.ws-header-notice');
+  await notice.locator('summary').click();
+  await expect(notice).toHaveAttribute('data-mode','pinned');
+  await page.locator('.ws-header .ws-search input').focus();
+  await expect(notice).not.toHaveAttribute('open');
+  await expect(page.locator('.ws-header .ws-search input')).toBeFocused();
+});
+
+
+test('notice animates open and closed without disturbing click-pinned mode',async({page,isMobile})=>{
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  const notice=page.locator('.ws-header-notice'),trigger=notice.locator('summary');
+  await trigger.click();
+  await expect(notice).toHaveAttribute('data-mode','pinned');
+  const panel=notice.locator('p');
+  await expect(panel).toBeVisible();
+  if(!isMobile) {
+    const openMotion=await panel.evaluate(el=>getComputedStyle(el).animationName);
+    expect(openMotion).toContain('ws-notice-appear');
+  }
+  await page.locator('.ws-project-index .rail-item').first().click();
+  if(!isMobile){
+    await expect(notice).toHaveAttribute('data-mode','closing',{timeout:1000});
+    await expect(panel).toHaveCSS('animation-name','ws-notice-disappear');
+  }
+  await expect(notice).not.toHaveAttribute('open',{timeout:2000});
+  await expect(notice).toHaveAttribute('data-mode','closed');
+});
+
+test('moving back into the notice cancels exit animation and restores transient hover',async({page,isMobile})=>{
+  test.skip(isMobile,'Pointer-hover only');
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  const notice=page.locator('.ws-header-notice'),trigger=notice.locator('summary'),panel=notice.locator('p');
+  await trigger.hover();
+  await expect(notice).toHaveAttribute('data-mode','hover');
+  await page.mouse.move(4,360);
+  await expect(notice).toHaveAttribute('data-mode','closing');
+  await trigger.hover();
+  await expect(notice).toHaveAttribute('data-mode','hover');
+  await expect(panel).toBeVisible();
+  await page.mouse.move(4,360);
+  await expect(notice).not.toHaveAttribute('open',{timeout:3000});
+});
+
+test('Gantt bottom edge hugs its actual final row after filtering to one item',async({page})=>{
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const input=page.locator('.ws-header .ws-search input');
+  await input.fill('TAL-PROGRESS-001');
+  await expect(page.locator('.gantt-row')).toHaveCount(1);
+  const geometry=await page.locator('.gantt-viewport').evaluate(view=>{
+    const canvas=view.querySelector('.gantt-canvas');
+    const last=view.querySelector('.gantt-row:last-of-type');
+    const v=view.getBoundingClientRect(),c=canvas.getBoundingClientRect(),l=last.getBoundingClientRect();
+    return {viewportHeight:v.height,canvasHeight:c.height,
+      afterLast:c.bottom-l.bottom,extraBelowCanvas:v.bottom-c.bottom,
+      scrollHeight:view.scrollHeight,clientHeight:view.clientHeight};
+  });
+  expect(geometry.afterLast).toBeGreaterThanOrEqual(-2);
+  expect(geometry.afterLast).toBeLessThanOrEqual(2);
+  // Extra scrollbar allowance is okay; a ~62px phantom row is not.
+  expect(geometry.extraBelowCanvas).toBeGreaterThanOrEqual(-3);
+  expect(geometry.extraBelowCanvas).toBeLessThanOrEqual(22);
+});
+
+test('Gantt last row, zero results and collapsed group never create a phantom row',async({page})=>{
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const search=page.locator('.ws-header .ws-search input');
+  await search.fill('TAL-PROGRESS-001');
+  await expect(page.locator('.gantt-row')).toHaveCount(1);
+  const group=page.locator('.gantt-group');
+  await group.click();
+  await expect(page.locator('.gantt-row')).toHaveCount(0);
+  let gap=await page.locator('.gantt-viewport').evaluate(el=>el.getBoundingClientRect().bottom-el.querySelector('.gantt-canvas').getBoundingClientRect().bottom);
+  expect(gap).toBeLessThanOrEqual(22);
+  await search.fill('NO_SUCH_PUBLIC_WORK_ITEM_000');
+  await expect(page.locator('.ws-no-results')).toBeVisible();
+  gap=await page.locator('.gantt-viewport').evaluate(el=>el.getBoundingClientRect().bottom-el.querySelector('.gantt-canvas').getBoundingClientRect().bottom);
+  expect(gap).toBeLessThanOrEqual(22);
+  await search.fill('');
+  // Count the current reviewed public rows; never hardcode the quantity
+  // because Future, planned and filtered records vary independently of layout.
+  await expect.poll(()=>page.locator('.gantt-row').count()).toBeGreaterThan(1);
+  const sizes=await page.locator('.gantt-viewport').evaluate(el=>({height:el.clientHeight,scrollHeight:el.scrollHeight}));
+  expect(sizes.scrollHeight).toBeGreaterThan(sizes.height);
+});
+
+
+test('V3.5 exterior panels are flush, radius-free, and internal cards keep their corners',async({page,isMobile})=>{
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const dimensions=await page.locator('.ws-content-grid').evaluate(grid=>{
+    const rail=grid.querySelector('.ws-project-index'),main=grid.querySelector('.ws-primary'),card=grid.querySelector('.kanban-card');
+    const outer=grid.getBoundingClientRect(),left=rail.getBoundingClientRect(),center=main.getBoundingClientRect();
+    return {outerLeft:outer.left,outerRight:outer.right,leftLeft:left.left,leftRight:left.right,
+      centerLeft:center.left,centerRight:center.right,
+      padding:getComputedStyle(grid).paddingLeft,
+      gap:getComputedStyle(grid).columnGap,
+      leftRadius:getComputedStyle(rail).borderTopLeftRadius,
+      centerRadius:getComputedStyle(main).borderTopLeftRadius,
+      cardRadius:getComputedStyle(card).borderTopLeftRadius};
+  });
+  expect(dimensions.padding).toBe('0px');
+  expect(dimensions.leftRadius).toBe('0px');
+  expect(dimensions.centerRadius).toBe('0px');
+  expect(parseFloat(dimensions.cardRadius)).toBeGreaterThan(0);
+  expect(Math.abs(dimensions.outerLeft-dimensions.leftLeft)).toBeLessThanOrEqual(1);
+  if(!isMobile){
+    expect(Math.abs(dimensions.leftRight-dimensions.centerLeft)).toBeLessThanOrEqual(1);
+    expect(Math.abs(dimensions.centerRight-dimensions.outerRight)).toBeLessThanOrEqual(1);
+  }
+});
+
+test('V3.5 default collapsed inspector has a left-arrow wall handle and empty manual opening',async({page,isMobile})=>{
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const grid=page.locator('.ws-content-grid'),inspector=page.locator('#roadmap-inspector');
+  const handle=page.getByRole('button',{name:/展开右侧详情栏|Expand detail sidebar/});
+  await expect(grid).toHaveAttribute('data-inspector-open','false');
+  await expect(inspector).toHaveAttribute('aria-hidden','true');
+  await expect(handle).toBeVisible();
+  await expect(handle).toHaveAttribute('aria-expanded','false');
+  const mainBefore=await page.locator('.ws-primary').boundingBox();
+  await handle.click();
+  await expect(grid).toHaveAttribute('data-inspector-open','true');
+  await expect(inspector).not.toHaveAttribute('aria-hidden','true');
+  await expect(inspector).toHaveClass(/inspector-visible/);
+  await expect(inspector.locator('.inspector-empty-state')).toContainText(/请选择一个项目以显示内容|Select an item to display its details/);
+  await expect(inspector.locator('.inspector-hero')).toHaveCount(0);
+  if(!isMobile) {
+    await expect.poll(()=>page.locator('.ws-primary').evaluate(el=>el.getBoundingClientRect().width)).toBeLessThan(mainBefore.width-150);
+  }
+  await page.getByRole('button',{name:/收起右侧详情栏|Collapse detail sidebar/}).click();
+  await expect(grid).toHaveAttribute('data-inspector-open','false');
+  await expect(inspector).toHaveAttribute('aria-hidden','true');
+});
+
+test('V3.5 real task selection auto-opens details; manual collapse and reopen preserve selection',async({page})=>{
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const inspector=page.locator('#roadmap-inspector');
+  await page.locator('.kanban-card').filter({hasText:'TAL-PROGRESS-001'}).click();
+  await expect(inspector).toHaveClass(/inspector-visible/);
+  await expect(inspector).toContainText('TAL-PROGRESS-001');
+  await expect(inspector.locator('.inspector-empty-state')).toHaveCount(0);
+  await page.getByRole('button',{name:/收起右侧详情栏|Collapse detail sidebar/}).click();
+  await expect(inspector).toHaveAttribute('aria-hidden','true');
+  await page.getByRole('button',{name:/展开右侧详情栏|Expand detail sidebar/}).click();
+  await expect(inspector).not.toHaveAttribute('aria-hidden','true');
+  await expect(inspector).toContainText('TAL-PROGRESS-001');
+});
+
+test('V3.5 handle hover visibly increases opacity and reduced-motion closes instantly',async({page,isMobile})=>{
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const handle=page.locator('.ws-inspector-handle');
+  await expect(handle).toBeVisible();
+  if(!isMobile){
+    const opacity=await handle.evaluate(el=>Number(getComputedStyle(el).opacity));
+    await handle.hover();
+    await expect.poll(()=>handle.evaluate(el=>Number(getComputedStyle(el).opacity))).toBeGreaterThan(opacity+.25);
+  }
+  await page.emulateMedia({reducedMotion:'reduce'});
+  await handle.click();
+  await expect(page.locator('#roadmap-inspector')).toHaveAttribute('aria-hidden','false');
+  await expect(handle).toHaveCSS('transition-duration',/^0s(, 0s)*$/);
+});
+
+test('V3.5 a system-map node explicitly selects and opens its inspector',async({page})=>{
+  await page.goto('/roadmap/systems/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  await expect(page.locator('#roadmap-inspector')).toHaveAttribute('aria-hidden','true');
+  await page.locator('.system-graph-node').filter({hasText:'TALOS'}).click();
+  const inspector=page.locator('#roadmap-inspector');
+  await expect(inspector).toHaveClass(/inspector-visible/);
+  await expect(inspector).toContainText('TALOS');
+});
+
+
+test('V3.5 compact tab has a 20%-area graphite/red visual with a 44px hit target and static chevrons',async({page})=>{
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const handle=page.locator('.ws-inspector-handle');
+  const svg=handle.locator('svg');
+  await expect(svg).toHaveCount(1);
+  const initial=await handle.evaluate(el=>{
+    const css=getComputedStyle(el),tab=getComputedStyle(el,'::before');
+    const bounds=el.getBoundingClientRect();
+    return {
+      hitWidth:bounds.width,hitHeight:bounds.height,
+      tabWidth:parseFloat(tab.width),tabHeight:parseFloat(tab.height),
+      background:tab.backgroundColor,color:css.color,
+      radiusTL:tab.borderTopLeftRadius,radiusTR:tab.borderTopRightRadius,
+      radiusBL:tab.borderBottomLeftRadius,radiusBR:tab.borderBottomRightRadius,
+      rotation:getComputedStyle(el.querySelector('svg')).transform,
+      right:Math.abs(innerWidth-bounds.right)
+    };
+  });
+  expect(initial.hitWidth).toBe(44);
+  expect(initial.hitHeight).toBe(44);
+  expect(initial.tabWidth).toBe(29);
+  expect(initial.tabHeight).toBe(44);
+  expect(initial.tabWidth*initial.tabHeight/(29*220)).toBeCloseTo(.2,6);
+  expect(initial.background).toBe('rgb(41, 38, 42)');
+  expect(initial.color).toBe('rgb(255, 138, 129)');
+  expect(initial.radiusTL).toBe('11px');
+  expect(initial.radiusBL).toBe('11px');
+  expect(initial.radiusTR).toBe('0px');
+  expect(initial.radiusBR).toBe('0px');
+  expect(initial.right).toBeLessThanOrEqual(2);
+  const probe='static-icon-'+test.info().project.name;
+  await svg.evaluate((el,p)=>el.dataset.rotationProbe=p,probe);
+  await handle.click();
+  await expect(handle).toHaveAttribute('aria-expanded','true');
+  await expect.poll(()=>svg.evaluate(el=>getComputedStyle(el).transform),{timeout:2500})
+    .not.toBe(initial.rotation);
+  await expect(svg).toHaveAttribute('data-rotation-probe',probe);
+  // Mobile drawers can be 96vw wide: the tab must not move offscreen.
+  const onScreen=await handle.evaluate(el=>{const rect=el.getBoundingClientRect();return rect.left>=0&&rect.right<=innerWidth+1;});
+  expect(onScreen).toBe(true);
+  await handle.click();
+  await expect(handle).toHaveAttribute('aria-expanded','false');
+  await expect(svg).toHaveAttribute('data-rotation-probe',probe);
+});
+
+test('V3.5 Gantt project group uses the same static right-chevron while CSS rotates it',async({page})=>{
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const group=page.locator('.gantt-group').first();
+  const chevron=group.locator('.chevron svg');
+  await expect(chevron).toHaveCount(1);
+  await expect(group).toHaveAttribute('aria-expanded','true');
+  const original=await chevron.evaluate(el=>getComputedStyle(el).transform);
+  await chevron.evaluate(el=>el.dataset.sameStaticSvg='yes');
+  await group.click();
+  await expect(group).toHaveAttribute('aria-expanded','false');
+  await expect(chevron).toHaveAttribute('data-same-static-svg','yes');
+  await expect.poll(()=>chevron.evaluate(el=>getComputedStyle(el).transform),{timeout:2500})
+    .not.toBe(original);
+  await group.click();
+  await expect(group).toHaveAttribute('aria-expanded','true');
+  await expect(chevron).toHaveAttribute('data-same-static-svg','yes');
+  await expect.poll(()=>chevron.evaluate(el=>getComputedStyle(el).transform),{timeout:2500})
+    .toBe(original);
+});

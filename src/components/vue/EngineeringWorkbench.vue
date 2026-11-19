@@ -9,7 +9,14 @@ import { monthIndex, monthString, validateWindow, windowEnds, axisTicks, barPosi
 const props = defineProps<{ view: 'schedule' | 'board' | 'activity' | 'systems' }>();
 const graphComponent = shallowRef<Component | null>(null);
 const labelWidth = ref(256);
-function selectGraphProgram(id:string) { if (id==='all' || publicPrograms.some(p=>p.id===id)) switchProgram(id as ProgramId|'all'); }
+function selectGraphProgram(id:string) {
+  if (id === 'all') { switchProgram('all'); return; }
+  if (publicPrograms.some(p=>p.id===id)) {
+    activeProgram.value = id as ProgramId;
+    selectedId.value = id;
+    inspectorOpen.value = true;
+  }
+}
 
 const { locale } = usePublicLocale();
 const tr = (zh: string, en: string) => locale.value === 'zh' ? zh : en;
@@ -18,7 +25,8 @@ const search = ref('');
 const stream = ref<'all' | Stream>('all');
 const eventKind = ref<'all' | PublicEvent['kind']>('all');
 const eventKinds: Array<'all' | PublicEvent['kind']> = ['all','milestone','verification','decision'];
-const selectedId = ref(props.view === 'activity' ? (publicEvents[0]?.id??'') : (publicItems[0]?.id??''));
+// Do not confuse a public record's existence with an explicit selection.
+const selectedId = ref('');
 const inspectorOpen = ref(false);
 const isNarrow = ref(false);
 const reducedMotion = ref(true); // Safe SSR default until the media query is known.
@@ -76,7 +84,8 @@ watch([inspectorOpen, isNarrow], async ([open, narrow]) => {
     if (previousBodyOverflow === null) previousBodyOverflow = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     await nextTick();
-    inspectorRef.value?.querySelector<HTMLElement>('.inspector-close')?.focus();
+    if (hasInspectorSelection.value) inspectorRef.value?.querySelector<HTMLElement>('.inspector-close')?.focus();
+    else inspectorRef.value?.focus();
   } else restoreBodyScroll();
 });
 function closeInspector() {
@@ -84,15 +93,27 @@ function closeInspector() {
   if (returnFocus?.isConnected) returnFocus.focus();
   returnFocus = null;
 }
+function toggleInspector() {
+  if (inspectorOpen.value) { closeInspector(); return; }
+  if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement)
+    returnFocus = document.activeElement;
+  inspectorOpen.value = true;
+}
 function onKeydown(event: KeyboardEvent) {
   if (event.key === 'Escape') {
     if (showRangePanel.value) { event.preventDefault(); closeRangePanel(true); return; }
-    if (inspectorOpen.value && isNarrow.value) { event.preventDefault(); closeInspector(); }
+    if (inspectorOpen.value) { event.preventDefault(); closeInspector(); }
   }
   if (event.key === 'Tab' && inspectorOpen.value && isNarrow.value && inspectorRef.value) {
     const controls = [...inspectorRef.value.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), [tabindex]:not([tabindex="-1"])')]
       .filter(el => !el.hasAttribute('inert') && el.getClientRects().length > 0);
-    if (!controls.length) { event.preventDefault(); return; }
+    if (!controls.length) {
+      // Empty inspector has no inner links; make the always-visible edge toggle
+      // the keyboard escape route instead of trapping Tab on an empty drawer.
+      event.preventDefault();
+      document.querySelector<HTMLElement>('.ws-inspector-handle')?.focus();
+      return;
+    }
     const first = controls[0], last = controls[controls.length - 1];
     if (event.shiftKey && (document.activeElement === first || !inspectorRef.value.contains(document.activeElement))) {
       event.preventDefault(); last.focus();
@@ -244,6 +265,11 @@ const visibleEvents = computed(() => publicEvents.filter(event =>
 const chosenItem = computed(() => publicItems.find(x => x.id === selectedId.value) ?? null);
 const chosenEvent = computed(() => publicEvents.find(x => x.id === selectedId.value) ?? null);
 const chosenProgram = computed(() => publicPrograms.find(x => x.id === activeProgram.value) ?? null);
+const hasInspectorSelection = computed(() => props.view === 'activity'
+  ? Boolean(chosenEvent.value)
+  : props.view === 'systems'
+    ? Boolean(chosenProgram.value && selectedId.value === chosenProgram.value.id)
+    : Boolean(chosenItem.value));
 const dependents = computed(() => chosenItem.value ? publicItems.filter(x => x.deps.includes(chosenItem.value!.id)) : []);
 function select(id:string) { if (document.activeElement instanceof HTMLElement) returnFocus = document.activeElement; selectedId.value=id; inspectorOpen.value=true; }
 function switchProgram(id:ProgramId|'all') { activeProgram.value=id; selectedId.value=''; inspectorOpen.value=false; closeRangePanel(); }
@@ -377,7 +403,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
         <input v-model="search" type="search" :placeholder="tr('搜索项目 / 任务 / 编号','Search project / task / ID')" :aria-label="tr('搜索','Search')" />
       </label>
     </Teleport>
-    <div class="ws-content-grid">
+    <div class="ws-content-grid" :data-inspector-open="inspectorOpen ? 'true' : 'false'">
       <aside class="ws-project-index" :aria-label="tr('路线图导航与项目索引','Roadmap navigation and project index')">
         <nav class="ws-view-nav" :aria-label="tr('路线图视图','Roadmap views')">
           <div class="rail-title"><span>VIEWS</span><span>04 / NAV</span></div>
@@ -438,7 +464,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
                 <path v-for="edge in dependencyEdges" :key="edge.key" :data-dependency-key="edge.key" :d="edge.d" :class="{active:edge.active}" :marker-end="edge.active?'url(#dep-arrow-active)':'url(#dep-arrow)'"/>
               </svg>
               <template v-for="group in grouped" :key="group.id">
-                <button class="gantt-group" type="button" @click="toggleGroup(group.id)" :aria-expanded="groupExpanded(group.id)"><span class="gantt-group-name"><span class="chevron" :class="{collapsed:!groupExpanded(group.id)}"><EngineeringIcon name="expand" :key="`${group.id}:${groupExpanded(group.id)}`" /></span><strong>{{group.id}}</strong><small>{{tr(group.zh,group.en)}}</small></span><span class="gantt-group-suffix">{{group.items.length}} {{tr('个工作项','WORK ITEMS')}}</span></button>
+                <button class="gantt-group" type="button" @click="toggleGroup(group.id)" :aria-expanded="groupExpanded(group.id)"><span class="gantt-group-name"><span class="chevron" :class="{collapsed:!groupExpanded(group.id)}"><EngineeringIcon name="gantt-chevron" /></span><strong>{{group.id}}</strong><small>{{tr(group.zh,group.en)}}</small></span><span class="gantt-group-suffix">{{group.items.length}} {{tr('个工作项','WORK ITEMS')}}</span></button>
                 <template v-if="groupExpanded(group.id)"><div v-for="item in group.items" :key="item.id" class="gantt-row" :class="{selected:selectedId===item.id}"><button class="gantt-item-name" @click="focusItem(item.id)"><small>{{item.id}} <span>·</span> {{streamName(item.stream)}}</small><strong>{{tr(item.titleZh,item.titleEn)}}</strong></button><div class="gantt-track"><span v-for="(tick,i) in ticks" :key="i" class="gantt-gridline" :style="{left:`${tick.left}%`}"></span><span v-if="currentLine" class="gantt-today" :style="{left:currentLine}"></span><button v-if="!durationPosition(item).hidden" class="gantt-bar" :data-gantt-id="item.id" :class="[item.stage,{selected:selectedId===item.id,related:focusedId===item.id}]" @pointerenter="hoveredId=item.id" @pointerleave="hoveredId=null" :aria-pressed="selectedId===item.id" :aria-label="`${item.id} · ${tr(item.titleZh,item.titleEn)} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · ${stageName(item.stage)}`" :style="{left:durationPosition(item).left,width:durationPosition(item).width}" :title="`${item.id} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · PUBLIC RECORD`" @click="select(item.id)"><span>{{item.id}}</span></button><span v-if="!item.start || !item.end" class="gantt-undated">{{tr('未安排公开时间','NO PUBLIC DATE')}}</span></div></div></template>
               </template>
               <div v-if="grouped.length===0" class="ws-no-results">{{tr('没有匹配的工作项。','No matching work items.')}}</div>
@@ -465,7 +491,12 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
       </div>
 
       <button v-if="inspectorOpen" class="ws-inspector-scrim" type="button" :aria-label="tr('关闭详情面板','Close detail panel')" @click="closeInspector"></button>
-      <aside ref="inspectorRef" id="roadmap-inspector" class="ws-inspector" :class="{'inspector-visible':inspectorOpen}" :aria-label="tr('详情检查器','Inspector')" :aria-hidden="isNarrow && !inspectorOpen ? 'true' : undefined" :inert="isNarrow && !inspectorOpen" tabindex="-1"><div class="inspector-title"><span>DETAIL INSPECTOR</span><button type="button" class="inspector-close" :aria-label="tr('关闭详情','Close inspector')" @click="closeInspector"><EngineeringIcon name="close" /></button></div>
+      <aside ref="inspectorRef" id="roadmap-inspector" class="ws-inspector" :class="{'inspector-visible':inspectorOpen}" :aria-label="tr('详情检查器','Inspector')" :aria-hidden="inspectorOpen ? 'false' : 'true'" :inert="!inspectorOpen" tabindex="-1">
+        <div v-if="!hasInspectorSelection" class="inspector-empty-state" role="status">
+          <p>{{tr('请选择一个项目以显示内容','Select an item to display its details')}}</p>
+        </div>
+        <template v-else>
+        <div class="inspector-title"><span>DETAIL INSPECTOR</span><button type="button" class="inspector-close" :aria-label="tr('关闭详情','Close inspector')" @click="closeInspector"><EngineeringIcon name="close" /></button></div>
         <AnimatePresence mode="wait">
           <motion.div :key="`${view}:${selectedId}:${activeProgram}`" class="inspector-motion-body"
             :initial="reducedMotion ? false : { opacity: 0, y: 8 }"
@@ -489,7 +520,15 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
         </AnimatePresence>
         <div class="inspector-warning"><span><EngineeringIcon name="warning" /></span><p>{{tr('公开事实由来源链接支持，未公布的项目没有推定进度或日期。','Public facts are source-linked. Undisclosed projects have no inferred status or dates.')}}</p></div>
         <div class="inspector-foot">INSPECTOR / REV 004 <span>PUBLIC SNAPSHOT</span></div>
+        </template>
       </aside>
+      <button class="ws-inspector-handle" type="button"
+        :aria-label="inspectorOpen ? tr('收起右侧详情栏','Collapse detail sidebar') : tr('展开右侧详情栏','Expand detail sidebar')"
+        aria-controls="roadmap-inspector" :aria-expanded="inspectorOpen ? 'true' : 'false'"
+        :title="inspectorOpen ? tr('收起详情','Collapse details') : tr('展开详情','Expand details')"
+        @click="toggleInspector">
+        <EngineeringIcon name="inspector-toggle" />
+      </button>
     </div>
     <Teleport v-if="portalReady" to="body">
       <Transition name="ws-pop">

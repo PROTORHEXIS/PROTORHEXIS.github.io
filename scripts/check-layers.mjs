@@ -10,7 +10,7 @@ const checks = [
   ['Range button uses expanded semantics', code.includes('aria-controls="gantt-range-panel"') && code.includes(':aria-expanded="showRangePanel"')],
   ['Range popover closes on outside pointer and Escape', code.includes('onGlobalPointerDown') && code.includes("event.key === 'Escape'")],
   ['Popover positions within viewport', code.includes('window.innerWidth - width - 12') && code.includes('window.innerHeight')],
-  ['Mobile inspector has inert and hidden state', code.includes(':inert="isNarrow && !inspectorOpen"') && code.includes(':aria-hidden="isNarrow && !inspectorOpen')],
+  ['Collapsed inspector has inert and hidden state at all breakpoints', code.includes(':inert="!inspectorOpen"') && code.includes(':aria-hidden="inspectorOpen ?') && code.includes('ws-inspector-handle')],
   ['Mobile inspector traps focus and restores scroll', code.includes("event.key === 'Tab'") && code.includes('restoreBodyScroll()')],
   ['Scoped stacking layers defined', css.includes('--ws-layer-dependency: 2;') && css.includes('--ws-layer-header: 6;') && css.includes('isolation: isolate')],
   ['Date popup escapes workbench and has own z-index', css.includes('position: fixed; z-index: var(--ws-layer-popover)')],

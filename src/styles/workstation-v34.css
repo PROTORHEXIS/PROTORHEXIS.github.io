@@ -125,3 +125,66 @@
   .ws-header-notice>summary{gap:5px;padding:6px}
   .gantt-control-actions .ws-toolset button{padding:5px 7px}
 }
+
+/* Reviewed-data notice: hover disclosure and click-pinned disclosure.
+   This invisible hover bridge keeps the 8px trigger-to-panel gap traversable
+   without accidentally treating entry into the panel as a pointer leave. */
+.ws-header{z-index:35}
+.ws-header-notice[open]::after{
+  content:"";
+  position:absolute;
+  top:100%;
+  left:0;
+  right:0;
+  height:9px;
+  z-index:19;
+  background:transparent;
+}
+.ws-header-notice[open]>summary{
+  color:#f2e6e6;
+  border-color:#895852;
+  background:#302326;
+}
+.ws-header-notice[data-mode="pinned"]>summary{border-color:#ff756e}
+.ws-header-notice[open]>p{z-index:21}
+
+/* V3.4 notice — subtle enter and exit motion, no layout shift.
+   Closing keeps details[open] until the 150ms exit animation finishes. */
+@keyframes ws-notice-appear {
+  from { opacity:0; transform:translateY(-7px) scale(.985); }
+  to   { opacity:1; transform:translateY(0) scale(1); }
+}
+@keyframes ws-notice-disappear {
+  from { opacity:1; transform:translateY(0) scale(1); }
+  to   { opacity:0; transform:translateY(-5px) scale(.988); }
+}
+.ws-header-notice[data-mode="hover"]>p,
+.ws-header-notice[data-mode="pinned"]>p {
+  animation:ws-notice-appear 190ms cubic-bezier(.2,.75,.25,1) both;
+  transform-origin:top left;
+}
+.ws-header-notice[data-mode="closing"]>p {
+  animation:ws-notice-disappear 150ms ease-in both;
+  pointer-events:none;
+}
+.ws-header-notice[data-mode="closing"]::after {pointer-events:none}
+@media(prefers-reduced-motion:reduce) {
+  .ws-header-notice>p {animation:none!important;transform:none!important}
+}
+/* Gantt: content-driven height. The old min-height:485px + flex:1 kept one
+   extra-looking empty row under the final item, even with only one item.
+   Preserve intrinsic row sizes and edge geometry; cap height only for long lists.
+   The horizontal scrollbar stays immediately beneath the final visible row. */
+.workbench[data-view="schedule"] .ws-timeline{flex:0 0 auto;min-height:0}
+.workbench[data-view="schedule"] .gantt-viewport{
+  flex:0 0 auto;
+  min-height:0;
+  height:auto;
+  max-height:max(260px,calc(100dvh - 250px));
+}
+@media(max-width:740px){
+  .workbench[data-view="schedule"] .gantt-viewport{
+    min-height:0;
+    max-height:max(230px,calc(100dvh - 300px));
+  }
+}

@@ -9,6 +9,7 @@ import '../styles/workstation-v26.css';
 import '../styles/workstation-v28.css';
 import '../styles/workstation-v33.css';
 import '../styles/workstation-v34.css';
+import '../styles/workstation-v35.css';
 interface Props {
   title: string;
   active: 'schedule' | 'board' | 'activity' | 'systems';
@@ -21,7 +22,7 @@ const { title, active } = Astro.props;
       <SiteBrand />
       <span class="ws-header-sep" aria-hidden="true"></span>
       <div class="ws-header-title"><span class="ws-signal"></span><span data-zh="公共开发路线图" data-en="PUBLIC DEVELOPMENT ROADMAP">公共开发路线图</span></div>
-      <details class="ws-header-notice">
+      <details class="ws-header-notice" data-mode="closed">
         <summary aria-label="公开数据范围说明 / Public data scope">
           <span class="ws-spot" aria-hidden="true"></span>
           <span data-zh="已审查公开内容" data-en="REVIEWED PUBLIC DATA">已审查公开内容</span>
@@ -37,6 +38,7 @@ const { title, active } = Astro.props;
       </div>
     </header>
     <main id="main" class="ws-main"><h1 class="visually-hidden">{title}</h1><slot /></main>
+    <script>import '../scripts/roadmap-notice.ts';</script>
     <footer class="ws-footer"><span>© PROTORHEXIS · ENGINEERING SURFACE</span><span data-zh="已公开记录 · 不代表其他系统发布资格或未来交付承诺" data-en="PUBLIC RECORDS · NO CROSS-SYSTEM RELEASE CLAIM OR FUTURE COMMITMENT">界面样本 · 不代表发布资格或时间承诺</span><span class="ws-footer-state">PUBLIC SNAPSHOT / LIMITED COVERAGE</span></footer>
   </div>
 </BaseLayout>

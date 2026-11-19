@@ -10,6 +10,8 @@ import MaterialSearch from '~icons/material-symbols/search';
 import MaterialArrowBack from '~icons/material-symbols/arrow-back';
 import MaterialArrowForward from '~icons/material-symbols/arrow-forward';
 import MaterialArrowDown from '~icons/material-symbols/keyboard-arrow-down';
+import MaterialInspectorDoubleLeft from '~icons/material-symbols/keyboard-double-arrow-left-rounded';
+import MaterialChevronRight from '~icons/material-symbols/keyboard-arrow-right';
 import MaterialClose from '~icons/material-symbols/close';
 import MaterialWarning from '~icons/material-symbols/warning-outline';
 import MaterialRestore from '~icons/material-symbols/restart-alt';
@@ -22,7 +24,7 @@ import FluentInfo from '~icons/fluent/info-24-regular';
  * 3. Fluent: precise specialty affordances when not available above
  * Only locally bundled icon data is used; do not use Iconify runtime API.
  */
-type SemanticName = 'back' | 'next' | 'expand' | 'close' | 'warning' | 'reset' | 'search' | 'info';
+type SemanticName = 'back' | 'next' | 'expand' | 'close' | 'warning' | 'reset' | 'search' | 'info' | 'inspector-toggle' | 'gantt-chevron';
 const props = defineProps<{ name: SemanticName }>();
 const prefersReducedMotion = ref(true);
 const hydrated = ref(false);
@@ -44,6 +46,9 @@ const animatedIcons = {
   reset: LineRestore,
   search: MaterialSearch, // the first collection has no verified equivalent in the V2 vocabulary
   info: FluentInfo, // reserved low-frequency detail marker, not a primary action
+  // Explicitly static Material Symbols: state rotation belongs to CSS only.
+  'inspector-toggle': MaterialInspectorDoubleLeft,
+  'gantt-chevron': MaterialChevronRight,
 };
 const staticIcons = {
   back: MaterialArrowBack,
@@ -54,6 +59,8 @@ const staticIcons = {
   reset: MaterialRestore,
   search: MaterialSearch,
   info: FluentInfo,
+  'inspector-toggle': MaterialInspectorDoubleLeft,
+  'gantt-chevron': MaterialChevronRight,
 };
 const resolved = computed(() => (hydrated.value && !prefersReducedMotion.value ? animatedIcons : staticIcons)[props.name]);
 </script>
