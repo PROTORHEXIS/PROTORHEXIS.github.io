@@ -134,8 +134,8 @@
   text-align:center;
   color:#a9a7b0;
 }
-.inspector-empty-symbol {font:38px/1 'Space Mono',monospace;color:#74545a}
-.inspector-empty-state p {max-width:240px;margin:0;font:12px/1.9 Inter,'Microsoft YaHei',sans-serif;color:#b8b4bb}
+.inspector-empty-symbol {font:38px/1 var(--font-sans);color:#74545a}
+.inspector-empty-state p {max-width:240px;margin:0;font:12px/1.9 var(--font-sans);color:#b8b4bb}
 /* Mobile/narrow: an accessible modal drawer with the same edge-tab motion. */
 @media (max-width:1050px) {
   .ws-content-grid {

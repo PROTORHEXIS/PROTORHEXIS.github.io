@@ -34,6 +34,7 @@ jobs:
       - name: Verify public fixture and style constraints
         run: |
           npm run check:fixtures
+          npm run check:fonts
           npm run check:style
           npm run check:gantt
           npm run check:layers

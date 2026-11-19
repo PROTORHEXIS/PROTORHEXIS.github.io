@@ -1,6 +1,7 @@
 ---
 import BaseLayout from './BaseLayout.astro';
 import SiteBrand from '../components/SiteBrand.astro';
+import publicSnapshot from '../data/roadmap.generated.json';
 import '../styles/workstation.css';
 import '../styles/workstation-refinements.css';
 import '../styles/workstation-layer-motion.css';
@@ -33,7 +34,11 @@ const { title, active } = Astro.props;
            data-en="Only reviewed facts and noncommittal future directions appear. Unapproved private updates remain hidden; disclosure approval is not a product release gate.">仅展示已审查的工程事实与非承诺性 Future 方向；未获批准的私有进展不会公开，公开审核也不等于产品发布资格。</p>
       </details>
       <div class="ws-header-right">
-        <span class="ws-header-edition">WORKSTATION / V3.6.1</span>
+        <span class="ws-header-data-updated">
+          <span data-zh="数据更新" data-en="DATA UPDATED">数据更新</span>
+          <time datetime={publicSnapshot.updatedAt}>{publicSnapshot.updatedAt.replaceAll('-', '.')}</time>
+        </span>
+        <span class="ws-header-edition">WORKSTATION / V3.6.2</span>
         <div id="ws-header-search-slot" class="ws-header-search-slot" aria-label="Roadmap search"></div>
         <button class="ws-locale" type="button" data-lang-button aria-label="Switch language">EN</button>
       </div>

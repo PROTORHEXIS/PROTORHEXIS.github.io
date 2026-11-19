@@ -436,7 +436,7 @@
 }
 .gantt-presets { display: flex; flex-wrap: wrap; gap: 5px; align-items: center; min-width: 0; }
 .gantt-controls-label {
-  font: 700 10px 'Space Mono', monospace;
+  font: 700 10px var(--font-sans);
   letter-spacing: .08em;
   color: #85858f;
   margin: 0 8px 0 4px;
@@ -449,7 +449,7 @@
   background: #242428;
   border-radius: 11px;
   cursor: pointer;
-  font: 600 10px 'Space Mono', monospace;
+  font: 600 10px var(--font-sans);
   transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
 }
 .gantt-presets > button:hover, .gantt-custom > summary:hover, .gantt-dep-toggle:hover { background: #303037; border-color: #686871; }
@@ -472,7 +472,7 @@
   border: 1px solid #55545e;
   border-radius: 16px;
 }
-.gantt-custom-form label { display: grid; gap: 7px; font: 10px 'Space Mono', monospace; color: #b5b5bd; }
+.gantt-custom-form label { display: grid; gap: 7px; font: 10px var(--font-sans); color: #b5b5bd; }
 .gantt-custom-form input {
   background: #171719;
   border: 1px solid #63636b;
@@ -481,14 +481,14 @@
   color: #fff;
   width: 100%;
   min-width: 0;
-  font: 11px Inter, sans-serif;
+  font: 11px var(--font-sans);
   color-scheme: dark;
 }
-.gantt-custom-form > button { grid-column: 1 / -1; color: #120d0d; background: #ff453a; border: none; border-radius: 10px; padding: 10px; font: 700 11px 'Space Mono', monospace; }
-.gantt-custom-form > p { grid-column: 1 / -1; margin: 0; color: #ff9b92; font: 11px Inter, sans-serif; }
-.gantt-custom-form > small { grid-column: 1 / -1; color: #a6a6ae; font: 10px Inter, sans-serif; }
+.gantt-custom-form > button { grid-column: 1 / -1; color: #120d0d; background: #ff453a; border: none; border-radius: 10px; padding: 10px; font: 700 11px var(--font-sans); }
+.gantt-custom-form > p { grid-column: 1 / -1; margin: 0; color: #ff9b92; font: 11px var(--font-sans); }
+.gantt-custom-form > small { grid-column: 1 / -1; color: #a6a6ae; font: 10px var(--font-sans); }
 .gantt-dep-toggle { display: inline-flex; gap: 8px; align-items: center; }
-.gantt-dep-toggle strong { font: 700 9px 'Space Mono',monospace; color: #ff7369; }
+.gantt-dep-toggle strong { font: 700 9px var(--font-sans); color: #ff7369; }
 .ws-dep-dot { width: 8px; height: 8px; border-radius: 50%; border: 1px solid #ff756b; }
 .gantt-dep-toggle[aria-pressed="true"] .ws-dep-dot { background: #ff453a; }
 .gantt-viewport { cursor: grab; overscroll-behavior-x: contain; }
@@ -531,7 +531,7 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
-  font: 700 10px 'Space Mono', monospace;
+  font: 700 10px var(--font-sans);
 }
 .ws-root .inspector-dep-link:hover { border-color: #ff7369; color: #fff; background: #463036; }
 .inspector-dep-link .ws-glyph { font-size: 13px; }
