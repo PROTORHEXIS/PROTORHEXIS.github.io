@@ -948,7 +948,7 @@ test('V3.6.2 header publishes source-backed data update immediately left of the 
     const edition=page.locator('.ws-header-edition');
     await expect(data.locator('time')).toHaveAttribute('datetime',snapshot.updatedAt);
     await expect(data.locator('time')).toHaveText(snapshot.updatedAt.replaceAll('-','.'));
-    await expect(edition).toHaveText('WORKSTATION / V3.6.2');
+    await expect(edition).toHaveText('WORKSTATION / V3.6.3');
     if(isMobile){
       await expect(data).toBeHidden();
       await expect(edition).toBeHidden();
@@ -981,13 +981,13 @@ test('V3.6.3 Gantt keeps chart legend at the pane bottom independent of task cou
   await expect(page.locator('.gantt-row')).toHaveCount(1);
 
   const metrics=()=>page.evaluate(()=>{
-    const select=s=>document.querySelector(s).getBoundingClientRect();
+    const select=s=>document.querySelector(s)?.getBoundingClientRect()??null;
     const pane=select('.ws-primary'),chart=select('.gantt-viewport'),
       canvas=select('.gantt-canvas'),legend=select('.ws-chart-foot'),
       last=select('.gantt-row:last-of-type'),status=select('.ws-statusline');
     return {paneBottom:pane.bottom,legendBottom:legend.bottom,
-      canvasLastGap:canvas.bottom-last.bottom,viewportHeight:chart.height,
-      canvasHeight:canvas.height,belowLast:chart.bottom-last.bottom,
+      canvasLastGap:last?canvas.bottom-last.bottom:null,viewportHeight:chart.height,
+      canvasHeight:canvas.height,belowLast:last?chart.bottom-last.bottom:null,
       statusTop:status.top,legendTop:legend.top,
       scrollHeight:document.querySelector('.gantt-viewport').scrollHeight,
       clientHeight:document.querySelector('.gantt-viewport').clientHeight};
