@@ -6,7 +6,6 @@ import IconDevelop from '~icons/material-symbols/construction';
 import IconQualify from '~icons/material-symbols/fact-check';
 import IconReview from '~icons/material-symbols/rate-review';
 import IconPublished from '~icons/material-symbols/check-circle';
-import IconUnassigned from '~icons/material-symbols/remove-circle-outline';
 import IconTentative from '~icons/material-symbols/schedule';
 import IconCommitted from '~icons/material-symbols/verified';
 import IconMilestone from '~icons/material-symbols/flag';
@@ -21,7 +20,7 @@ const props=defineProps<{status:Status}>();
 const icons={
   future:IconFuture,planned:IconPlanned,development:IconDevelop,
   qualification:IconQualify,review:IconReview,published:IconPublished,
-  unassigned:IconUnassigned,tentative:IconTentative,committed:IconCommitted,released:IconPublished,
+  unassigned:IconFuture,tentative:IconTentative,committed:IconCommitted,released:IconPublished,
   milestone:IconMilestone,verification:IconCommitted,decision:IconDecision,project:IconProject
 };
 const selected=computed(()=>icons[props.status]);
