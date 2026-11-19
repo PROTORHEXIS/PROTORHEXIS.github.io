@@ -886,7 +886,11 @@ for (const [view,route,selector] of [
       };
     });
     const before=await metrics();
-    await page.locator(selector).first().click();
+    // The map's first node is the ALL overview; select an actual program.
+    const target=view==='systems'
+      ? page.locator('.system-graph-node').filter({hasText:'TALOS'}).first()
+      : page.locator(selector).first();
+    await target.click();
     await expect(grid).toHaveAttribute('data-inspector-open','true');
     await expect(inspector).toHaveAttribute('aria-hidden','false');
     await expect.poll(()=>inspector.evaluate(el=>el.getBoundingClientRect().width)).toBeGreaterThan(300);
