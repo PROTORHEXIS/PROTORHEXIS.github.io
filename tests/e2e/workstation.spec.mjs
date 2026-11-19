@@ -735,6 +735,9 @@ test('V3.5 compact tab has a 20%-area graphite/red visual with a 44px hit target
   await expect.poll(()=>svg.evaluate(el=>getComputedStyle(el).transform),{timeout:2500})
     .not.toBe(initial.rotation);
   await expect(svg).toHaveAttribute('data-rotation-probe',probe);
+  // Mobile drawers can be 96vw wide: the tab must not move offscreen.
+  const onScreen=await handle.evaluate(el=>{const rect=el.getBoundingClientRect();return rect.left>=0&&rect.right<=innerWidth+1;});
+  expect(onScreen).toBe(true);
   await handle.click();
   await expect(handle).toHaveAttribute('aria-expanded','false');
   await expect(svg).toHaveAttribute('data-rotation-probe',probe);
