@@ -31,7 +31,7 @@
   min-height: 33px; padding: 7px 12px; border: 1px solid #3b3b43;
   color: #b7b7c0; background: #242428; border-radius: 11px;
   display: inline-flex; align-items: center; gap: 5px; cursor: pointer;
-  font: 600 10px 'Space Mono', monospace;
+  font: 600 10px var(--font-sans);
 }
 .gantt-range-trigger:hover, .gantt-range-trigger[aria-expanded='true'] { border-color: #ff756b; background: #303037; }
 .gantt-range-trigger.current { background: #393037; border-color: #9b5852; }
@@ -45,7 +45,7 @@
   color-scheme: dark;
 }
 .range-panel-header { display:flex; align-items:center; justify-content:space-between; padding:0 0 9px; gap:8px;
-  font:700 11px 'Space Mono',monospace; color:#dddde3; }
+  font:700 11px var(--font-sans); color:#dddde3; }
 .range-panel-header button { display:grid; place-content:center; width:32px; height:32px; border:1px solid #505057; border-radius:10px; color:#ddd; background:#323239; cursor:pointer; }
 .gantt-floating-range .gantt-custom-form {
   position:static; z-index:auto; width:100%; padding:3px 0 0; display:grid; gap:10px; grid-template-columns:minmax(0,1fr) minmax(0,1fr);

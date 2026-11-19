@@ -7,8 +7,8 @@
   flex: 0 0 auto; padding: 5px 12px; background: #1d1d20;
   border-bottom: 1px solid #35353b;
 }
-.ws-board-transport-title { font: 700 10px 'Space Mono', monospace; color: #d5d5dc; white-space: nowrap; }
-.ws-board-transport-title small { font: 400 10px Inter,sans-serif; color: #a1a1ad; margin-left: 9px; }
+.ws-board-transport-title { font: 700 10px var(--font-sans); color: #d5d5dc; white-space: nowrap; }
+.ws-board-transport-title small { font: 400 10px var(--font-sans); color: #a1a1ad; margin-left: 9px; }
 .ws-board-transport-progress { flex: 1; min-width: 30px; height: 4px; border-radius: 8px; background: #37373d; overflow: hidden; position: relative; }
 .ws-board-transport-progress > span { display: block; position: absolute; left: 0; top: 0; height: 100%; border-radius: inherit; background: #ff635b; transition: width 140ms ease; }
 .ws-board-transport > button { width: 31px; height: 31px; display: inline-grid; place-items: center; border: 1px solid #494950; border-radius: 11px; color: #e9e9ee; background: #2b2b30; cursor: pointer; }
@@ -23,7 +23,7 @@
   .ws-tabs { width: 100%; min-width: 0; flex: 1 1 auto; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; overscroll-behavior-inline: contain; padding-right: 30px; }
   .ws-tabs::-webkit-scrollbar { display: none; }
   .ws-tab { flex: 0 0 auto; }
-  .ws-tabs-more:not([hidden]) { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; border: 1px solid #4e4e56; background: #29292f; color: #ff726a; font: bold 19px Inter,sans-serif; cursor: pointer; z-index: 7; }
+  .ws-tabs-more:not([hidden]) { position: absolute; right: 9px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; border: 1px solid #4e4e56; background: #29292f; color: #ff726a; font: bold 19px var(--font-sans); cursor: pointer; z-index: 7; }
   .ws-board-transport { gap: 7px; padding: 5px 9px; }
   .ws-board-transport-title { font-size: 9px; }
   .ws-board-transport-title small { display: none; }
