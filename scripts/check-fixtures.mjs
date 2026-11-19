@@ -27,6 +27,9 @@ assert(!existsSync(resolve(root,'src/data/workstation-demo.ts')), 'Synthetic dem
 assert(existsSync(resolve(root,'src/data/roadmap.generated.json')), 'Generated public data missing');
 const layout = read('src/layouts/EngineeringLayout.astro');
 assert(layout.includes('ws-header-notice') && layout.includes('PUBLIC SNAPSHOT / LIMITED COVERAGE'),'review disclosure must live in header, not in a stacked banner');
+assert(layout.includes("import publicSnapshot from '../data/roadmap.generated.json'"),'Header data timestamp must come from the compiled reviewed public snapshot');
+assert(layout.includes('datetime={publicSnapshot.updatedAt}') && layout.indexOf('class="ws-header-data-updated"') < layout.indexOf('class="ws-header-edition"'),'Data update date must be semantic, source-backed, and placed left of version');
+assert(!layout.includes('new Date()') && !layout.includes('Date.now()'),'Do not mislabel deployment time as last public data update');
 const component = read('src/components/vue/EngineeringWorkbench.vue');
 const graph = read('src/components/vue/SystemRelationshipGraph.vue');
 const brand = read('src/components/BrandLockup.astro');

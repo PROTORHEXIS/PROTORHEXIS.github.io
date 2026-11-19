@@ -178,3 +178,27 @@
 @media(prefers-reduced-motion:reduce) {
   .ws-inspector .inspector-status .ws-status-icon {animation:none!important}
 }
+
+/* Public snapshot freshness indicator is placed immediately before edition.
+   Use only the approved, build-generated snapshot date; never Date.now(). */
+.ws-header-data-updated {
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  padding-right:12px;
+  border-right:1px solid #3e3e45;
+  color:#9696a1;
+  font:500 10px/1.4 var(--font-sans);
+  letter-spacing:.025em;
+  white-space:nowrap;
+  flex:0 0 auto;
+}
+.ws-header-data-updated time {
+  color:#d0d0d8;
+  font-variant-numeric:tabular-nums;
+}
+/* The edition is already hidden at this breakpoint in workstation.css.
+   Keep its paired freshness date on exactly the same responsive boundary. */
+@media(max-width:1300px) {
+  .ws-header-data-updated {display:none}
+}

@@ -936,3 +936,39 @@ test('V3.6.2 self-hosted Noto Sans supplies real Latin and CJK faces without OS 
     expect(errors).toEqual([]);
   }
 });
+
+test('V3.6.2 header publishes source-backed data update immediately left of the version',async({page,isMobile})=>{
+  const {readFileSync}=await import('node:fs');
+  const {fileURLToPath}=await import('node:url');
+  const snapshot=JSON.parse(readFileSync(fileURLToPath(new URL('../../src/data/roadmap.generated.json',import.meta.url)),'utf8'));
+  for(const route of ['/roadmap/','/roadmap/board/','/roadmap/evidence/','/roadmap/systems/']){
+    await page.goto(route,{waitUntil:'domcontentloaded'});
+    await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+    const data=page.locator('.ws-header-data-updated');
+    const edition=page.locator('.ws-header-edition');
+    await expect(data.locator('time')).toHaveAttribute('datetime',snapshot.updatedAt);
+    await expect(data.locator('time')).toHaveText(snapshot.updatedAt.replaceAll('-','.'));
+    await expect(edition).toHaveText('WORKSTATION / V3.6.2');
+    if(isMobile){
+      await expect(data).toBeHidden();
+      await expect(edition).toBeHidden();
+    }else{
+      await expect(data).toBeVisible();
+      await expect(edition).toBeVisible();
+      const rect=await page.evaluate(()=>{
+        const a=document.querySelector('.ws-header-data-updated').getBoundingClientRect();
+        const b=document.querySelector('.ws-header-edition').getBoundingClientRect();
+        return {dateRight:a.right,editionLeft:b.left};
+      });
+      expect(rect.dateRight).toBeLessThan(rect.editionLeft);
+    }
+  }
+  if(!isMobile){
+    await page.getByRole('button',{name:'Switch to English'}).click();
+    await expect(page.locator('.ws-header-data-updated [data-en]')).toHaveText('DATA UPDATED');
+    await expect(page.locator('.ws-header-data-updated time')).toHaveText(snapshot.updatedAt.replaceAll('-','.'));
+    await page.setViewportSize({width:1200,height:850});
+    await expect(page.locator('.ws-header-data-updated')).toBeHidden();
+    await expect(page.locator('.ws-header-edition')).toBeHidden();
+  }
+});
