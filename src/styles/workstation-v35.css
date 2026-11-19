@@ -31,6 +31,10 @@
 .ws-content-grid > .ws-inspector{
   width:100%;
   min-height:0;
+  /* Size containment prevents zero-width hidden detail text from inflating
+     the Grid row (and shifting the 50%-centered collapse handle downward).
+     The opened inspector instead scrolls within the primary-driven row. */
+  contain:size;
   border-left:0;
   overflow:hidden;
   visibility:hidden;

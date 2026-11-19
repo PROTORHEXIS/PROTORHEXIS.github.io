@@ -1,0 +1,180 @@
+/* Roadmap V3.6 — drag-selection suppression + readable inspector + semantic
+   state colors. Browsers do not expose trustworthy physical PPI; use CSS
+   pixels, rem (honors browser zoom), container queries and viewport width. */
+
+/* Only the engineering workstation is presentation-like / drag-to-pan.
+   Native form fields, textareas and editable elements retain selection. */
+.ws-root {
+  -webkit-user-select:none;
+  user-select:none;
+}
+.ws-root :is(input,textarea,[contenteditable="true"],[contenteditable=""]) {
+  -webkit-user-select:text;
+  user-select:text;
+}
+.ws-root :is(img,svg) { -webkit-user-drag:none; }
+
+/* A little more width on desktop allows 14–17px typography rather than
+   squeezing data into a 248px inspector column. */
+@media(min-width:1051px) {
+  :root { --ws-inspector:clamp(306px,25vw,392px); }
+}
+@media(min-width:1700px) {
+  :root { --ws-inspector:clamp(352px,21vw,412px); }
+}
+.ws-inspector {
+  container:ws-inspector / inline-size;
+  --detail-body:clamp(.925rem,.87rem + .24vw,1.05rem);
+  --detail-label:clamp(.78rem,.74rem + .14vw,.91rem);
+  --detail-meta:clamp(.85rem,.8rem + .2vw,.99rem);
+  color:#e4e4e9;
+  -webkit-text-size-adjust:100%;
+  text-size-adjust:100%;
+}
+.ws-inspector .inspector-title {
+  min-height:54px;height:auto;padding:13px 18px;
+  font-size:var(--detail-label);line-height:1.45;color:#dddde4;letter-spacing:.025em;
+}
+.ws-inspector .inspector-hero { padding:22px clamp(18px,6cqi,27px) 20px; }
+.ws-inspector .inspector-hero > small {
+  font-size:var(--detail-label);line-height:1.55;color:#f5a29b;
+  overflow-wrap:anywhere;
+}
+.ws-inspector .inspector-hero h2 {
+  font-size:clamp(1.27rem,1.16rem + .35vw,1.58rem);
+  line-height:1.4;letter-spacing:-.012em;margin:12px 0 16px;
+  color:#f5f5f7;text-wrap:pretty;overflow-wrap:anywhere;
+}
+.ws-inspector .inspector-section {padding:20px clamp(18px,6cqi,27px)}
+.ws-inspector .inspector-label {font-size:var(--detail-label);color:#c3c2cb;line-height:1.55}
+.ws-inspector .inspector-section p {
+  font-size:var(--detail-body);line-height:1.8;color:#e0dfe6;
+  margin:10px 0 0;overflow-wrap:anywhere;text-wrap:pretty;
+}
+.ws-inspector .inspector-spec {padding:6px clamp(18px,6cqi,27px)}
+.ws-inspector .inspector-spec > div {
+  gap:10px;padding:15px 0;align-items:start;
+}
+.ws-inspector .inspector-spec dt {
+  font-size:var(--detail-label);line-height:1.55;color:#b9b9c4;
+  letter-spacing:.012em;flex:0 1 42%;text-wrap:pretty;
+}
+.ws-inspector .inspector-spec dd {
+  max-width:60%;min-width:0;font-size:var(--detail-meta);line-height:1.65;
+  color:#ecebf1;overflow-wrap:anywhere;
+}
+.ws-inspector .inspector-spec dd > small {
+  font-size:var(--detail-label);line-height:1.65;color:#b1b1be;
+}
+.ws-inspector .inspector-warning {
+  padding:14px 15px;gap:10px;
+  background:#292426;border-color:#554345;
+}
+.ws-inspector .inspector-warning p {
+  font-size:var(--detail-meta);line-height:1.75;color:#d8c6c7;
+}
+.ws-inspector .inspector-crossviews {padding:14px clamp(18px,6cqi,27px);gap:8px}
+.ws-inspector .inspector-crossviews a,
+.ws-inspector .inspector-dep-link {
+  font-size:var(--detail-label);line-height:1.55;min-height:32px;
+}
+.ws-inspector .inspector-foot {
+  font-size:var(--detail-label);line-height:1.5;
+  gap:8px;flex-wrap:wrap;color:#9999a6;
+}
+.ws-inspector .inspector-empty-state p {font-size:var(--detail-body);line-height:1.7}
+@container ws-inspector (max-width:349px) {
+  .inspector-spec > div {flex-direction:column;align-items:stretch;gap:5px}
+  .inspector-spec dt {flex-basis:auto;max-width:100%}
+  .inspector-spec dd {max-width:100%;text-align:left}
+  .inspector-dep-row dd {justify-content:flex-start;max-width:100%}
+}
+@container ws-inspector (min-width:350px) {
+  .inspector-spec dt {flex:0 1 40%}
+  .inspector-spec dd {max-width:58%}
+}
+/* On narrow screens the inspector is a mobile drawer; avoid typographic
+   regression from global compact mobile media queries. */
+@media(max-width:1050px) {
+  .ws-content-grid > .ws-inspector {width:min(390px,94vw)}
+  .ws-content-grid[data-inspector-open="true"] > .ws-inspector-handle {
+    right:calc(min(390px,94vw) - var(--ws-handle-width));
+  }
+}
+@media(max-width:420px) {
+  .ws-inspector .inspector-hero {padding:18px 17px}
+  .ws-inspector .inspector-section {padding:18px 17px}
+  .ws-inspector .inspector-spec {padding-inline:17px}
+}
+
+/* Stage lifecycle and delivery confidence use independent semantic palettes.
+   Red remains an interaction accent, not a synonym for completion. */
+.ws-root {
+  --state-future:#b5aec7; --state-future-bg:#272530; --state-future-border:#51475d;
+  --state-planned:#a7c9e9; --state-planned-bg:#222b36; --state-planned-border:#496782;
+  --state-development:#f2c39c; --state-development-bg:#352b26; --state-development-border:#80604a;
+  --state-qualification:#bcb5ee; --state-qualification-bg:#2b293b; --state-qualification-border:#5e598c;
+  --state-review:#e5ca8d; --state-review-bg:#342f25; --state-review-border:#746444;
+  --state-published:#9eddb8; --state-published-bg:#22332b; --state-published-border:#436c53;
+  --state-unassigned:#c0bec8; --state-unassigned-bg:#2b2b30; --state-unassigned-border:#50515b;
+  --state-tentative:#ead19a; --state-tentative-bg:#302e26; --state-tentative-border:#746746;
+  --state-committed:#a6d5ef; --state-committed-bg:#22323b; --state-committed-border:#436a7b;
+  --state-released:#9eddb8; --state-released-bg:#22332b; --state-released-border:#436c53;
+  --state-milestone:#a6d5ef; --state-milestone-bg:#22323b; --state-milestone-border:#436a7b;
+  --state-verification:#9eddb8; --state-verification-bg:#22332b; --state-verification-border:#436c53;
+  --state-decision:#ead19a; --state-decision-bg:#302e26; --state-decision-border:#746746;
+  --state-project:#a7c9e9; --state-project-bg:#222b36; --state-project-border:#496782;
+}
+.ws-status-icon {
+  display:inline-flex;vertical-align:middle;justify-content:center;align-items:center;
+  flex:0 0 auto;width:1em;height:1em;font-size:1em;line-height:1;
+}
+.ws-status-icon svg {width:1em;height:1em;display:block}
+.kanban-stage-label {display:inline-flex;align-items:center;gap:7px;min-width:0}
+.kanban-heading[data-stage] .kanban-stage-label{color:var(--state-unassigned)}
+.kanban-heading[data-stage="future"] .kanban-stage-label{color:var(--state-future)}
+.kanban-heading[data-stage="planned"] .kanban-stage-label{color:var(--state-planned)}
+.kanban-heading[data-stage="development"] .kanban-stage-label{color:var(--state-development)}
+.kanban-heading[data-stage="qualification"] .kanban-stage-label{color:var(--state-qualification)}
+.kanban-heading[data-stage="review"] .kanban-stage-label{color:var(--state-review)}
+.kanban-heading[data-stage="published"] .kanban-stage-label{color:var(--state-published)}
+.kanban-card-foot .kanban-delivery,
+.ws-inspector .inspector-delivery-label {
+  display:inline-flex;align-items:center;gap:.38em;min-width:0;
+}
+.kanban-card-foot .kanban-delivery {font-size:clamp(10px,.68rem,12px)}
+.kanban-card-foot .kanban-delivery[data-delivery="unassigned"],
+.ws-inspector .inspector-delivery[data-delivery="unassigned"] {color:var(--state-unassigned)}
+.kanban-card-foot .kanban-delivery[data-delivery="tentative"],
+.ws-inspector .inspector-delivery[data-delivery="tentative"] {color:var(--state-tentative)}
+.kanban-card-foot .kanban-delivery[data-delivery="committed"],
+.ws-inspector .inspector-delivery[data-delivery="committed"] {color:var(--state-committed)}
+.kanban-card-foot .kanban-delivery[data-delivery="released"],
+.ws-inspector .inspector-delivery[data-delivery="released"] {color:var(--state-released)}
+.ws-inspector .inspector-status {
+  display:inline-flex;align-items:center;gap:.45em;
+  font-size:var(--detail-label);font-weight:700;line-height:1.45;
+  padding:8px 12px;border:1px solid var(--badge-border,#55545c);
+  color:var(--badge-fg,#e0dfe6);background:var(--badge-bg,#2c2b31);
+  border-radius:999px;
+}
+.ws-inspector .inspector-status[data-stage="future"] {--badge-fg:var(--state-future);--badge-bg:var(--state-future-bg);--badge-border:var(--state-future-border)}
+.ws-inspector .inspector-status[data-stage="planned"] {--badge-fg:var(--state-planned);--badge-bg:var(--state-planned-bg);--badge-border:var(--state-planned-border)}
+.ws-inspector .inspector-status[data-stage="development"] {--badge-fg:var(--state-development);--badge-bg:var(--state-development-bg);--badge-border:var(--state-development-border)}
+.ws-inspector .inspector-status[data-stage="qualification"] {--badge-fg:var(--state-qualification);--badge-bg:var(--state-qualification-bg);--badge-border:var(--state-qualification-border)}
+.ws-inspector .inspector-status[data-stage="review"] {--badge-fg:var(--state-review);--badge-bg:var(--state-review-bg);--badge-border:var(--state-review-border)}
+.ws-inspector .inspector-status[data-stage="published"] {--badge-fg:var(--state-published);--badge-bg:var(--state-published-bg);--badge-border:var(--state-published-border)}
+.ws-inspector .inspector-status[data-event-kind="milestone"] {--badge-fg:var(--state-milestone);--badge-bg:var(--state-milestone-bg);--badge-border:var(--state-milestone-border)}
+.ws-inspector .inspector-status[data-event-kind="verification"] {--badge-fg:var(--state-verification);--badge-bg:var(--state-verification-bg);--badge-border:var(--state-verification-border)}
+.ws-inspector .inspector-status[data-event-kind="decision"] {--badge-fg:var(--state-decision);--badge-bg:var(--state-decision-bg);--badge-border:var(--state-decision-border)}
+.ws-inspector .inspector-status[data-status="project"] {--badge-fg:var(--state-project);--badge-bg:var(--state-project-bg);--badge-border:var(--state-project-border)}
+/* Optional subtle motion only while work is active; completed status stays
+   stable, and all state icons are available without any animation. */
+@keyframes ws-status-breathe {50% {opacity:.63;transform:scale(.94)}}
+.ws-inspector .inspector-status[data-stage="development"] .ws-status-icon,
+.ws-inspector .inspector-status[data-stage="qualification"] .ws-status-icon {
+  animation:ws-status-breathe 2.6s ease-in-out infinite;
+}
+@media(prefers-reduced-motion:reduce) {
+  .ws-inspector .inspector-status .ws-status-icon {animation:none!important}
+}

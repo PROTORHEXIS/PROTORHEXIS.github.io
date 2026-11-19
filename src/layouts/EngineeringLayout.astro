@@ -10,6 +10,7 @@ import '../styles/workstation-v28.css';
 import '../styles/workstation-v33.css';
 import '../styles/workstation-v34.css';
 import '../styles/workstation-v35.css';
+import '../styles/workstation-v36.css';
 interface Props {
   title: string;
   active: 'schedule' | 'board' | 'activity' | 'systems';
@@ -32,7 +33,7 @@ const { title, active } = Astro.props;
            data-en="Only reviewed facts and noncommittal future directions appear. Unapproved private updates remain hidden; disclosure approval is not a product release gate.">仅展示已审查的工程事实与非承诺性 Future 方向；未获批准的私有进展不会公开，公开审核也不等于产品发布资格。</p>
       </details>
       <div class="ws-header-right">
-        <span class="ws-header-edition">WORKSTATION / V3.4</span>
+        <span class="ws-header-edition">WORKSTATION / V3.6.1</span>
         <div id="ws-header-search-slot" class="ws-header-search-slot" aria-label="Roadmap search"></div>
         <button class="ws-locale" type="button" data-lang-button aria-label="Switch language">EN</button>
       </div>

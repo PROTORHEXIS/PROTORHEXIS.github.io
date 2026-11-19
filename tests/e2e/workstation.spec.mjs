@@ -763,3 +763,149 @@ test('V3.5 Gantt project group uses the same static right-chevron while CSS rota
   await expect.poll(()=>chevron.evaluate(el=>getComputedStyle(el).transform),{timeout:2500})
     .toBe(original);
 });
+
+
+test('V3.6 dragging the timeline and board never selects their labels',async({page,isMobile})=>{
+  test.skip(isMobile,'Native touch scroll does not create text selection');
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const box=await page.locator('.gantt-viewport').boundingBox();
+  await page.mouse.move(box.x+140,box.y+120);
+  await page.mouse.down();
+  await page.mouse.move(box.x+320,box.y+125,{steps:9});
+  await page.mouse.up();
+  expect(await page.evaluate(()=>window.getSelection()?.toString()??'')).toBe('');
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  const card=page.locator('.kanban-card').first();
+  const cb=await card.boundingBox();
+  await page.mouse.move(cb.x+18,cb.y+35);
+  await page.mouse.down();await page.mouse.move(cb.x+120,cb.y+105,{steps:8});await page.mouse.up();
+  expect(await page.evaluate(()=>window.getSelection()?.toString()??'')).toBe('');
+  const input=page.locator('.ws-header .ws-search input');
+  await input.fill('TALOS');
+  await input.focus();
+  await input.evaluate(el=>el.setSelectionRange(0,5));
+  expect(await input.evaluate(el=>el.selectionEnd-el.selectionStart)).toBe(5);
+});
+
+test('V3.6 inspector texts are legible and state badge colors reflect real release state',async({page,isMobile})=>{
+  await page.goto('/roadmap/board/?item=WEB-SITE-001&program=PROTORHEXIS',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const inspector=page.locator('#roadmap-inspector');
+  await expect(inspector).toHaveClass(/inspector-visible/);
+  const state=inspector.locator('.inspector-status[data-stage="published"]');
+  await expect(state).toBeVisible();
+  await expect(state.locator('.ws-status-icon svg')).toHaveCount(1);
+  await expect(state).toContainText(/已发布|PUBLISHED/);
+  const result=await inspector.evaluate(el=>{
+    const badge=el.querySelector('.inspector-status'),desc=el.querySelector('.inspector-section p');
+    const label=el.querySelector('.inspector-spec dt'),value=el.querySelector('.inspector-spec dd');
+    return {badgeColor:getComputedStyle(badge).color,
+      badgeBackground:getComputedStyle(badge).backgroundColor,
+      body:parseFloat(getComputedStyle(desc).fontSize),
+      label:parseFloat(getComputedStyle(label).fontSize),
+      value:parseFloat(getComputedStyle(value).fontSize),
+      scrollWidth:el.scrollWidth,clientWidth:el.clientWidth};
+  });
+  expect(result.badgeColor).toBe('rgb(158, 221, 184)');
+  expect(result.badgeBackground).toBe('rgb(34, 51, 43)');
+  expect(result.body).toBeGreaterThanOrEqual(14.5);
+  expect(result.label).toBeGreaterThanOrEqual(12);
+  expect(result.value).toBeGreaterThanOrEqual(13);
+  expect(result.scrollWidth).toBeLessThanOrEqual(result.clientWidth+2);
+  await expect(page.locator('.kanban-delivery[data-delivery="released"]').first().locator('svg')).toHaveCount(1);
+  await expect(inspector.locator('.inspector-delivery[data-delivery="released"] svg')).toHaveCount(1);
+});
+
+test('V3.6 development and qualification use distinct semantic badge colors and mapped icons',async({page})=>{
+  for(const [id,stage,color] of [
+    ['TAL-PROGRESS-001','development','rgb(242, 195, 156)'],
+    ['TES-PROGRESS-001','qualification','rgb(188, 181, 238)']
+  ]){
+    await page.goto('/roadmap/board/?item='+id,{waitUntil:'domcontentloaded'});
+    await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+    const badge=page.locator('.inspector-status[data-stage="'+stage+'"]');
+    await expect(badge.locator('svg')).toHaveCount(1);
+    await expect(badge).toHaveCSS('color',color);
+  }
+});
+
+test('V3.6 container-driven inspector typography adapts when desktop viewport changes',async({page,isMobile})=>{
+  test.skip(isMobile,'desktop resize case');
+  await page.setViewportSize({width:1100,height:850});
+  await page.goto('/roadmap/board/?item=WEB-SITE-001',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const inspector=page.locator('#roadmap-inspector');
+  await expect.poll(()=>inspector.evaluate(el=>el.getBoundingClientRect().width),{timeout:5000})
+    .toBeGreaterThanOrEqual(300);
+  const narrow=await inspector.evaluate(el=>({width:el.getBoundingClientRect().width,
+    layout:getComputedStyle(el.querySelector('.inspector-spec > div')).flexDirection,
+    size:parseFloat(getComputedStyle(el.querySelector('.inspector-section p')).fontSize)}));
+  await page.setViewportSize({width:1920,height:1080});
+  await expect.poll(()=>inspector.evaluate(el=>el.getBoundingClientRect().width),{timeout:5000})
+    .toBeGreaterThan(narrow.width+25);
+  const wide=await inspector.evaluate(el=>({width:el.getBoundingClientRect().width,
+    layout:getComputedStyle(el.querySelector('.inspector-spec > div')).flexDirection,
+    size:parseFloat(getComputedStyle(el.querySelector('.inspector-section p')).fontSize)}));
+  expect(narrow.width).toBeGreaterThanOrEqual(300);
+  expect(wide.width).toBeGreaterThan(narrow.width);
+  expect(narrow.size).toBeGreaterThanOrEqual(14);
+  expect(wide.size).toBeGreaterThanOrEqual(narrow.size);
+  expect(['row','column']).toContain(narrow.layout);
+});
+
+/* V3.6.1 regression: an unopened inspector is a zero-width CSS Grid item.
+   Once a long project is selected, collapsing it must not let wrapped,
+   invisible detail content become the grid row's intrinsic block size.
+   The wall handle is positioned at 50% of that row and must remain stationary. */
+for (const [view,route,selector] of [
+  ['schedule','/roadmap/','.gantt-item-name'],
+  ['board','/roadmap/board/','.kanban-card'],
+  ['activity','/roadmap/evidence/','.event-entry'],
+  ['systems','/roadmap/systems/','.system-graph-node']
+]) {
+  test(`V3.6.1 collapsing the ${view} inspector preserves page geometry without a blank tail`,async({page,isMobile})=>{
+    test.skip(isMobile,'Inline grid geometry is desktop-only; mobile drawer has a separate fixed layout');
+    await page.goto(route,{waitUntil:'domcontentloaded'});
+    await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+    const grid=page.locator('.ws-content-grid');
+    const inspector=page.locator('#roadmap-inspector');
+    const handle=page.locator('.ws-inspector-handle');
+    const metrics=()=>page.evaluate(()=>{
+      const grid=document.querySelector('.ws-content-grid');
+      const handle=document.querySelector('.ws-inspector-handle');
+      const footer=document.querySelector('.ws-footer');
+      const gridBox=grid.getBoundingClientRect();
+      const handleBox=handle.getBoundingClientRect();
+      const footerBox=footer.getBoundingClientRect();
+      return {
+        gridHeight:gridBox.height,
+        handleDocTop:handleBox.top+window.scrollY,
+        footerDocTop:footerBox.top+window.scrollY,
+        documentHeight:document.documentElement.scrollHeight
+      };
+    });
+    const before=await metrics();
+    // The map's first node is the ALL overview; select an actual program.
+    const target=view==='systems'
+      ? page.locator('.system-graph-node').filter({hasText:'TALOS'}).first()
+      : page.locator(selector).first();
+    await target.click();
+    await expect(grid).toHaveAttribute('data-inspector-open','true');
+    await expect(inspector).toHaveAttribute('aria-hidden','false');
+    await expect.poll(()=>inspector.evaluate(el=>el.getBoundingClientRect().width)).toBeGreaterThan(300);
+    await expect.poll(async()=>Math.abs((await metrics()).gridHeight-before.gridHeight),{timeout:5000})
+      .toBeLessThan(4);
+    await handle.click();
+    await expect(grid).toHaveAttribute('data-inspector-open','false');
+    await expect(inspector).toHaveAttribute('aria-hidden','true');
+    await expect.poll(async()=>Math.abs((await metrics()).gridHeight-before.gridHeight),{timeout:5000})
+      .toBeLessThan(4);
+    const after=await metrics();
+    expect(Math.abs(after.handleDocTop-before.handleDocTop)).toBeLessThan(4);
+    expect(Math.abs(after.footerDocTop-before.footerDocTop)).toBeLessThan(4);
+    expect(Math.abs(after.documentHeight-before.documentHeight)).toBeLessThan(5);
+    await handle.click();
+    await expect(inspector).toHaveAttribute('aria-hidden','false');
+  });
+}

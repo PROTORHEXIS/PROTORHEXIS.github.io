@@ -82,6 +82,14 @@ assert(component.includes('<EngineeringIcon name="inspector-toggle" />') && !com
 assert(v35.includes('--ws-handle-height:44px') && v35.includes('--ws-handle-visual-width:29px') && v35.includes('border-radius:11px 0 0 11px'), 'Compact handle must show 20% of the previous painted area and a flat right edge');
 assert(v35.includes('background:#29262a') && v35.includes('color:#ff8a81') && !v35.includes('background:#156082'), 'Handle uses the workstation graphite/red palette instead of the reference blue');
 assert(v35.includes('width:var(--ws-handle-width)') && v35.includes('height:var(--ws-handle-height)') && v35.includes('.ws-inspector-handle::before'), 'Preserve a 44px interactive target around the compact visible tab');
+const v36=read('src/styles/workstation-v36.css');
+const statusSource=read('src/components/vue/RoadmapStatusIcon.vue');
+assert(layout.includes('workstation-v36.css'), 'Reviewed V3.6 typography and selection CSS must be loaded');
+assert(v36.includes('-webkit-user-select:none') && v36.includes('user-select:text'), 'Disable drag-to-select while preserving form field selection');
+assert(v36.includes('container:ws-inspector / inline-size') && v36.includes('@container ws-inspector'), 'Inspector layout must follow real panel width');
+assert(v36.includes('prefers-reduced-motion:reduce') && v36.includes('data-stage="published"'), 'Semantic published state and reduced-motion guard needed');
+assert(statusSource.includes("'~icons/material-symbols/check-circle'") && component.includes('RoadmapStatusIcon'), 'Published stage and delivery need a real icon, not text alone');
+assert(component.includes(':data-stage="chosenItem.stage"') && component.includes(':data-event-kind="chosenEvent.kind"'), 'Inspector state coloring must use actual record data');
 assert(v35.includes('rotate(180deg)') && v35.includes('gantt-group .chevron.collapsed'), 'Both icon rotations must be pure CSS and respect collapse state');
 const stylesheet = read('src/styles/workstation.css');
 assert(!/(?:^|[;{\s])box-shadow\s*:\s*(?!none\s*!important)/m.test(stylesheet), 'workstation must not introduce shadows');
