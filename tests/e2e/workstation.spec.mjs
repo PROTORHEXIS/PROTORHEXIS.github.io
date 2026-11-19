@@ -695,3 +695,59 @@ test('V3.5 a system-map node explicitly selects and opens its inspector',async({
   await expect(inspector).toHaveClass(/inspector-visible/);
   await expect(inspector).toContainText('TALOS');
 });
+
+
+test('V3.5 screenshot-reference tab uses flat right edge, blue background and static left chevrons',async({page,isMobile})=>{
+  await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const handle=page.locator('.ws-inspector-handle');
+  const svg=handle.locator('svg');
+  await expect(svg).toHaveCount(1);
+  const initial=await handle.evaluate(el=>{
+    const css=getComputedStyle(el),r=el.getBoundingClientRect(),icon=el.querySelector('svg');
+    return {background:css.backgroundColor,width:r.width,height:r.height,
+      topLeft:css.borderTopLeftRadius,topRight:css.borderTopRightRadius,
+      bottomLeft:css.borderBottomLeftRadius,bottomRight:css.borderBottomRightRadius,
+      rotation:getComputedStyle(icon).transform,
+      right:Math.abs(innerWidth-r.right)};
+  });
+  expect(initial.background).toBe('rgb(21, 96, 130)');
+  expect(initial.width).toBe(29);
+  expect(initial.height).toBe(isMobile?170:220);
+  expect(initial.topLeft).toBe('16px');
+  expect(initial.bottomLeft).toBe('16px');
+  expect(initial.topRight).toBe('0px');
+  expect(initial.bottomRight).toBe('0px');
+  expect(initial.right).toBeLessThanOrEqual(2);
+  const probe='static-icon-'+test.info().project.name;
+  await svg.evaluate((el,p)=>el.dataset.rotationProbe=p,probe);
+  await handle.click();
+  await expect(handle).toHaveAttribute('aria-expanded','true');
+  await expect.poll(()=>svg.evaluate(el=>getComputedStyle(el).transform),{timeout:2500})
+    .not.toBe(initial.rotation);
+  await expect(svg).toHaveAttribute('data-rotation-probe',probe);
+  await handle.click();
+  await expect(handle).toHaveAttribute('aria-expanded','false');
+  await expect(svg).toHaveAttribute('data-rotation-probe',probe);
+});
+
+test('V3.5 Gantt project group uses the same static right-chevron while CSS rotates it',async({page})=>{
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const group=page.locator('.gantt-group').first();
+  const chevron=group.locator('.chevron svg');
+  await expect(chevron).toHaveCount(1);
+  await expect(group).toHaveAttribute('aria-expanded','true');
+  const original=await chevron.evaluate(el=>getComputedStyle(el).transform);
+  await chevron.evaluate(el=>el.dataset.sameStaticSvg='yes');
+  await group.click();
+  await expect(group).toHaveAttribute('aria-expanded','false');
+  await expect(chevron).toHaveAttribute('data-same-static-svg','yes');
+  await expect.poll(()=>chevron.evaluate(el=>getComputedStyle(el).transform),{timeout:2500})
+    .not.toBe(original);
+  await group.click();
+  await expect(group).toHaveAttribute('aria-expanded','true');
+  await expect(chevron).toHaveAttribute('data-same-static-svg','yes');
+  await expect.poll(()=>chevron.evaluate(el=>getComputedStyle(el).transform),{timeout:2500})
+    .toBe(original);
+});

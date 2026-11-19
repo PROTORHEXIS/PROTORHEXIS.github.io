@@ -74,6 +74,13 @@ assert(v35.includes('padding:0!important') && v35.includes('gap:0!important') &&
 assert(component.includes('class="ws-inspector-handle"') && component.includes('aria-controls="roadmap-inspector"') && component.includes('@click="toggleInspector"'), 'Right-edge handle must toggle inspector and expose accessibility state');
 assert(component.includes("const selectedId = ref('')") && component.includes('inspector-empty-state'), 'Inspector cannot start with an implicitly selected public record');
 assert(v35.includes('prefers-reduced-motion:reduce') && v35.includes('ws-inspector-handle:hover'), 'Handle must animate with a reduced-motion fallback');
+const iconSource = read('src/components/vue/EngineeringIcon.vue');
+assert(iconSource.includes("'~icons/material-symbols/keyboard-double-arrow-left-rounded'") && iconSource.includes("'~icons/material-symbols/keyboard-arrow-right'"), 'The handle and Gantt chevron must use locally bundled static Iconify SVGs');
+assert(iconSource.includes("'inspector-toggle': MaterialInspectorDoubleLeft") && iconSource.includes("'gantt-chevron': MaterialChevronRight"), 'Both hover and reduced-motion modes must retain static icon geometry');
+assert(component.includes('<EngineeringIcon name="gantt-chevron" />') && !component.includes(':key="`${group.id}:${groupExpanded(group.id)}`"'), 'Gantt group icon must be static across expansion and not remounted');
+assert(component.includes('<EngineeringIcon name="inspector-toggle" />') && !component.includes("inspectorOpen ? 'next' : 'back'"), 'Inspector uses a single static icon rotated by CSS');
+assert(v35.includes('background:#156082') && v35.includes('border-radius:16px 0 0 16px') && v35.includes('--ws-handle-height:220px'), 'Reference tab shape and original blue must be retained');
+assert(v35.includes('rotate(180deg)') && v35.includes('gantt-group .chevron.collapsed'), 'Both icon rotations must be pure CSS and respect collapse state');
 const stylesheet = read('src/styles/workstation.css');
 assert(!/(?:^|[;{\s])box-shadow\s*:\s*(?!none\s*!important)/m.test(stylesheet), 'workstation must not introduce shadows');
 assert(!/filter\s*:\s*drop-shadow\s*\(/.test(stylesheet), 'no drop-shadow in workstation');
