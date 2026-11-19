@@ -697,27 +697,36 @@ test('V3.5 a system-map node explicitly selects and opens its inspector',async({
 });
 
 
-test('V3.5 screenshot-reference tab uses flat right edge, blue background and static left chevrons',async({page,isMobile})=>{
+test('V3.5 compact tab has a 20%-area graphite/red visual with a 44px hit target and static chevrons',async({page})=>{
   await page.goto('/roadmap/board/',{waitUntil:'domcontentloaded'});
   await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
   const handle=page.locator('.ws-inspector-handle');
   const svg=handle.locator('svg');
   await expect(svg).toHaveCount(1);
   const initial=await handle.evaluate(el=>{
-    const css=getComputedStyle(el),r=el.getBoundingClientRect(),icon=el.querySelector('svg');
-    return {background:css.backgroundColor,width:r.width,height:r.height,
-      topLeft:css.borderTopLeftRadius,topRight:css.borderTopRightRadius,
-      bottomLeft:css.borderBottomLeftRadius,bottomRight:css.borderBottomRightRadius,
-      rotation:getComputedStyle(icon).transform,
-      right:Math.abs(innerWidth-r.right)};
+    const css=getComputedStyle(el),tab=getComputedStyle(el,'::before');
+    const bounds=el.getBoundingClientRect();
+    return {
+      hitWidth:bounds.width,hitHeight:bounds.height,
+      tabWidth:parseFloat(tab.width),tabHeight:parseFloat(tab.height),
+      background:tab.backgroundColor,color:css.color,
+      radiusTL:tab.borderTopLeftRadius,radiusTR:tab.borderTopRightRadius,
+      radiusBL:tab.borderBottomLeftRadius,radiusBR:tab.borderBottomRightRadius,
+      rotation:getComputedStyle(el.querySelector('svg')).transform,
+      right:Math.abs(innerWidth-bounds.right)
+    };
   });
-  expect(initial.background).toBe('rgb(21, 96, 130)');
-  expect(initial.width).toBe(29);
-  expect(initial.height).toBe(isMobile?170:220);
-  expect(initial.topLeft).toBe('16px');
-  expect(initial.bottomLeft).toBe('16px');
-  expect(initial.topRight).toBe('0px');
-  expect(initial.bottomRight).toBe('0px');
+  expect(initial.hitWidth).toBe(44);
+  expect(initial.hitHeight).toBe(44);
+  expect(initial.tabWidth).toBe(29);
+  expect(initial.tabHeight).toBe(44);
+  expect(initial.tabWidth*initial.tabHeight/(29*220)).toBeCloseTo(.2,6);
+  expect(initial.background).toBe('rgb(41, 38, 42)');
+  expect(initial.color).toBe('rgb(255, 138, 129)');
+  expect(initial.radiusTL).toBe('11px');
+  expect(initial.radiusBL).toBe('11px');
+  expect(initial.radiusTR).toBe('0px');
+  expect(initial.radiusBR).toBe('0px');
   expect(initial.right).toBeLessThanOrEqual(2);
   const probe='static-icon-'+test.info().project.name;
   await svg.evaluate((el,p)=>el.dataset.rotationProbe=p,probe);

@@ -1,9 +1,11 @@
 /* V3.5 continuous surface / inspector preview. Outer panes only.
    Internal cards, controls, filters and popovers retain their own radii. */
 .ws-content-grid {
-  /* Match the user's reference: 29 × 220, blue flat-right edge tab. */
-  --ws-handle-width:29px;
-  --ws-handle-height:220px;
+  /* Visual tab: 29 × 44px = precisely 20% of the former 29 × 220px area.
+     The button itself is 44 × 44px for an accessible pointer/touch target. */
+  --ws-handle-width:44px;
+  --ws-handle-height:44px;
+  --ws-handle-visual-width:29px;
   --ws-inspector-track:0px;
   position:relative;
   width:100%;
@@ -58,34 +60,57 @@
   width:var(--ws-handle-width);
   height:var(--ws-handle-height);
   border:0;
-  border-radius:16px 0 0 16px;
-  background:#156082;
-  color:#070b0e;
+  border-radius:0;
+  padding:0;
+  background:transparent;
+  color:#ff8a81;
   display:flex;
-  justify-content:center;
+  justify-content:flex-end;
   align-items:center;
   cursor:pointer;
-  opacity:.67;
-  transition:opacity 180ms ease,right 260ms cubic-bezier(.22,.72,.18,1),
-    background-color 180ms ease;
+  opacity:.72;
+  transition:opacity 180ms ease,right 260ms cubic-bezier(.22,.72,.18,1);
 }
-/* A single, permanently mounted STATIC double-chevron SVG. Opening and
-   closing only rotate it; the icon component never gets re-keyed or swapped. */
-.ws-inspector-handle .ws-glyph {
-  width:29px;
-  height:42px;
+/* Only the smaller VISUAL tab receives a surface. The remaining 15px of the
+   44px hit target is transparent, so the UI stays compact but easy to click. */
+.ws-inspector-handle::before{
+  content:"";
+  position:absolute;
+  top:0;
+  right:0;
+  width:var(--ws-handle-visual-width);
+  height:100%;
+  box-sizing:border-box;
+  border:1px solid #625055;
+  border-right:0;
+  border-radius:11px 0 0 11px;
+  background:#29262a;
+  pointer-events:none;
+  transition:background-color 180ms ease,border-color 180ms ease;
+}
+/* Both directions use the same locally bundled static SVG, rotated by CSS. */
+.ws-inspector-handle .ws-glyph{
+  width:22px;
+  height:24px;
+  margin-right:3px;
   flex-shrink:0;
-  transform:rotate(0deg) scaleY(1.6);
+  position:relative;
+  z-index:1;
+  transform:rotate(0deg);
   transition:transform 260ms cubic-bezier(.22,.72,.18,1);
 }
-.ws-inspector-handle:hover {opacity:1;background-color:#1e7499}
-.ws-inspector-handle:focus-visible {outline:2px solid #91cae5;outline-offset:2px;opacity:1}
+.ws-inspector-handle:hover{opacity:1}
+.ws-inspector-handle:hover::before{
+  background:#3a292e;
+  border-color:#a65e58;
+}
+.ws-inspector-handle:focus-visible{outline:2px solid #ff756e;outline-offset:2px;opacity:1}
 .ws-content-grid[data-inspector-open="true"] > .ws-inspector-handle{
-  /* Flat edge must touch the inspector's left wall; no half-overlap. */
+  /* The painted right edge abuts the inspector's left boundary. */
   right:var(--ws-inspector);
 }
 .ws-content-grid[data-inspector-open="true"] > .ws-inspector-handle .ws-glyph{
-  transform:rotate(180deg) scaleY(1.6);
+  transform:rotate(180deg);
 }
 /* Static > chevron on Gantt group cards, rotated only through CSS. */
 .gantt-group .chevron .ws-glyph {
@@ -160,9 +185,9 @@
     border:0;
     border-radius:0!important;
   }
-  .ws-inspector-handle {--ws-handle-width:29px;--ws-handle-height:170px}
+  /* The visible tab stays 29 × 44px on mobile; the hit target stays 44 × 44px. */
 }
-/* Intentionally flat-right unlike the previously rounded pill. */
+/* Flat-right visual tab, matching the website's graphite and red identity. */
 @media (prefers-reduced-motion:reduce) {
   .ws-content-grid,
   .ws-content-grid > .ws-inspector,
