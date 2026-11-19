@@ -601,8 +601,13 @@ test('Gantt last row, zero results and collapsed group never create a phantom ro
   // Count the current reviewed public rows; never hardcode the quantity
   // because Future, planned and filtered records vary independently of layout.
   await expect.poll(()=>page.locator('.gantt-row').count()).toBeGreaterThan(1);
-  const sizes=await page.locator('.gantt-viewport').evaluate(el=>({height:el.clientHeight,scrollHeight:el.scrollHeight}));
-  expect(sizes.scrollHeight).toBeGreaterThan(sizes.height);
+  // When the canvas exactly fits the mobile viewport, there must be no
+  // artificial overflow from a phantom frozen-label mask.
+  const sizes=await page.locator('.gantt-viewport').evaluate(el=>({
+    height:el.clientHeight,scrollHeight:el.scrollHeight,
+    realCanvasHeight:el.querySelector('.gantt-canvas').getBoundingClientRect().height
+  }));
+  expect(Math.abs(sizes.scrollHeight-Math.max(sizes.height,sizes.realCanvasHeight))).toBeLessThan(3);
 });
 
 
@@ -1022,7 +1027,9 @@ test('V3.6.3 Gantt keeps chart legend at the pane bottom independent of task cou
   await expect.poll(()=>page.locator('.gantt-row').count()).toBeGreaterThan(1);
   const long=await metrics();
   expect(Math.abs(long.paneBottom-long.legendBottom)).toBeLessThan(3);
-  expect(long.scrollHeight).toBeGreaterThan(long.clientHeight);
+  // The final canvas may fit perfectly on mobile. Its real content, not
+  // the old mask overhang, is the only legitimate source of overflow.
+  expect(Math.abs(long.scrollHeight-Math.max(long.clientHeight,long.canvasHeight))).toBeLessThan(3);
 });
 
 test('V3.6.4 frozen Gantt label mask ends at the last real row even after vertical scroll',async({page})=>{
@@ -1082,7 +1089,14 @@ test('V3.6.4 frozen Gantt label mask ends at the last real row even after vertic
   await expect.poll(()=>page.locator('.gantt-row').count()).toBeGreaterThan(4);
   await viewport.evaluate(el=>{el.scrollTop=0;el.scrollLeft=0});
   assertAligned(await metrics(),true);
+  const capacity=await metrics();
   await viewport.evaluate(el=>{el.scrollTop=el.scrollHeight;el.scrollLeft=420});
-  await expect.poll(()=>viewport.evaluate(el=>el.scrollTop)).toBeGreaterThan(50);
+  if(capacity.scrollHeight>capacity.clientHeight+50){
+    await expect.poll(()=>viewport.evaluate(el=>el.scrollTop)).toBeGreaterThan(50);
+  }else{
+    // A fitted mobile chart has nothing to scroll vertically; verify
+    // horizontal freezing without inventing a 56px phantom overflow.
+    expect(capacity.scrollHeight-capacity.clientHeight).toBeLessThanOrEqual(50);
+  }
   assertAligned(await metrics(),true);
 });
