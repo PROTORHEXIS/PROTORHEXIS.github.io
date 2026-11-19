@@ -853,3 +853,55 @@ test('V3.6 container-driven inspector typography adapts when desktop viewport ch
   expect(wide.size).toBeGreaterThanOrEqual(narrow.size);
   expect(['row','column']).toContain(narrow.layout);
 });
+
+/* V3.6.1 regression: an unopened inspector is a zero-width CSS Grid item.
+   Once a long project is selected, collapsing it must not let wrapped,
+   invisible detail content become the grid row's intrinsic block size.
+   The wall handle is positioned at 50% of that row and must remain stationary. */
+for (const [view,route,selector] of [
+  ['schedule','/roadmap/','.gantt-item-name'],
+  ['board','/roadmap/board/','.kanban-card'],
+  ['activity','/roadmap/evidence/','.event-entry'],
+  ['systems','/roadmap/systems/','.system-graph-node']
+]) {
+  test(`V3.6.1 collapsing the ${view} inspector preserves page geometry without a blank tail`,async({page,isMobile})=>{
+    test.skip(isMobile,'Inline grid geometry is desktop-only; mobile drawer has a separate fixed layout');
+    await page.goto(route,{waitUntil:'domcontentloaded'});
+    await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+    const grid=page.locator('.ws-content-grid');
+    const inspector=page.locator('#roadmap-inspector');
+    const handle=page.locator('.ws-inspector-handle');
+    const metrics=()=>page.evaluate(()=>{
+      const grid=document.querySelector('.ws-content-grid');
+      const handle=document.querySelector('.ws-inspector-handle');
+      const footer=document.querySelector('.ws-footer');
+      const gridBox=grid.getBoundingClientRect();
+      const handleBox=handle.getBoundingClientRect();
+      const footerBox=footer.getBoundingClientRect();
+      return {
+        gridHeight:gridBox.height,
+        handleDocTop:handleBox.top+window.scrollY,
+        footerDocTop:footerBox.top+window.scrollY,
+        documentHeight:document.documentElement.scrollHeight
+      };
+    });
+    const before=await metrics();
+    await page.locator(selector).first().click();
+    await expect(grid).toHaveAttribute('data-inspector-open','true');
+    await expect(inspector).toHaveAttribute('aria-hidden','false');
+    await expect.poll(()=>inspector.evaluate(el=>el.getBoundingClientRect().width)).toBeGreaterThan(300);
+    await expect.poll(async()=>Math.abs((await metrics()).gridHeight-before.gridHeight),{timeout:5000})
+      .toBeLessThan(4);
+    await handle.click();
+    await expect(grid).toHaveAttribute('data-inspector-open','false');
+    await expect(inspector).toHaveAttribute('aria-hidden','true');
+    await expect.poll(async()=>Math.abs((await metrics()).gridHeight-before.gridHeight),{timeout:5000})
+      .toBeLessThan(4);
+    const after=await metrics();
+    expect(Math.abs(after.handleDocTop-before.handleDocTop)).toBeLessThan(4);
+    expect(Math.abs(after.footerDocTop-before.footerDocTop)).toBeLessThan(4);
+    expect(Math.abs(after.documentHeight-before.documentHeight)).toBeLessThan(5);
+    await handle.click();
+    await expect(inspector).toHaveAttribute('aria-hidden','false');
+  });
+}
