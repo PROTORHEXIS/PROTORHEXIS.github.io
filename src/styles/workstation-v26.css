@@ -7,7 +7,9 @@
 .event-summary { max-width:100%; }
 .gantt-canvas { --gantt-label-width:256px; }
 .gantt-head-name, .gantt-item-name { box-sizing:border-box; width:var(--gantt-label-width); flex:0 0 var(--gantt-label-width); }
-.gantt-label-mask { display:block; position:sticky; top:0; left:0; width:var(--gantt-label-width);
+/* Freeze horizontally only: a vertical top:0 sticky mask follows scrolling rows
+   incorrectly and can paint beyond the canvas bottom after vertical scrolling. */
+.gantt-label-mask { display:block; position:sticky; top:auto; left:0; width:var(--gantt-label-width);
   height:0; pointer-events:none; z-index:var(--ws-layer-frozen); }
 .gantt-label-mask::after { content:''; position:absolute; top:0; left:0;
   height:var(--gantt-masked-height); width:var(--gantt-label-width);
