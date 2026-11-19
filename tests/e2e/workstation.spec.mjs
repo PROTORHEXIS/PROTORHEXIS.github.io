@@ -836,10 +836,14 @@ test('V3.6 container-driven inspector typography adapts when desktop viewport ch
   await page.goto('/roadmap/board/?item=WEB-SITE-001',{waitUntil:'domcontentloaded'});
   await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
   const inspector=page.locator('#roadmap-inspector');
+  await expect.poll(()=>inspector.evaluate(el=>el.getBoundingClientRect().width),{timeout:5000})
+    .toBeGreaterThanOrEqual(300);
   const narrow=await inspector.evaluate(el=>({width:el.getBoundingClientRect().width,
     layout:getComputedStyle(el.querySelector('.inspector-spec > div')).flexDirection,
     size:parseFloat(getComputedStyle(el.querySelector('.inspector-section p')).fontSize)}));
   await page.setViewportSize({width:1920,height:1080});
+  await expect.poll(()=>inspector.evaluate(el=>el.getBoundingClientRect().width),{timeout:5000})
+    .toBeGreaterThan(narrow.width+25);
   const wide=await inspector.evaluate(el=>({width:el.getBoundingClientRect().width,
     layout:getComputedStyle(el.querySelector('.inspector-spec > div')).flexDirection,
     size:parseFloat(getComputedStyle(el.querySelector('.inspector-section p')).fontSize)}));
