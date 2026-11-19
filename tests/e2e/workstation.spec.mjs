@@ -909,3 +909,30 @@ for (const [view,route,selector] of [
     await expect(inspector).toHaveAttribute('aria-hidden','false');
   });
 }
+
+test('V3.6.2 self-hosted Noto Sans supplies real Latin and CJK faces without OS defaults',async({page})=>{
+  for(const route of ['/','/roadmap/','/roadmap/board/','/roadmap/evidence/']) {
+    const errors=[];
+    page.on('pageerror',e=>errors.push(e.message));
+    await page.goto(route,{waitUntil:'domcontentloaded'});
+    await expect(page.locator('body')).toBeVisible();
+    const result=await page.evaluate(async()=>{
+      const latin=await document.fonts.load('400 14px "Noto Sans Variable"','PROTORHEXIS');
+      const chinese=await document.fonts.load('400 14px "Noto Sans SC Variable"','开发路线图源爆点');
+      const body=getComputedStyle(document.body).fontFamily;
+      const label=document.querySelector('.ws-header-title, .construction .lead, .construction-main');
+      return {
+        latinLoaded:latin.some(f=>f.status==='loaded' && f.family.includes('Noto Sans Variable')),
+        chineseLoaded:chinese.some(f=>f.status==='loaded' && f.family.includes('Noto Sans SC Variable')),
+        body,label:label?getComputedStyle(label).fontFamily:''
+      };
+    });
+    expect(result.latinLoaded).toBe(true);
+    expect(result.chineseLoaded).toBe(true);
+    expect(result.body).toContain('Noto Sans Variable');
+    expect(result.body).toContain('Noto Sans SC Variable');
+    expect(result.body).not.toMatch(/Inter|Space Mono|Microsoft YaHei|system-ui/);
+    if(result.label)expect(result.label).toContain('Noto Sans');
+    expect(errors).toEqual([]);
+  }
+});
