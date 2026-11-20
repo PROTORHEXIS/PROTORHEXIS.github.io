@@ -60,6 +60,15 @@ test('V3.6.5 selected far-right board card is fully revealed after inspector ope
   await card.click();
   await expect(page.locator('.ws-content-grid')).toHaveAttribute('data-inspector-open','true');
   await expect.poll(async()=>visible(await metrics(page,'.ws-board-viewport',target))).toBe(true);
+  // The inspector's grid track keeps shrinking for 260ms after the click.
+  // Compare two settled frames, not a transient early "visible" snapshot.
+  await expect.poll(async()=>{
+    const a=await view.evaluate(el=>el.clientWidth);
+    await page.waitForTimeout(85);
+    const b=await view.evaluate(el=>el.clientWidth);
+    return Math.abs(b-a);
+  },{timeout:4000}).toBeLessThan(1);
+  await expect.poll(async()=>visible(await metrics(page,'.ws-board-viewport',target))).toBe(true);
   const start=await metrics(page,'.ws-board-viewport',target);
   await card.click();
   await expect.poll(async()=>visible(await metrics(page,'.ws-board-viewport',target))).toBe(true);
