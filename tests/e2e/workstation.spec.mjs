@@ -953,7 +953,7 @@ test('V3.6.2 header publishes source-backed data update immediately left of the 
     const edition=page.locator('.ws-header-edition');
     await expect(data.locator('time')).toHaveAttribute('datetime',snapshot.updatedAt);
     await expect(data.locator('time')).toHaveText(snapshot.updatedAt.replaceAll('-','.'));
-    await expect(edition).toHaveText('WORKSTATION / V3.6.4');
+    await expect(edition).toHaveText('WORKSTATION / V3.6.5');
     if(isMobile){
       await expect(data).toBeHidden();
       await expect(edition).toBeHidden();
