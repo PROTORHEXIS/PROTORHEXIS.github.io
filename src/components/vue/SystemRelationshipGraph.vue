@@ -46,7 +46,7 @@ const graphEdges = computed<Edge[]>(() => {
         </template>
         <template #node-program="{data}">
           <Handle type="target" :position="Position.Top" :connectable="false" />
-          <button class="system-graph-node system-graph-program" type="button" :class="{'is-selected':activeProgram===data.id}" @click.stop="emit('select',data.id)">
+          <button class="system-graph-node system-graph-program" :data-program-id="data.id" type="button" :class="{'is-selected':activeProgram===data.id}" @click.stop="emit('select',data.id)">
             <span>{{data.code}}</span><strong>{{data.id}}</strong><small>{{locale==='zh'?data.zh:data.en}}</small>
           </button>
         </template>
