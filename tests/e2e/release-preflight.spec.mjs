@@ -67,6 +67,11 @@ test('release-preflight: single-task mask has zero phantom pixels and a +56px mu
   expect(original.viewportBottom - original.canvasBottom).toBeGreaterThan(30);
 
   // Fault-injection control: the exact V3.6.3 duplicate-header-height bug.
+  // Vue owns this inline CSS variable; snapshot its value and RESTORE it
+  // rather than removeProperty(), which would erase Vue's production binding.
+  const originalMaskVariable = await page.locator('.gantt-canvas').evaluate(
+    canvas => canvas.style.getPropertyValue('--gantt-masked-height'));
+  expect(originalMaskVariable).toMatch(/^\\d+(?:\\.\\d+)?px$/);
   await page.locator('.gantt-canvas').evaluate(canvas => {
     canvas.style.setProperty('--gantt-masked-height',
       String(Math.round(canvas.getBoundingClientRect().height) + 56) + 'px');
@@ -74,8 +79,8 @@ test('release-preflight: single-task mask has zero phantom pixels and a +56px mu
   const mutated = await geometry(page);
   expect(mutated.maskBottom - mutated.canvasBottom).toBeGreaterThan(52);
   expect(mutated.maskBottom - mutated.canvasBottom).toBeLessThan(60);
-  await page.locator('.gantt-canvas').evaluate(canvas =>
-    canvas.style.removeProperty('--gantt-masked-height'));
+  await page.locator('.gantt-canvas').evaluate((canvas, saved) =>
+    canvas.style.setProperty('--gantt-masked-height', saved), originalMaskVariable);
   assertRealRows(await geometry(page));
   await page.screenshot({
     path: 'test-results/preflight-single-' + test.info().project.name + '.png',
