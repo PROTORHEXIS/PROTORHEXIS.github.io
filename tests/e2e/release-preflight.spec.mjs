@@ -71,7 +71,7 @@ test('release-preflight: single-task mask has zero phantom pixels and a +56px mu
   // rather than removeProperty(), which would erase Vue's production binding.
   const originalMaskVariable = await page.locator('.gantt-canvas').evaluate(
     canvas => canvas.style.getPropertyValue('--gantt-masked-height'));
-  expect(originalMaskVariable).toMatch(/^\\d+(?:\\.\\d+)?px$/);
+  expect(originalMaskVariable).toMatch(/^[0-9]+(?:[.][0-9]+)?px$/);
   await page.locator('.gantt-canvas').evaluate(canvas => {
     canvas.style.setProperty('--gantt-masked-height',
       String(Math.round(canvas.getBoundingClientRect().height) + 56) + 'px');
