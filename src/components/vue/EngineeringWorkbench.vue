@@ -150,6 +150,14 @@ onMounted(() => {
   window.addEventListener('resize', syncBoardScroll);
   window.addEventListener('resize', measureGanttLabels);
   nextTick(syncBoardScroll);
+  nextTick(()=>{
+    const primary=document.querySelector<HTMLElement>('.workbench .ws-primary');
+    if (primary && typeof ResizeObserver!=='undefined') {
+      selectionResizeObserver=new ResizeObserver(scheduleSelectionReveal);
+      selectionResizeObserver.observe(primary);
+    }
+    scheduleSelectionReveal(); // Deep-link selection initialized during onMounted.
+  });
   if (props.view === 'systems') import('./SystemRelationshipGraph.vue').then(mod=>{graphComponent.value=mod.default;}).catch(()=>{graphComponent.value=null;});
   if (props.view === 'schedule') nextTick(measureGanttLabels);
 
@@ -173,6 +181,8 @@ onBeforeUnmount(() => {
   viewportQuery?.removeEventListener('change', onViewportChange);
   motionQuery?.removeEventListener('change', onMotionChange);
   resizeObserver?.disconnect();
+  selectionResizeObserver?.disconnect();
+  if (selectionRaf) cancelAnimationFrame(selectionRaf);
   restoreBodyScroll();
 });
 const zoom = ref<'month' | 'quarter'>('month');
@@ -184,6 +194,8 @@ const customEnd = ref('2027-10');
 const rangeError = ref('');
 const ganttViewport = ref<HTMLElement | null>(null);
 const boardViewport = ref<HTMLElement | null>(null);
+const activityViewport = ref<HTMLElement | null>(null);
+const systemViewport = ref<HTMLElement | null>(null);
 const boardScrollRatio = ref(0);
 const boardOverflow = ref(false);
 function syncBoardScroll() {
@@ -200,6 +212,64 @@ function scrollBoard(direction: -1 | 1) {
   const distance = (lane?.getBoundingClientRect().width || 260) + 10;
   el.scrollBy({ left: direction * distance, behavior: reducedMotion.value ? 'auto' : 'smooth' });
 }
+
+// Keep the *selected object* inside its own scrollport, not the page.
+// Smallest necessary correction is preferred; never center an already-visible
+// card. The WBS sticky label occupies the left edge of the Gantt viewport.
+let selectionRaf = 0;
+let selectionResizeObserver: ResizeObserver | null = null;
+function revealInside(viewport: HTMLElement, target: HTMLElement, leftInset = 0) {
+  const view = viewport.getBoundingClientRect(), item = target.getBoundingClientRect();
+  const left = view.left + leftInset + 8, right = view.right - 8;
+  const top = view.top + 8, bottom = view.bottom - 8;
+  if (right <= left + 2 || bottom <= top + 2) return;
+  // An object larger than the scrollport cannot fit; reveal its leading edge.
+  const dx = item.width > right - left
+    ? item.left - left
+    : item.left < left ? item.left - left : item.right > right ? item.right - right : 0;
+  const dy = item.height > bottom - top
+    ? item.top - top
+    : item.top < top ? item.top - top : item.bottom > bottom ? item.bottom - bottom : 0;
+  if (Math.abs(dx) > 0.5) viewport.scrollLeft = Math.max(0,Math.min(viewport.scrollWidth-viewport.clientWidth,viewport.scrollLeft+dx));
+  if (Math.abs(dy) > 0.5) viewport.scrollTop = Math.max(0,Math.min(viewport.scrollHeight-viewport.clientHeight,viewport.scrollTop+dy));
+}
+function findSelected(nodes: NodeListOf<HTMLElement>, id: string, key: keyof DOMStringMap) {
+  return Array.from(nodes).find(node=>node.dataset[key]===id) ?? null;
+}
+function revealSelection() {
+  const id=selectedId.value;
+  if (!id || (isNarrow.value && inspectorOpen.value)) return; // Mobile inspector is a modal overlay.
+  if (props.view==='board' && boardViewport.value) {
+    const target=findSelected(boardViewport.value.querySelectorAll<HTMLElement>('.kanban-card[data-item-id]'),id,'itemId');
+    if (target) { revealInside(boardViewport.value,target);syncBoardScroll(); }
+  } else if (props.view==='schedule' && ganttViewport.value) {
+    const viewport=ganttViewport.value;
+    const bar=findSelected(viewport.querySelectorAll<HTMLElement>('.gantt-bar[data-gantt-id]'),id,'ganttId');
+    const label=findSelected(viewport.querySelectorAll<HTMLElement>('.gantt-item-name[data-item-id]'),id,'itemId');
+    // Exclude the opaque frozen WBS column from usable bar space.
+    if (bar) revealInside(viewport,bar,Math.min(labelWidth.value,Math.max(0,viewport.clientWidth-80)));
+    else if (label) revealInside(viewport,label);
+  } else if (props.view==='activity' && activityViewport.value) {
+    const target=findSelected(activityViewport.value.querySelectorAll<HTMLElement>('.event-entry[data-event-id]'),id,'eventId');
+    if (target) revealInside(activityViewport.value,target);
+  } else if (props.view==='systems' && systemViewport.value) {
+    const target=findSelected(systemViewport.value.querySelectorAll<HTMLElement>('.system-graph-node[data-program-id],.systemmap-fallback [data-program-id]'),id,'programId');
+    if (target) revealInside(systemViewport.value,target);
+  }
+}
+function scheduleSelectionReveal() {
+  if (typeof window==='undefined') return;
+  if (selectionRaf) window.cancelAnimationFrame(selectionRaf);
+  selectionRaf=window.requestAnimationFrame(()=>{selectionRaf=0;revealSelection();});
+}
+// Post-render selection and measured pane resizing are separate: opening an
+// inspector animates the CSS grid for 260ms after Vue's nextTick. ResizeObserver
+// continues to correct visibility throughout the animation without a timeout.
+watch([selectedId,inspectorOpen,activeProgram,search,locale,isNarrow],()=>{
+  nextTick(scheduleSelectionReveal);
+},{flush:'post'});
+watch(graphComponent,()=>nextTick(scheduleSelectionReveal),{flush:'post'});
+
 const trackWidth = ref(900);
 // Measure the full visible label text (not clipped DOM widths), then share one CSS variable
 // between the frozen labels, header, chart coordinate origin, and opaque continuous mask.
@@ -367,28 +437,18 @@ async function focusItem(id:string) {
   if (stream.value!=='all' && stream.value!==item.stream) stream.value='all';
   search.value='';
   expanded.value[item.program]=true;
-  if(!item.start || !item.end) { selectedId.value=id; inspectorOpen.value=true; return; }
-  const itemStart=Date.parse(`${item.start}T00:00:00Z`);
-  const itemEnd=Date.parse(`${item.end}T00:00:00Z`);
-  if (itemStart>=rangeEnd.value || itemEnd<rangeStart.value) {
-    calendarWindow.value={...calendarWindow.value,startMonth:monthString(monthIndex(item.start.slice(0,7))-1)};
+  if(item.start && item.end) {
+    const itemStart=Date.parse(`${item.start}T00:00:00Z`);
+    const itemEnd=Date.parse(`${item.end}T00:00:00Z`);
+    if(itemStart>=rangeEnd.value || itemEnd<rangeStart.value)
+      calendarWindow.value={...calendarWindow.value,startMonth:monthString(monthIndex(item.start.slice(0,7))-1)};
   }
   // Inspector navigation does not overwrite returnFocus with a control inside the inspector.
   if (!inspectorOpen.value && document.activeElement instanceof HTMLElement) returnFocus=document.activeElement;
   selectedId.value=id;
   inspectorOpen.value=true;
   await nextTick();
-  if (props.view==='schedule' && ganttViewport.value) {
-    const target=Array.from(ganttViewport.value.querySelectorAll<HTMLElement>('[data-gantt-id]')).find(el=>el.dataset.ganttId===id);
-    if (target) {
-      const bounds=target.getBoundingClientRect(), parent=ganttViewport.value.getBoundingClientRect();
-      const delta=bounds.left-parent.left;
-      ganttViewport.value.scrollLeft += delta-ganttViewport.value.clientWidth*0.5;
-      const viewportTop=ganttViewport.value.scrollTop;
-      const rowTop=target.closest('.gantt-row')?.getBoundingClientRect().top ?? bounds.top;
-      ganttViewport.value.scrollTop=Math.max(0,viewportTop + rowTop-parent.top-92);
-    }
-  }
+  scheduleSelectionReveal(); // Container-local nearest edge, not forced centering.
 }
 function fmtDate(s:string|null) { return s ? s.replaceAll('-','.') : tr('未确定','NOT SCHEDULED'); }
 function filteredCount(program:ProgramId){return publicItems.filter(x=>x.program===program).length;}
@@ -467,7 +527,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
               </svg>
               <template v-for="group in grouped" :key="group.id">
                 <button class="gantt-group" type="button" @click="toggleGroup(group.id)" :aria-expanded="groupExpanded(group.id)"><span class="gantt-group-name"><span class="chevron" :class="{collapsed:!groupExpanded(group.id)}"><EngineeringIcon name="gantt-chevron" /></span><strong>{{group.id}}</strong><small>{{tr(group.zh,group.en)}}</small></span><span class="gantt-group-suffix">{{group.items.length}} {{tr('个工作项','WORK ITEMS')}}</span></button>
-                <template v-if="groupExpanded(group.id)"><div v-for="item in group.items" :key="item.id" class="gantt-row" :class="{selected:selectedId===item.id}"><button class="gantt-item-name" @click="focusItem(item.id)"><small>{{item.id}} <span>·</span> {{streamName(item.stream)}}</small><strong>{{tr(item.titleZh,item.titleEn)}}</strong></button><div class="gantt-track"><span v-for="(tick,i) in ticks" :key="i" class="gantt-gridline" :style="{left:`${tick.left}%`}"></span><span v-if="currentLine" class="gantt-today" :style="{left:currentLine}"></span><button v-if="!durationPosition(item).hidden" class="gantt-bar" :data-gantt-id="item.id" :class="[item.stage,{selected:selectedId===item.id,related:focusedId===item.id}]" @pointerenter="hoveredId=item.id" @pointerleave="hoveredId=null" :aria-pressed="selectedId===item.id" :aria-label="`${item.id} · ${tr(item.titleZh,item.titleEn)} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · ${stageName(item.stage)}`" :style="{left:durationPosition(item).left,width:durationPosition(item).width}" :title="`${item.id} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · PUBLIC RECORD`" @click="select(item.id)"><span>{{item.id}}</span></button><span v-if="!item.start || !item.end" class="gantt-undated">{{tr('未安排公开时间','NO PUBLIC DATE')}}</span></div></div></template>
+                <template v-if="groupExpanded(group.id)"><div v-for="item in group.items" :key="item.id" class="gantt-row" :class="{selected:selectedId===item.id}"><button class="gantt-item-name" :data-item-id="item.id" @click="focusItem(item.id)"><small>{{item.id}} <span>·</span> {{streamName(item.stream)}}</small><strong>{{tr(item.titleZh,item.titleEn)}}</strong></button><div class="gantt-track"><span v-for="(tick,i) in ticks" :key="i" class="gantt-gridline" :style="{left:`${tick.left}%`}"></span><span v-if="currentLine" class="gantt-today" :style="{left:currentLine}"></span><button v-if="!durationPosition(item).hidden" class="gantt-bar" :data-gantt-id="item.id" :class="[item.stage,{selected:selectedId===item.id,related:focusedId===item.id}]" @pointerenter="hoveredId=item.id" @pointerleave="hoveredId=null" :aria-pressed="selectedId===item.id" :aria-label="`${item.id} · ${tr(item.titleZh,item.titleEn)} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · ${stageName(item.stage)}`" :style="{left:durationPosition(item).left,width:durationPosition(item).width}" :title="`${item.id} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · PUBLIC RECORD`" @click="select(item.id)"><span>{{item.id}}</span></button><span v-if="!item.start || !item.end" class="gantt-undated">{{tr('未安排公开时间','NO PUBLIC DATE')}}</span></div></div></template>
               </template>
               <div v-if="grouped.length===0" class="ws-no-results">{{tr('没有匹配的工作项。','No matching work items.')}}</div>
             </div>
@@ -483,13 +543,13 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
             <button type="button" :aria-label="tr('下一阶段','Next stage')" :disabled="!boardOverflow || boardScrollRatio>0.99" @click="scrollBoard(1)"><EngineeringIcon name="next" /></button>
           </div>
           <div ref="boardViewport" class="ws-board-viewport" tabindex="0" @scroll.passive="syncBoardScroll" :aria-label="tr('可横向滚动的交付看板','Scrollable release board')"><div class="ws-board" :style="{'--board-stage-count':stages.length,'--board-min-width':`${stages.length*260}px`}">
-          <section v-for="stage in stages" :key="stage.id" class="kanban-column"><div class="kanban-heading" :data-stage="stage.id"><span class="kanban-stage-label"><RoadmapStatusIcon :status="stage.id" />{{stage.code}} / {{tr(stage.zh,stage.en)}}</span><span class="kanban-count">{{visibleItems.filter(x=>x.stage===stage.id).length.toString().padStart(2,'0')}}</span></div><div class="kanban-stack"><motion.button v-for="item in visibleItems.filter(x=>x.stage===stage.id)" :key="item.id" layout :initial="false" :whileHover="reducedMotion ? undefined : { y: -2 }" :whilePress="reducedMotion ? undefined : { scale: 0.99 }" :transition="{ duration: reducedMotion ? 0 : 0.14 }" class="kanban-card" :class="{selected:selectedId===item.id}" :aria-pressed="selectedId===item.id" @click="select(item.id)"><span class="kanban-card-head"><small>{{item.id}}</small><small>{{item.program}}</small></span><strong>{{tr(item.titleZh,item.titleEn)}}</strong><p>{{tr(item.descZh,item.descEn)}}</p><span class="kanban-card-foot"><span>{{streamName(item.stream)}}</span><span class="kanban-delivery" :data-delivery="item.deliveryState"><RoadmapStatusIcon :status="item.deliveryState" />{{deliveryName(item.deliveryState)}}</span><span class="ws-action-glyph"><EngineeringIcon name="next" /></span></span></motion.button><div v-if="!visibleItems.some(x=>x.stage===stage.id)" class="kanban-empty">NO ITEMS</div></div></section>
+          <section v-for="stage in stages" :key="stage.id" class="kanban-column"><div class="kanban-heading" :data-stage="stage.id"><span class="kanban-stage-label"><RoadmapStatusIcon :status="stage.id" />{{stage.code}} / {{tr(stage.zh,stage.en)}}</span><span class="kanban-count">{{visibleItems.filter(x=>x.stage===stage.id).length.toString().padStart(2,'0')}}</span></div><div class="kanban-stack"><motion.button v-for="item in visibleItems.filter(x=>x.stage===stage.id)" :key="item.id" layout :initial="false" :whileHover="reducedMotion ? undefined : { y: -2 }" :whilePress="reducedMotion ? undefined : { scale: 0.99 }" :transition="{ duration: reducedMotion ? 0 : 0.14 }" class="kanban-card" :data-item-id="item.id" :class="{selected:selectedId===item.id}" :aria-pressed="selectedId===item.id" @click="select(item.id)"><span class="kanban-card-head"><small>{{item.id}}</small><small>{{item.program}}</small></span><strong>{{tr(item.titleZh,item.titleEn)}}</strong><p>{{tr(item.descZh,item.descEn)}}</p><span class="kanban-card-foot"><span>{{streamName(item.stream)}}</span><span class="kanban-delivery" :data-delivery="item.deliveryState"><RoadmapStatusIcon :status="item.deliveryState" />{{deliveryName(item.deliveryState)}}</span><span class="ws-action-glyph"><EngineeringIcon name="next" /></span></span></motion.button><div v-if="!visibleItems.some(x=>x.stage===stage.id)" class="kanban-empty">NO ITEMS</div></div></section>
         </div></div>
         </template>
 
-        <div v-else-if="view==='activity'" class="ws-activity"><div class="activity-filters"><span>{{tr('事件类型','EVENT TYPE')}}</span><div class="ws-toolset"><button v-for="kind in eventKinds" :key="kind" :class="{current:eventKind===kind}" @click="eventKind=kind">{{kind==='all'?tr('全部','ALL'):eventName(kind)}}</button></div></div><div class="event-stream"><button v-for="event in visibleEvents" :key="event.id" class="event-entry" :class="{selected:selectedId===event.id}" :aria-pressed="selectedId===event.id" @click="select(event.id)"><span class="event-date">{{fmtDate(event.date)}}<small>{{event.program}}</small></span><span class="event-marker"><i></i></span><span class="event-body"><span class="event-kind">{{eventName(event.kind)}} <span>/ {{event.id}}</span></span><strong>{{tr(event.titleZh,event.titleEn)}}</strong><span class="event-summary">{{tr(event.descZh,event.descEn)}}</span><span class="event-arrow" aria-hidden="true"><EngineeringIcon name="next" /></span></span></button><div v-if="visibleEvents.length===0" class="ws-no-results">{{tr('没有匹配的事件。','No matching events.')}}</div></div></div>
+        <div v-else-if="view==='activity'" ref="activityViewport" class="ws-activity"><div class="activity-filters"><span>{{tr('事件类型','EVENT TYPE')}}</span><div class="ws-toolset"><button v-for="kind in eventKinds" :key="kind" :class="{current:eventKind===kind}" @click="eventKind=kind">{{kind==='all'?tr('全部','ALL'):eventName(kind)}}</button></div></div><div class="event-stream"><button v-for="event in visibleEvents" :key="event.id" class="event-entry" :data-event-id="event.id" :class="{selected:selectedId===event.id}" :aria-pressed="selectedId===event.id" @click="select(event.id)"><span class="event-date">{{fmtDate(event.date)}}<small>{{event.program}}</small></span><span class="event-marker"><i></i></span><span class="event-body"><span class="event-kind">{{eventName(event.kind)}} <span>/ {{event.id}}</span></span><strong>{{tr(event.titleZh,event.titleEn)}}</strong><span class="event-summary">{{tr(event.descZh,event.descEn)}}</span><span class="event-arrow" aria-hidden="true"><EngineeringIcon name="next" /></span></span></button><div v-if="visibleEvents.length===0" class="ws-no-results">{{tr('没有匹配的事件。','No matching events.')}}</div></div></div>
 
-        <div v-else class="ws-systemmap"><div class="systemmap-topline">PROTORHEXIS / DISTRIBUTED RESEARCH & ENGINEERING <span>PUBLIC INDEX / VERIFIED ONLY</span></div><div class="systemmap-stage"><component :is="graphComponent" v-if="graphComponent" :programs="publicPrograms" :relations="publicSnapshot.relations" :locale="locale" :active-program="activeProgram" @select="selectGraphProgram" /><div v-else class="systemmap-fallback" role="group" :aria-label="tr('系统列表','System list')"><button v-for="prog in publicPrograms" :key="prog.id" type="button" @click="selectGraphProgram(prog.id)">{{prog.id}}</button></div></div><p class="systemmap-note">{{tr('仅绘制经公开审核的组织级项目归属关系；不代表系统之间已实现技术集成或依赖。','Only reviewed organizational grouping is shown; no technical integration or dependencies are implied.')}}</p></div>
+        <div v-else ref="systemViewport" class="ws-systemmap"><div class="systemmap-topline">PROTORHEXIS / DISTRIBUTED RESEARCH & ENGINEERING <span>PUBLIC INDEX / VERIFIED ONLY</span></div><div class="systemmap-stage"><component :is="graphComponent" v-if="graphComponent" :programs="publicPrograms" :relations="publicSnapshot.relations" :locale="locale" :active-program="activeProgram" @select="selectGraphProgram" /><div v-else class="systemmap-fallback" role="group" :aria-label="tr('系统列表','System list')"><button v-for="prog in publicPrograms" :key="prog.id" type="button" :data-program-id="prog.id" @click="selectGraphProgram(prog.id)">{{prog.id}}</button></div></div><p class="systemmap-note">{{tr('仅绘制经公开审核的组织级项目归属关系；不代表系统之间已实现技术集成或依赖。','Only reviewed organizational grouping is shown; no technical integration or dependencies are implied.')}}</p></div>
       </div>
 
       <button v-if="inspectorOpen" class="ws-inspector-scrim" type="button" :aria-label="tr('关闭详情面板','Close detail panel')" @click="closeInspector"></button>

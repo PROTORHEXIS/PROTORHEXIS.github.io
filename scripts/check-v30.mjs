@@ -50,7 +50,7 @@ for(const key of ['TAL-02>TES-02','TAL-01>TAL-02']) {
  const xs=parts.filter((_,i)=>i%2===0);
  assert.ok(xs.every(x=>x>=minx-2),`far-off detour: ${key}`);
 }
-assert.ok(readFileSync('src/layouts/EngineeringLayout.astro','utf8').includes('WORKSTATION / V3.6.4'),'public workstation version must match candidate');
+assert.ok(readFileSync('src/layouts/EngineeringLayout.astro','utf8').includes('WORKSTATION / V3.6.5'),'public workstation version must match candidate');
 const ui=readFileSync('src/components/vue/EngineeringWorkbench.vue','utf8');
 assert.ok(ui.includes('viewBox="0 0 10 8" refX="1"')&&ui.includes('M1 1 L9 4 L1 7 Z'),'marker must project exactly 8px beyond stroke end');
 assert.ok(ui.includes('const routingEdges=computed')&&ui.includes('const dependencyEdges=computed'),'hover must not reroute the geometry');
