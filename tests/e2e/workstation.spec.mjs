@@ -601,8 +601,13 @@ test('Gantt last row, zero results and collapsed group never create a phantom ro
   // Count the current reviewed public rows; never hardcode the quantity
   // because Future, planned and filtered records vary independently of layout.
   await expect.poll(()=>page.locator('.gantt-row').count()).toBeGreaterThan(1);
-  const sizes=await page.locator('.gantt-viewport').evaluate(el=>({height:el.clientHeight,scrollHeight:el.scrollHeight}));
-  expect(sizes.scrollHeight).toBeGreaterThan(sizes.height);
+  // When the canvas exactly fits the mobile viewport, there must be no
+  // artificial overflow from a phantom frozen-label mask.
+  const sizes=await page.locator('.gantt-viewport').evaluate(el=>({
+    height:el.clientHeight,scrollHeight:el.scrollHeight,
+    realCanvasHeight:el.querySelector('.gantt-canvas').getBoundingClientRect().height
+  }));
+  expect(Math.abs(sizes.scrollHeight-Math.max(sizes.height,sizes.realCanvasHeight))).toBeLessThan(3);
 });
 
 
@@ -948,7 +953,7 @@ test('V3.6.2 header publishes source-backed data update immediately left of the 
     const edition=page.locator('.ws-header-edition');
     await expect(data.locator('time')).toHaveAttribute('datetime',snapshot.updatedAt);
     await expect(data.locator('time')).toHaveText(snapshot.updatedAt.replaceAll('-','.'));
-    await expect(edition).toHaveText('WORKSTATION / V3.6.3');
+    await expect(edition).toHaveText('WORKSTATION / V3.6.4');
     if(isMobile){
       await expect(data).toBeHidden();
       await expect(edition).toBeHidden();
@@ -1022,5 +1027,76 @@ test('V3.6.3 Gantt keeps chart legend at the pane bottom independent of task cou
   await expect.poll(()=>page.locator('.gantt-row').count()).toBeGreaterThan(1);
   const long=await metrics();
   expect(Math.abs(long.paneBottom-long.legendBottom)).toBeLessThan(3);
-  expect(long.scrollHeight).toBeGreaterThan(long.clientHeight);
+  // The final canvas may fit perfectly on mobile. Its real content, not
+  // the old mask overhang, is the only legitimate source of overflow.
+  expect(Math.abs(long.scrollHeight-Math.max(long.clientHeight,long.canvasHeight))).toBeLessThan(3);
+});
+
+test('V3.6.4 frozen Gantt label mask ends at the last real row even after vertical scroll',async({page})=>{
+  await page.goto('/roadmap/',{waitUntil:'domcontentloaded'});
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  const search=page.locator('.ws-header .ws-search input');
+  const viewport=page.locator('.gantt-viewport');
+  const metrics=()=>page.evaluate(()=>{
+    const view=document.querySelector('.gantt-viewport');
+    const canvas=view.querySelector('.gantt-canvas');
+    const mask=canvas.querySelector('.gantt-label-mask');
+    const pseudo=getComputedStyle(mask,'::after');
+    const maskCss=getComputedStyle(mask);
+    const canvasRect=canvas.getBoundingClientRect();
+    const maskRect=mask.getBoundingClientRect();
+    const last=canvas.querySelector('.gantt-row:last-of-type');
+    const lastRect=last?.getBoundingClientRect()??null;
+    const paintedTop=maskRect.top+Number.parseFloat(pseudo.top);
+    const maskHeight=Number.parseFloat(pseudo.height);
+    return {paintedBottom:paintedTop+maskHeight,maskHeight,
+      canvasTop:canvasRect.top,canvasBottom:canvasRect.bottom,
+      canvasHeight:canvasRect.height,lastBottom:lastRect?.bottom??null,
+      rows:canvas.querySelectorAll('.gantt-row').length,
+      topRule:maskCss.top,scrollTop:view.scrollTop,
+      scrollHeight:view.scrollHeight,clientHeight:view.clientHeight};
+  });
+  const assertAligned=(s,expectRow)=>{
+    expect(s.maskHeight).toBeGreaterThan(0);
+    expect(s.maskHeight).toBeLessThanOrEqual(s.canvasHeight+2);
+    // The dark frozen background must not extend even one task-row below
+    // the canvas, including while the main scrollport is scrolled vertically.
+    expect(Math.abs(s.paintedBottom-(s.canvasTop+s.maskHeight))).toBeLessThan(2);
+    expect(s.paintedBottom-s.canvasBottom).toBeLessThanOrEqual(2);
+    if(expectRow){
+      expect(s.rows).toBeGreaterThan(0);
+      expect(Math.abs(s.canvasBottom-s.lastBottom)).toBeLessThan(2);
+      expect(Math.abs(s.maskHeight-s.canvasHeight)).toBeLessThan(2);
+      expect(Math.abs(s.paintedBottom-s.lastBottom)).toBeLessThan(2);
+    }
+  };
+  // Screenshot 2: one TALOS task, no phantom dark row below the task.
+  await search.fill('TAL-PROGRESS-001');
+  await expect(page.locator('.gantt-row')).toHaveCount(1);
+  const single=await metrics();
+  assertAligned(single,true);
+  expect(single.maskHeight).toBeLessThan(200);
+  // Group collapse and empty result must not create a hanging mask.
+  await page.locator('.gantt-group').first().click();
+  await expect(page.locator('.gantt-row')).toHaveCount(0);
+  assertAligned(await metrics(),false);
+  await search.fill('NO_MATCHING_PUBLIC_RECORD_000');
+  await expect(page.locator('.ws-no-results')).toBeVisible();
+  assertAligned(await metrics(),false);
+  // Screenshot 1: with many rows, vertical scrolling must not make the
+  // left-hand mask stick to the top while the canvas itself scrolls away.
+  await search.fill('');
+  await expect.poll(()=>page.locator('.gantt-row').count()).toBeGreaterThan(4);
+  await viewport.evaluate(el=>{el.scrollTop=0;el.scrollLeft=0});
+  assertAligned(await metrics(),true);
+  const capacity=await metrics();
+  await viewport.evaluate(el=>{el.scrollTop=el.scrollHeight;el.scrollLeft=420});
+  if(capacity.scrollHeight>capacity.clientHeight+50){
+    await expect.poll(()=>viewport.evaluate(el=>el.scrollTop)).toBeGreaterThan(50);
+  }else{
+    // A fitted mobile chart has nothing to scroll vertically; verify
+    // horizontal freezing without inventing a 56px phantom overflow.
+    expect(capacity.scrollHeight-capacity.clientHeight).toBeLessThanOrEqual(50);
+  }
+  assertAligned(await metrics(),true);
 });

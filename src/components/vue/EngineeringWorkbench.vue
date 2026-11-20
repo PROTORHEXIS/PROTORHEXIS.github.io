@@ -324,6 +324,7 @@ const currentLine=computed(()=>{
   const t=Date.parse(`${publicSnapshot.updatedAt ?? '2026-11-17'}T00:00:00Z`);
   return t >= rangeStart.value && t < rangeEnd.value?`${((t-rangeStart.value)/(rangeEnd.value-rangeStart.value))*100}%`:null;
 });
+// visibleRows.height includes the 56px calendar header; never add it twice.
 const ganttLayout=computed(()=>visibleRows(grouped.value,expanded.value));
 const focusedId=computed(()=>hoveredId.value || (chosenItem.value ? selectedId.value : null));
 // Compute geometry only when bars, dates or visibility change, never on mouse hover.
@@ -457,7 +458,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
             </div>
           </div>
           <div ref="ganttViewport" class="gantt-viewport" tabindex="0" :aria-label="tr('可横向滚动的只读甘特排期图','Scrollable read-only Gantt timeline')" @pointerdown="panStart" @pointermove="panMove" @pointerup="panEnd" @pointercancel="panEnd" @lostpointercapture="panEnd">
-            <div class="gantt-canvas" :style="{'--tick-count':unitCount,'--gantt-label-width':`${labelWidth}px`,'--gantt-masked-height':`${ganttLayout.height+56}px`,minWidth:`${gridMinWidth}px`}"><div class="gantt-label-mask" aria-hidden="true"></div>
+            <div class="gantt-canvas" :style="{'--tick-count':unitCount,'--gantt-label-width':`${labelWidth}px`,'--gantt-masked-height':`${ganttLayout.height}px`,minWidth:`${gridMinWidth}px`}"><div class="gantt-label-mask" aria-hidden="true"></div>
               <div class="gantt-head"><div class="gantt-head-name"><strong>{{tr('工作项 / 交付物','WORK PACKAGE / DELIVERABLE')}}</strong><small>WBS INDEX</small></div><div class="gantt-axis"><span v-for="(tick,i) in ticks" :key="i" :style="{width:`${tick.width}%`,flex:`0 0 ${tick.width}%`}">{{tick.label}}</span></div></div>
               <svg v-if="showDependencies && dependencyEdges.length" class="gantt-dependency-layer" :viewBox="`0 0 ${trackWidth} ${ganttLayout.height}`" :style="{height:`${ganttLayout.height}px`}" preserveAspectRatio="none" aria-hidden="true">
                 <defs><marker id="dep-arrow" markerUnits="userSpaceOnUse" viewBox="0 0 10 8" refX="1" refY="4" markerWidth="10" markerHeight="8" orient="auto"><path d="M1 1 L9 4 L1 7 Z" fill="#777781"/></marker><marker id="dep-arrow-active" markerUnits="userSpaceOnUse" viewBox="0 0 10 8" refX="1" refY="4" markerWidth="10" markerHeight="8" orient="auto"><path d="M1 1 L9 4 L1 7 Z" fill="#ff453a"/></marker></defs>

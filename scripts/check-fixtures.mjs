@@ -103,5 +103,8 @@ assert(!/filter\s*:\s*drop-shadow\s*\(/.test(stylesheet), 'no drop-shadow in wor
 assert(!/\.ws-content-grid\s*\{[^}]*max-width/.test(stylesheet), 'main workbench must not be artificially max-width constrained');
 assert.equal(read('public/CNAME').trim(), 'protorhexis.com');
 assert(read('src/pages/index.astro').includes('建设中'), 'root must remain under construction');
+const maskStyle=read('src/styles/workstation-v26.css');
+assert(maskStyle.includes('position:sticky; top:auto; left:0') && maskStyle.includes('height:var(--gantt-masked-height)'), 'Frozen label mask sticks horizontally, never vertically, and uses row-bound height');
+assert(component.includes("'--gantt-masked-height':\`\${ganttLayout.height}px\`") && !component.includes('ganttLayout.height+56'), 'Frozen label mask must use actual layout height, including header exactly once');
 assert(!read('src/components/vue/EngineeringWorkbench.vue').includes('SYNTHETIC'), 'No fabricated claims in UI');
 console.log('Source invariants: PASS (4 routes, reviewed public data only, no synthetic UI, no shadows)');
