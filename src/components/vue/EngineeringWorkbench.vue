@@ -3,8 +3,11 @@ import { computed, ref, nextTick, onMounted, onBeforeUnmount, watch, shallowRef,
 import { AnimatePresence, motion } from 'motion-v';
 import { usePublicLocale } from './usePublicLocale';
 import EngineeringIcon from './EngineeringIcon.vue';
-import RoadmapStatusIcon from './RoadmapStatusIcon.vue';
-import { publicSnapshot, publicItems, publicEvents, publicPrograms, type WorkItem, type ProgramId, type PublicEvent, type Stage, type Stream } from '../../data/workstation-public';
+import RoadmapBoardLanes from './RoadmapBoardLanes.vue';
+import RoadmapActivityStream from './RoadmapActivityStream.vue';
+import RoadmapInspectorDetails from './RoadmapInspectorDetails.vue';
+import { roadmapLabels, stages } from './roadmap-presentation';
+import { publicSnapshot, publicItems, publicEvents, publicPrograms, type WorkItem, type ProgramId, type PublicEvent, type Stream } from '../../data/workstation-public';
 import { monthIndex, monthString, validateWindow, windowEnds, axisTicks, barPosition, visibleRows, dependencyPaths } from '../../lib/gantt';
 
 const props = defineProps<{ view: 'schedule' | 'board' | 'activity' | 'systems' }>();
@@ -279,7 +282,7 @@ function measureGanttLabels() {
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
   if (!ctx) return;
-  ctx.font = strong ? getComputedStyle(strong).font : '500 12px Inter';
+  ctx.font = strong ? getComputedStyle(strong).font : '500 12px "Noto Sans Variable", "Noto Sans SC Variable"';
   const titles = publicItems.map(item => tr(item.titleZh,item.titleEn));
   const widest = titles.reduce((max,title)=>Math.max(max,ctx.measureText(title).width),0);
   const needed = Math.ceil(Math.max(156,widest + 34));
@@ -295,25 +298,7 @@ const showDependencies = ref(true);
 const hoveredId = ref<string | null>(null);
 let pan: { id:number; pointerX:number; scrollLeft:number; dragged:boolean } | null = null;
 const expanded = ref<Record<string, boolean>>({});
-const stages: {id:Stage,zh:string,en:string,code:string}[] = [
-  {id:'future',zh:'未来方向',en:'FUTURE',code:'01'},
-  {id:'planned',zh:'已规划',en:'PLANNED',code:'02'},
-  {id:'development',zh:'开发中',en:'IN DEVELOPMENT',code:'03'},
-  {id:'qualification',zh:'验证中',en:'QUALIFICATION',code:'04'},
-  {id:'review',zh:'发布评审',en:'RELEASE REVIEW',code:'05'},
-  {id:'published',zh:'已发布',en:'PUBLISHED',code:'06'},
-];
-const stageName = (stage: Stage) => { const s = stages.find(x => x.id === stage); return s ? tr(s.zh, s.en) : stage; };
-const streamName = (s: Stream) => ({platform:tr('平台','PLATFORM'),product:tr('产品','PRODUCT'),infrastructure:tr('基础设施','INFRASTRUCTURE')})[s];
-const eventName = (k:PublicEvent['kind']) => ({milestone:tr('里程碑','MILESTONE'),verification:tr('验证','VERIFICATION'),decision:tr('决策变更','DECISION')})[k];
-const deliveryName = (state:WorkItem['deliveryState']) => ({
-  unassigned:tr('未指定交付','UNASSIGNED'),
-  tentative:tr('暂定交付','TENTATIVE'),
-  committed:tr('已通过交付门禁','COMMITTED'),
-  released:tr('已发布','RELEASED')
-})[state];
-const workLink=(view:'schedule'|'board',item:WorkItem) => `${view==='board'?'/roadmap/board/':'/roadmap/'}?item=${encodeURIComponent(item.id)}&program=${encodeURIComponent(item.program)}`;
-const projectEventsLink=(item:WorkItem) => `/roadmap/evidence/?program=${encodeURIComponent(item.program)}`;
+const { stageName, streamName, eventName, fmtDate } = roadmapLabels(tr);
 const viewLinks = [
   {id:'schedule',href:'/roadmap/',code:'01',zh:'开发排期',en:'PROGRESS TRACKER'},
   {id:'board',href:'/roadmap/board/',code:'02',zh:'交付看板',en:'RELEASE BOARD'},
@@ -451,7 +436,6 @@ async function focusItem(id:string) {
   await nextTick();
   scheduleSelectionReveal(); // Container-local nearest edge, not forced centering.
 }
-function fmtDate(s:string|null) { return s ? s.replaceAll('-','.') : tr('未确定','NOT SCHEDULED'); }
 function filteredCount(program:ProgramId){return publicItems.filter(x=>x.program===program).length;}
 const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visibleItems.value.map(x=>x.program)).size,events:visibleEvents.value.length}));
 </script>
@@ -543,12 +527,11 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
             <button type="button" :aria-label="tr('上一阶段','Previous stage')" :disabled="!boardOverflow || boardScrollRatio<0.01" @click="scrollBoard(-1)"><EngineeringIcon name="back" /></button>
             <button type="button" :aria-label="tr('下一阶段','Next stage')" :disabled="!boardOverflow || boardScrollRatio>0.99" @click="scrollBoard(1)"><EngineeringIcon name="next" /></button>
           </div>
-          <div ref="boardViewport" class="ws-board-viewport" tabindex="0" @scroll.passive="syncBoardScroll" :aria-label="tr('可横向滚动的交付看板','Scrollable release board')"><div class="ws-board" :style="{'--board-stage-count':stages.length,'--board-min-width':`${stages.length*260}px`}">
-          <section v-for="stage in stages" :key="stage.id" class="kanban-column"><div class="kanban-heading" :data-stage="stage.id"><span class="kanban-stage-label"><RoadmapStatusIcon :status="stage.id" />{{stage.code}} / {{tr(stage.zh,stage.en)}}</span><span class="kanban-count">{{visibleItems.filter(x=>x.stage===stage.id).length.toString().padStart(2,'0')}}</span></div><div class="kanban-stack"><motion.button v-for="item in visibleItems.filter(x=>x.stage===stage.id)" :key="item.id" layout :initial="false" :whileHover="reducedMotion ? undefined : { y: -2 }" :whilePress="reducedMotion ? undefined : { scale: 0.99 }" :transition="{ duration: reducedMotion ? 0 : 0.14 }" class="kanban-card" :data-item-id="item.id" :class="{selected:selectedId===item.id}" :aria-pressed="selectedId===item.id" @click="select(item.id)"><span class="kanban-card-head"><small>{{item.id}}</small><small>{{item.program}}</small></span><strong>{{tr(item.titleZh,item.titleEn)}}</strong><p>{{tr(item.descZh,item.descEn)}}</p><span class="kanban-card-foot"><span>{{streamName(item.stream)}}</span><span class="kanban-delivery" :data-delivery="item.deliveryState"><RoadmapStatusIcon :status="item.deliveryState" />{{deliveryName(item.deliveryState)}}</span><span class="ws-action-glyph"><EngineeringIcon name="next" /></span></span></motion.button><div v-if="!visibleItems.some(x=>x.stage===stage.id)" class="kanban-empty">NO ITEMS</div></div></section>
-        </div></div>
+          <div ref="boardViewport" class="ws-board-viewport" tabindex="0" @scroll.passive="syncBoardScroll" :aria-label="tr('可横向滚动的交付看板','Scrollable release board')"><RoadmapBoardLanes :items="visibleItems" :selected-id="selectedId" :reduced-motion="reducedMotion" :tr="tr" @select="select" />
+        </div>
         </template>
 
-        <div v-else-if="view==='activity'" ref="activityViewport" class="ws-activity"><div class="activity-filters"><span>{{tr('事件类型','EVENT TYPE')}}</span><div class="ws-toolset"><button v-for="kind in eventKinds" :key="kind" :class="{current:eventKind===kind}" @click="eventKind=kind">{{kind==='all'?tr('全部','ALL'):eventName(kind)}}</button></div></div><div class="event-stream"><button v-for="event in visibleEvents" :key="event.id" class="event-entry" :data-event-id="event.id" :class="{selected:selectedId===event.id}" :aria-pressed="selectedId===event.id" @click="select(event.id)"><span class="event-date">{{fmtDate(event.date)}}<small>{{event.program}}</small></span><span class="event-marker"><i></i></span><span class="event-body"><span class="event-kind">{{eventName(event.kind)}} <span>/ {{event.id}}</span></span><strong>{{tr(event.titleZh,event.titleEn)}}</strong><span class="event-summary">{{tr(event.descZh,event.descEn)}}</span><span class="event-arrow" aria-hidden="true"><EngineeringIcon name="next" /></span></span></button><div v-if="visibleEvents.length===0" class="ws-no-results">{{tr('没有匹配的事件。','No matching events.')}}</div></div></div>
+        <div v-else-if="view==='activity'" ref="activityViewport" class="ws-activity"><div class="activity-filters"><span>{{tr('事件类型','EVENT TYPE')}}</span><div class="ws-toolset"><button v-for="kind in eventKinds" :key="kind" :class="{current:eventKind===kind}" @click="eventKind=kind">{{kind==='all'?tr('全部','ALL'):eventName(kind)}}</button></div></div><RoadmapActivityStream :events="visibleEvents" :selected-id="selectedId" :tr="tr" @select="select" /></div>
 
         <div v-else ref="systemViewport" class="ws-systemmap"><div class="systemmap-topline">PROTORHEXIS / DISTRIBUTED RESEARCH & ENGINEERING <span>PUBLIC INDEX / VERIFIED ONLY</span></div><div class="systemmap-stage"><component :is="graphComponent" v-if="graphComponent" :programs="publicPrograms" :relations="publicSnapshot.relations" :locale="locale" :active-program="activeProgram" @select="selectGraphProgram" /><div v-else class="systemmap-fallback" role="group" :aria-label="tr('系统列表','System list')"><button v-for="prog in publicPrograms" :key="prog.id" type="button" :data-program-id="prog.id" @click="selectGraphProgram(prog.id)">{{prog.id}}</button></div></div><p class="systemmap-note">{{tr('仅绘制经公开审核的组织级项目归属关系；不代表系统之间已实现技术集成或依赖。','Only reviewed organizational grouping is shown; no technical integration or dependencies are implied.')}}</p></div>
       </div>
@@ -566,19 +549,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
             :animate="{ opacity: 1, y: 0 }"
             :exit="reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -5 }"
             :transition="{ duration: reducedMotion ? 0 : 0.16, ease: 'easeOut' }">
-        <template v-if="chosenItem && view!=='activity' && view!=='systems'"><div class="inspector-hero"><small>{{chosenItem.id}} / {{chosenItem.program}}</small><h2>{{tr(chosenItem.titleZh,chosenItem.titleEn)}}</h2><span class="inspector-status" :data-stage="chosenItem.stage"><RoadmapStatusIcon :status="chosenItem.stage" />{{stageName(chosenItem.stage)}}</span></div><div class="inspector-section"><span class="inspector-label">{{tr('工作概要','DESCRIPTION')}}</span><p>{{tr(chosenItem.descZh,chosenItem.descEn)}}</p></div><dl class="inspector-spec"><div><dt>{{tr('公开时间记录','PUBLIC DATE RECORD')}}</dt><dd>{{fmtDate(chosenItem.start)}}<br/>— {{fmtDate(chosenItem.end)}}<small v-if="chosenItem.scheduleKind==='observed'">{{tr('公开 PR 观察窗口','Observed PR window')}}</small></dd></div><div><dt>{{tr('工作类别','STREAM')}}</dt><dd>{{streamName(chosenItem.stream)}}</dd></div>
-        <div><dt>{{tr('交付可信度','DELIVERY CONFIDENCE')}}</dt><dd class="inspector-delivery" :data-delivery="chosenItem.deliveryState"><span class="inspector-delivery-label"><RoadmapStatusIcon :status="chosenItem.deliveryState" />{{deliveryName(chosenItem.deliveryState)}}</span><small v-if="chosenItem.releaseTarget">{{chosenItem.releaseTarget}}</small></dd></div>
-        <div><dt>{{tr('来源核验','SOURCE VERIFICATION')}}</dt><dd>{{chosenItem.verifiedAt?fmtDate(chosenItem.verifiedAt):tr('未单独核验','NOT SEPARATELY VERIFIED')}}<small>{{tr('记录更新','Record updated')}}: {{fmtDate(chosenItem.updatedAt)}}</small></dd></div><div class="inspector-dep-row"><dt>{{tr('前置依赖','PREDECESSORS')}}</dt><dd><template v-if="chosenItem.deps.length"><button v-for="dep in chosenItem.deps" :key="dep" class="inspector-dep-link" type="button" :title="tr('定位并打开依赖任务','Locate dependency')" @click="focusItem(dep)">{{dep}} <EngineeringIcon name="next" /></button></template><span v-else>{{tr('无','NONE')}}</span></dd></div><div class="inspector-dep-row"><dt>{{tr('后续工作','SUCCESSORS')}}</dt><dd><template v-if="dependents.length"><button v-for="next in dependents" :key="next.id" class="inspector-dep-link" type="button" :title="tr('定位后续任务','Locate successor')" @click="focusItem(next.id)">{{next.id}} <EngineeringIcon name="next" /></button></template><span v-else>{{tr('无','NONE')}}</span></dd></div><div><dt>{{tr('数据级别','PROVENANCE')}}</dt><dd>{{chosenItem.evidence.length ? 'PUBLIC / SOURCE-LINKED' : chosenItem.reviewReceipt ? 'PRIVATE / REVIEWED SUMMARY' : 'FUTURE INTENT / NO DATE'}}</dd></div><div v-if="chosenItem.reviewReceipt"><dt>{{tr('审核编号','REVIEW RECEIPT')}}</dt><dd>{{chosenItem.reviewReceipt}}</dd></div><div v-if="chosenItem.evidence.length"><dt>{{tr('公开来源','PUBLIC SOURCES')}}</dt><dd><a v-for="src in chosenItem.evidence" :key="src.url" :href="src.url" target="_blank" rel="noopener noreferrer" class="inspector-dep-link">GitHub ↗</a></dd></div></dl><nav class="inspector-crossviews" :aria-label="tr('同一工作项的其他视图','Other views of this work item')">
-          <a v-if="chosenItem.stage!=='future' && view!=='schedule'" :href="workLink('schedule',chosenItem)">{{tr('查看排期','Open schedule')}} →</a>
-          <a v-if="view!=='board'" :href="workLink('board',chosenItem)">{{tr('查看看板','Open board')}} →</a>
-          <a :href="projectEventsLink(chosenItem)">{{tr('查看项目事件','Project events')}} →</a>
-        </nav></template>
-        <template v-else-if="chosenEvent && view==='activity'"><div class="inspector-hero"><small>{{chosenEvent.id}} / {{chosenEvent.program}}</small><h2>{{tr(chosenEvent.titleZh,chosenEvent.titleEn)}}</h2><span class="inspector-status" :data-event-kind="chosenEvent.kind"><RoadmapStatusIcon :status="chosenEvent.kind" />{{eventName(chosenEvent.kind)}}</span></div><div class="inspector-section"><span class="inspector-label">{{tr('事件说明','EVENT DETAILS')}}</span><p>{{tr(chosenEvent.descZh,chosenEvent.descEn)}}</p></div><dl class="inspector-spec"><div><dt>{{tr('事件时间','EVENT DATE')}}</dt><dd>{{fmtDate(chosenEvent.date)}}</dd></div>
-        <div v-if="chosenEvent.change"><dt>{{tr('变化与原因','CHANGE / REASON')}}</dt><dd>{{chosenEvent.change.before}} → {{chosenEvent.change.after}}<small>{{tr(chosenEvent.change.reason.zh,chosenEvent.change.reason.en)}}</small></dd></div><div><dt>{{tr('公开来源','PUBLIC SOURCES')}}</dt><dd><a v-for="src in chosenEvent.evidence" :key="src.url" :href="src.url" target="_blank" rel="noopener noreferrer" class="inspector-dep-link">GitHub ↗</a></dd></div></dl><nav v-if="chosenEvent.itemId" class="inspector-crossviews" :aria-label="tr('关联工作项','Linked work item')">
-          <a :href="`/roadmap/board/?item=${encodeURIComponent(chosenEvent.itemId)}`">{{tr('查看对应交付物','Open linked deliverable')}} →</a>
-        </nav></template>
-        <template v-else-if="view==='systems'"><div class="inspector-hero"><small>SYSTEM MAP / {{chosenProgram?.code??'OVERVIEW'}}</small><h2>{{chosenProgram?.id??'PROTORHEXIS'}}</h2><span class="inspector-status" data-status="project"><RoadmapStatusIcon status="project" />PUBLIC PROJECT / LIMITED RECORD</span></div><div class="inspector-section"><span class="inspector-label">{{tr('系统范围','SYSTEM SCOPE')}}</span><p>{{chosenProgram?tr(chosenProgram.zh,chosenProgram.en):tr('分布式科研和工程协作网络','Distributed research and engineering network')}}</p></div><dl class="inspector-spec"><div><dt>PUBLICATION</dt><dd>PUBLIC OVERVIEW ONLY</dd></div></dl></template>
-        <template v-else><div class="inspector-placeholder"><span class="placeholder-cross">⌖</span><strong>{{tr('选择一个条目','Select an item')}}</strong><p>{{tr('在主视图中点击时间条、卡片或事件，查看对应详细信息。','Choose a bar, card or event to inspect its details.')}}</p></div></template>
+        <RoadmapInspectorDetails :view="view" :chosen-item="chosenItem" :chosen-event="chosenEvent" :chosen-program="chosenProgram" :dependents="dependents" :tr="tr" @focus="focusItem" />
           </motion.div>
         </AnimatePresence>
         <div class="inspector-warning"><span><EngineeringIcon name="warning" /></span><p>{{tr('公开事实由来源链接支持，未公布的项目没有推定进度或日期。','Public facts are source-linked. Undisclosed projects have no inferred status or dates.')}}</p></div>
