@@ -1,11 +1,10 @@
-# PROTORHEXIS Public Roadmap — Engineering Workstation V3.1
+# PROTORHEXIS Public Roadmap
 
 Site: https://protorhexis.com/roadmap/  |  API: https://protorhexis.com/api/roadmap/v1.json
 
-## Contents are source-reviewed, not synthetic
-The website previously used `src/data/workstation-demo.ts`, a fictional UI fixture. V3.1 **replaces it** with reviewed public content records under `src/content/roadmap/{programs,work-items,updates,relations}/` and a statically compiled snapshot at `src/data/roadmap.generated.json`.
+## Data source
 
-Published history is limited to publicly verifiable website PRs and builds. The TALOS/MAXWELL/THOULESS/TESSERACT index entries **do not** imply public delivery status, real API dependency topology, production readiness or dates. Date ranges marked `observed` are public PR windows, not plans or release commitments. Unpublished schedules stay `null`. Future automated ingestion is not implemented yet.
+Markdown/YAML records in `src/content/roadmap/` compile into one public snapshot consumed by the Gantt, board, timeline, system map and JSON API. Scheduled updates follow [the current agent policy](agent/AGENTS.md). Historical observation windows are distinct from delivery dates; Future stays undated.
 
 ### Human / Agent authoring
 - Human-friendly Markdown frontmatter/YAML and VS Code Front Matter config (`frontmatter.json`).
@@ -18,23 +17,21 @@ Published history is limited to publicly verifiable website PRs and builds. The 
 
 All public source links are explicitly allowlisted; no private repository paths or tokens may enter this site or its public Pull Requests, including Draft PRs. Real engineering details require **independent source approval and sanitization before entering this public repository**. See [V3.1 content pipeline](docs/ROADMAP-V3.1-CONTENT-PIPELINE.md) and [Agent instructions](agent/AGENTS.md).
 
-### Release gate
-```
+### Build and validation
+
+```sh
 npm install
-npm run roadmap:compile
-npm run roadmap:validate
-npm run check:roadmap
-npm run check:fixtures
-npm run check:style
-npm run check:gantt
-npm run check:layers
-npm run check:v25
-npm run check:v26
-npm run check:v29
-npm run check:v30
 npm run build
+npm run check:roadmap
+npm run check:site
+npm run check:fonts
+npm run check:gantt
+npx playwright install chromium
 npm run test:e2e
 ```
+
+`build` compiles the snapshot automatically. `check:roadmap` validates the compiled data and candidate intake; Gantt tests exercise the geometry directly. Playwright checks actual desktop and mobile behavior.
+
 GitHub Actions runs source, schema, build and desktop/mobile Chromium Hydration checks before deploying `main` to Pages. A PR validation never publishes the site. No Page.js browser token or write API exists. `src/data/roadmap.generated.json` is generated, so don't edit it by hand.
 
 ### Views

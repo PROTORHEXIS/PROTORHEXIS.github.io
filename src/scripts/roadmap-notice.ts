@@ -4,8 +4,9 @@
  * A short closing phase retains <details open> long enough to animate the
  * contents out without interrupting clicks or keyboard focus elsewhere.
  */
-const notice = document.querySelector<HTMLDetailsElement>('.ws-header-notice');
-if (notice) {
+const headerNotice = document.querySelector<HTMLDetailsElement>('.ws-header-notice');
+if (headerNotice) {
+  const notice = headerNotice;
   const trigger = notice.querySelector<HTMLElement>('summary');
   if (trigger) {
     type Mode = 'closed' | 'hover' | 'pinned' | 'closing';
@@ -22,7 +23,6 @@ if (notice) {
     }
 
     function setMode(mode: Mode) {
-      if (!notice) return;
       notice.open = mode !== 'closed';
       notice.dataset.mode = mode;
     }
@@ -36,7 +36,7 @@ if (notice) {
     function dismiss() {
       cancelPendingClose();
       pinned = false;
-      if (!notice || !notice.open) {
+      if (!notice.open) {
         setMode('closed');
         return;
       }
@@ -48,7 +48,7 @@ if (notice) {
       setMode('closing');
       closeTimer = window.setTimeout(() => {
         closeTimer = undefined;
-        if (notice?.dataset.mode === 'closing') setMode('closed');
+        if (notice.dataset.mode === 'closing') setMode('closed');
       }, CLOSE_MS);
     }
 

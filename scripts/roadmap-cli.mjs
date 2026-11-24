@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /** Read-only public content builder + private/local agent intake candidate validator. */
 import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 'node:fs';
-import { join, resolve, basename, dirname } from 'node:path';
+import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { parseDocument, stringify as yamlStringify } from 'yaml';
 import { schemas, identifier } from '../src/lib/roadmap-content-schema.mjs';
@@ -24,9 +24,7 @@ function readSource(path) {
   }
   const doc=parseDocument(yaml,{uniqueKeys:true,strict:true});
   if(doc.errors.length)fail(`${path}: ${doc.errors[0].message}`);
-  const parsed=doc.toJS();
-  if(!parsed||Array.isArray(parsed)||typeof parsed!=='object')fail(`Object required: ${path}`);
-  return parsed;
+  return doc.toJS();
 }
 function loadContent(){
   const store={program:[],work:[],event:[],relation:[]};
@@ -40,7 +38,7 @@ function loadContent(){
       if(filename!==`${data.id.toLowerCase()}${ext}`)fail(`Filename must match stable ID: ${filename}`);
       seen.add(data.id);
       if(data.publication!=='approved')continue; // no draft can reach generated public feed
-      for(const s of data.sources||[]){
+      for(const s of data.sources){
         const url=new URL(s.url);
         if(url.hostname!=='github.com' && url.hostname!=='protorhexis.com')fail(`Source must be publicly approved: ${s.url}`);
         if(url.hostname==='github.com'&&!(/^(\/PROTORHEXIS\/(?:\.github|PROTORHEXIS\.github\.io)\/)/.test(url.pathname)))
@@ -99,7 +97,7 @@ function recordContext(id){
 function parseIntake(path){
   const lines=readFileSync(path,'utf8').split(/\r?\n/).map(x=>x.trim()).filter(Boolean);
   if(lines.length<2)fail('JSONL requires header and at least one operation');
-  let records;try{records=lines.map((x,i)=>{try{return JSON.parse(x)}catch(e){fail(`Invalid JSONL line ${i+1}: ${e.message}`)}})}catch(e){throw e}
+  const records=lines.map((x,i)=>{try{return JSON.parse(x)}catch(e){fail(`Invalid JSONL line ${i+1}: ${e.message}`)}});
   const [head,...ops]=records;
   if(head.schema!=='roadmap-intake/v1'||!/^[-\w]{4,96}$/.test(head.batch||'')||Object.keys(head).some(k=>!['schema','batch','source'].includes(k)))fail('Invalid intake header');
   if(!head.source||typeof head.source!=='string')fail('Intake source reference required');

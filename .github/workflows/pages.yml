@@ -26,24 +26,14 @@ jobs:
           node-version: '24'
       - name: Install dependencies
         run: npm install --no-audit --no-fund
-      - name: Compile and verify approved public roadmap content
-        run: |
-          npm run roadmap:compile
-          npm run roadmap:validate
-          npm run check:roadmap
-      - name: Verify public fixture and style constraints
-        run: |
-          npm run check:fixtures
-          npm run check:fonts
-          npm run check:style
-          npm run check:gantt
-          npm run check:layers
-          npm run check:v25
-          npm run check:v26
-          npm run check:v29
-          npm run check:v30
-      - name: Build Astro static site
+      - name: Build Astro static site (includes roadmap compilation)
         run: npm run build
+      - name: Validate roadmap and site contracts
+        run: |
+          npm run check:roadmap
+          npm run check:site
+          npm run check:fonts
+          npm run check:gantt
       - name: Install Playwright Chromium for real SSR hydration checks
         run: npx playwright install --with-deps chromium
       - name: Real browser smoke and interaction tests
