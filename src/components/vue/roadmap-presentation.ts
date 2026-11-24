@@ -1,4 +1,7 @@
+import type { InjectionKey, Ref } from 'vue';
 import type { Stage, Stream, PublicEvent, WorkItem } from '../../data/workstation-public';
+
+export const reducedMotionKey: InjectionKey<Readonly<Ref<boolean>>> = Symbol('roadmap-reduced-motion');
 
 export type Translate = (zh: string, en: string) => string;
 export const stages: {id:Stage,zh:string,en:string,code:string}[] = [

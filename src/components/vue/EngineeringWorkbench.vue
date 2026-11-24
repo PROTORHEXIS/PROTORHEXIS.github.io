@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { computed, ref, nextTick, onMounted, onBeforeUnmount, watch, shallowRef, type Component } from 'vue';
+import { computed, ref, nextTick, onMounted, onBeforeUnmount, watch, shallowRef, provide, type Component } from 'vue';
 import { AnimatePresence, motion } from 'motion-v';
 import { usePublicLocale } from './usePublicLocale';
 import EngineeringIcon from './EngineeringIcon.vue';
 import RoadmapBoardLanes from './RoadmapBoardLanes.vue';
 import RoadmapActivityStream from './RoadmapActivityStream.vue';
 import RoadmapInspectorDetails from './RoadmapInspectorDetails.vue';
-import { roadmapLabels, stages } from './roadmap-presentation';
+import { roadmapLabels, stages, reducedMotionKey } from './roadmap-presentation';
 import { publicSnapshot, publicItems, publicEvents, publicPrograms, type WorkItem, type ProgramId, type PublicEvent, type Stream } from '../../data/workstation-public';
 import { monthIndex, monthString, validateWindow, windowEnds, axisTicks, barPosition, visibleRows, dependencyPaths } from '../../lib/gantt';
 
@@ -33,7 +33,8 @@ const eventKinds: Array<'all' | PublicEvent['kind']> = ['all','milestone','verif
 const selectedId = ref('');
 const inspectorOpen = ref(false);
 const isNarrow = ref(false);
-const reducedMotion = ref(true); // Safe SSR default until the media query is known.
+const reducedMotion = ref(true); // Static icons and motion on SSR until the preference is known.
+provide(reducedMotionKey, reducedMotion);
 let viewportQuery: MediaQueryList | null = null;
 let motionQuery: MediaQueryList | null = null;
 let previousBodyOverflow: string | null = null;
@@ -47,7 +48,7 @@ const rangePanel = ref<HTMLElement | null>(null);
 const rangePosition = ref({ left: 0, top: 0 });
 const rangePanelStyle = computed(() => ({ left: `${rangePosition.value.left}px`, top: `${rangePosition.value.top}px` }));
 function positionRangePanel() {
-  if (!showRangePanel.value || !rangeTrigger.value || typeof window === 'undefined') return;
+  if (!showRangePanel.value || !rangeTrigger.value) return;
   const r = rangeTrigger.value.getBoundingClientRect();
   const width = Math.min(342, window.innerWidth - 24);
   const panelHeight = rangePanel.value?.offsetHeight || 240;
@@ -148,11 +149,17 @@ onMounted(() => {
   viewportQuery.addEventListener('change', onViewportChange);
   motionQuery.addEventListener('change', onMotionChange);
   window.addEventListener('keydown', onKeydown);
-  window.addEventListener('pointerdown', onGlobalPointerDown, true);
-  window.addEventListener('resize', positionRangePanel);
-  window.addEventListener('resize', syncBoardScroll);
-  window.addEventListener('resize', measureGanttLabels);
-  nextTick(syncBoardScroll);
+  if (props.view === 'board') {
+    window.addEventListener('resize', syncBoardScroll);
+    nextTick(syncBoardScroll);
+  }
+  if (props.view === 'schedule') {
+    window.addEventListener('pointerdown', onGlobalPointerDown, true);
+    window.addEventListener('resize', positionRangePanel);
+    window.addEventListener('resize', measureGanttLabels);
+    window.addEventListener('scroll', positionRangePanel, true);
+    nextTick(measureGanttLabels);
+  }
   nextTick(()=>{
     const primary=document.querySelector<HTMLElement>('.workbench .ws-primary');
     if (primary && typeof ResizeObserver!=='undefined') {
@@ -162,9 +169,6 @@ onMounted(() => {
     scheduleSelectionReveal(); // Deep-link selection initialized during onMounted.
   });
   if (props.view === 'systems') import('./SystemRelationshipGraph.vue').then(mod=>{graphComponent.value=mod.default;}).catch(()=>{graphComponent.value=null;});
-  if (props.view === 'schedule') nextTick(measureGanttLabels);
-
-  window.addEventListener('scroll', positionRangePanel, true);
   if (props.view === 'schedule' && ganttViewport.value) {
     const axis = ganttViewport.value.querySelector<HTMLElement>('.gantt-axis');
     if (axis) {
@@ -277,7 +281,7 @@ const trackWidth = ref(900);
 // Measure the full visible label text (not clipped DOM widths), then share one CSS variable
 // between the frozen labels, header, chart coordinate origin, and opaque continuous mask.
 function measureGanttLabels() {
-  if (typeof document === 'undefined' || !ganttViewport.value || props.view !== 'schedule') return;
+  if (!ganttViewport.value) return;
   const strong = ganttViewport.value.querySelector<HTMLElement>('.gantt-item-name strong');
   const canvas = document.createElement('canvas');
   const ctx = canvas.getContext('2d');
@@ -291,7 +295,7 @@ function measureGanttLabels() {
     ? Math.min(needed, Math.max(108, Math.floor(window.innerWidth * .36)))
     : Math.max(190, Math.min(420,needed));
 }
-watch(locale,()=>nextTick(measureGanttLabels));
+if (props.view === 'schedule') watch(locale,()=>nextTick(measureGanttLabels));
 
 let resizeObserver: ResizeObserver | null = null;
 const showDependencies = ref(true);
@@ -339,10 +343,10 @@ const unitCount = computed(() => ticks.value.length);
 const gridMinWidth = computed(() => labelWidth.value + Math.max(8,unitCount.value)*(zoom.value === 'month' ? 120 : 164));
 const rangeStart = computed(() => windowBounds.value.start);
 const rangeEnd = computed(() => windowBounds.value.end);
-function durationPosition(item:WorkItem) {
+const durationPositions = computed(() => Object.fromEntries(visibleItems.value.map(item => {
   const bar = barPosition(item, calendarWindow.value);
-  return { hidden:bar.hidden, left:`${bar.left}%`, width:`${Math.max(0.6,bar.width)}%` };
-}
+  return [item.id, { hidden:bar.hidden, left:`${bar.left}%`, width:`${Math.max(0.6,bar.width)}%` }];
+})));
 function setPreset(months: 6 | 12 | 24) {
   calendarWindow.value = {...calendarWindow.value,months};
   activePreset.value = `${months}m` as typeof activePreset.value;
@@ -512,7 +516,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
               </svg>
               <template v-for="group in grouped" :key="group.id">
                 <button class="gantt-group" type="button" @click="toggleGroup(group.id)" :aria-expanded="groupExpanded(group.id)"><span class="gantt-group-name"><span class="chevron" :class="{collapsed:!groupExpanded(group.id)}"><EngineeringIcon name="gantt-chevron" /></span><strong>{{group.id}}</strong><small>{{tr(group.zh,group.en)}}</small></span><span class="gantt-group-suffix">{{group.items.length}} {{tr('个工作项','WORK ITEMS')}}</span></button>
-                <template v-if="groupExpanded(group.id)"><div v-for="item in group.items" :key="item.id" class="gantt-row" :class="{selected:selectedId===item.id}"><button class="gantt-item-name" :data-item-id="item.id" @click="focusItem(item.id)"><small>{{item.id}} <span>·</span> {{streamName(item.stream)}}</small><strong>{{tr(item.titleZh,item.titleEn)}}</strong></button><div class="gantt-track"><span v-for="(tick,i) in ticks" :key="i" class="gantt-gridline" :style="{left:`${tick.left}%`}"></span><span v-if="currentLine" class="gantt-today" :style="{left:currentLine}"></span><button v-if="!durationPosition(item).hidden" class="gantt-bar" :data-gantt-id="item.id" :class="[item.stage,{selected:selectedId===item.id,related:focusedId===item.id}]" @pointerenter="hoveredId=item.id" @pointerleave="hoveredId=null" :aria-pressed="selectedId===item.id" :aria-label="`${item.id} · ${tr(item.titleZh,item.titleEn)} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · ${stageName(item.stage)}`" :style="{left:durationPosition(item).left,width:durationPosition(item).width}" :title="`${item.id} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · PUBLIC RECORD`" @click="select(item.id)"><span>{{item.id}}</span></button><span v-if="!item.start || !item.end" class="gantt-undated">{{tr('未安排公开时间','NO PUBLIC DATE')}}</span></div></div></template>
+                <template v-if="groupExpanded(group.id)"><div v-for="item in group.items" :key="item.id" class="gantt-row" :class="{selected:selectedId===item.id}"><button class="gantt-item-name" :data-item-id="item.id" @click="focusItem(item.id)"><small>{{item.id}} <span>·</span> {{streamName(item.stream)}}</small><strong>{{tr(item.titleZh,item.titleEn)}}</strong></button><div class="gantt-track"><span v-for="(tick,i) in ticks" :key="i" class="gantt-gridline" :style="{left:`${tick.left}%`}"></span><span v-if="currentLine" class="gantt-today" :style="{left:currentLine}"></span><button v-if="!durationPositions[item.id].hidden" class="gantt-bar" :data-gantt-id="item.id" :class="[item.stage,{selected:selectedId===item.id,related:focusedId===item.id}]" @pointerenter="hoveredId=item.id" @pointerleave="hoveredId=null" :aria-pressed="selectedId===item.id" :aria-label="`${item.id} · ${tr(item.titleZh,item.titleEn)} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · ${stageName(item.stage)}`" :style="{left:durationPositions[item.id].left,width:durationPositions[item.id].width}" :title="`${item.id} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · PUBLIC RECORD`" @click="select(item.id)"><span>{{item.id}}</span></button><span v-if="!item.start || !item.end" class="gantt-undated">{{tr('未安排公开时间','NO PUBLIC DATE')}}</span></div></div></template>
               </template>
               <div v-if="grouped.length===0" class="ws-no-results">{{tr('没有匹配的工作项。','No matching work items.')}}</div>
             </div>
