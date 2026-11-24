@@ -1,5 +1,7 @@
 # Roadmap V3.1 — git-native, schema-first public data
 
+> **V3.7 amendment (2026-11-24):** [ROADMAP-DATA-AGENT-002](../agent/AGENTS.md) supersedes the former per-record human approval and separate site merge/deploy requirements for eligible low-risk roadmap data only. The intake CLI stays candidate-only; authorized scheduled publication uses the Markdown authoring path, first-party disclosure notes and validated PRs. Product release authority and private-evidence confidentiality remain unchanged. The historical process below is retained for context.
+
 **Scope**: public site content pipeline and agent candidate adapter. This is **not** an implementation of internal TALOS, MAXWELL or TIC/TIR ingestion.
 
 ## Authority / evidence
