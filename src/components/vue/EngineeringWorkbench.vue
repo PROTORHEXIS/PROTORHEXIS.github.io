@@ -326,12 +326,12 @@ const visibleItems = computed(() => publicItems.filter(item =>
   (props.view !== 'schedule' || item.stage !== 'future') &&
   (activeProgram.value==='all' || item.program===activeProgram.value) &&
   (stream.value==='all' || item.stream===stream.value) &&
-  (!search.value || matching(item.titleZh+' '+item.id+' '+item.program,item.titleEn))
+  matching(item.titleZh+' '+item.id+' '+item.program,item.titleEn)
 ));
 const visibleEvents = computed(() => publicEvents.filter(event =>
   (activeProgram.value==='all' || event.program===activeProgram.value) &&
   (eventKind.value==='all' || event.kind===eventKind.value) &&
-  (!search.value || matching(event.titleZh+' '+event.id+' '+event.program,event.titleEn))
+  matching(event.titleZh+' '+event.id+' '+event.program,event.titleEn)
 ));
 const chosenItem = computed(() => publicItems.find(x => x.id === selectedId.value) ?? null);
 const chosenEvent = computed(() => publicEvents.find(x => x.id === selectedId.value) ?? null);
@@ -355,7 +355,7 @@ const gridMinWidth = computed(() => labelWidth.value + Math.max(8,unitCount.valu
 const rangeStart = computed(() => windowBounds.value.start);
 const rangeEnd = computed(() => windowBounds.value.end);
 function durationPosition(item:WorkItem) {
-  const bar = item.start && item.end ? barPosition({start:item.start,end:item.end}, calendarWindow.value) : {hidden:true,left:0,width:0,right:0};
+  const bar = barPosition(item, calendarWindow.value);
   return { hidden:bar.hidden, left:`${bar.left}%`, width:`${Math.max(0.6,bar.width)}%` };
 }
 function setPreset(months: 6 | 12 | 24) {
@@ -389,9 +389,10 @@ const rangeLabel=computed(()=>{
   const end=new Date(rangeEnd.value-86400000), start=new Date(rangeStart.value);
   return `${start.getUTCFullYear()}.${String(start.getUTCMonth()+1).padStart(2,'0')} — ${end.getUTCFullYear()}.${String(end.getUTCMonth()+1).padStart(2,'0')}`;
 });
-// Fixed reference date for a synthetic 2026 fixture, NOT today's actual date.
+// Mark the source snapshot's update date.
 const currentLine=computed(()=>{
-  const t=Date.parse(`${publicSnapshot.updatedAt ?? '2026-11-17'}T00:00:00Z`);
+  if (!publicSnapshot.updatedAt) return null;
+  const t=Date.parse(`${publicSnapshot.updatedAt}T00:00:00Z`);
   return t >= rangeStart.value && t < rangeEnd.value?`${((t-rangeStart.value)/(rangeEnd.value-rangeStart.value))*100}%`:null;
 });
 // visibleRows.height includes the 56px calendar header; never add it twice.
