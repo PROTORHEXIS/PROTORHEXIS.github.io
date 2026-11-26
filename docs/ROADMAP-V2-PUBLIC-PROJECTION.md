@@ -1,0 +1,8 @@
+# Public projection v2
+
+The same approved Markdown/YAML records compile both API versions. V1 retains its existing record shape and historical date semantics. V2 adds schedule windows, independent work lifecycle/disposition and verification summaries, release/change collections and release-event references. No private fact schema or source identity is part of this public contract.
+
+- Existing observed dates remain observed. A legacy tentative/committed schedule becomes a planned window with the same commitment; undated records remain undated. Explicit V2 windows take precedence for V2 display; the legacy schedule stays unchanged for V1 compatibility. The V1 intake cannot overwrite an explicit V2 schedule. Partial windows remain visible as details, not invented duration bars.
+- Release records have a stable ID, display name, optional version/date, actual channel and preview flag. Each change belongs to a release and distinguishes implementation from verification. Release Timeline source records refer to release ID and date; title/description derive from the release, not duplicated Markdown. No deployment or merge creates a release by inference.
+- V2 publicUpdatedAt uses the most recent actual public content revision date. For legacy events without that field, their existing event date is the historical fallback. Freshness does not change on a no-op run. Each API has its own deterministic content digest.
+- Existing source allowlist, approved-only compilation and data publication authorization remain unchanged. New release/change and V2 state/plan publication are not authorized by the V1 agent intake. Do not put private references or fixtures in public source records. No manual generated JSON edits.

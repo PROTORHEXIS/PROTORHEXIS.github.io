@@ -4,11 +4,12 @@ import { readFileSync, writeFileSync, readdirSync, existsSync, mkdirSync } from 
 import { join, resolve } from 'node:path';
 import { createHash } from 'node:crypto';
 import { parseDocument, stringify as yamlStringify } from 'yaml';
-import { schemas, identifier } from '../src/lib/roadmap-content-schema.mjs';
+import { schemas, identifier, legacyWorkSchema, legacyEventSchema } from '../src/lib/roadmap-content-schema.mjs';
+import { compileSnapshots, validateExtensions } from '../src/lib/roadmap-projection.mjs';
 
 const root=resolve(import.meta.dirname,'..');
 const contentRoot=join(root,'src/content/roadmap');
-const definitions=[['program','programs','.yaml'],['work','work-items','.md'],['event','updates','.md'],['relation','relations','.yaml']];
+const definitions=[['program','programs','.yaml'],['work','work-items','.md'],['event','updates','.md'],['relation','relations','.yaml'],['release','releases','.md'],['change','changes','.md']];
 const inputArgs=process.argv.slice(2);
 const action=inputArgs.shift() || 'help';
 const option=(flag,fallback)=>{const i=inputArgs.indexOf(flag);return i<0?fallback:inputArgs[i+1];};
@@ -27,7 +28,7 @@ function readSource(path) {
   return doc.toJS();
 }
 function loadContent(){
-  const store={program:[],work:[],event:[],relation:[]};
+  const store={program:[],work:[],event:[],relation:[],release:[],change:[]};
   const seen=new Set();
   for(const [kind,folder,ext] of definitions){
     for(const filename of readdirSync(join(contentRoot,folder)).filter(n=>n.endsWith(ext)).sort()){
@@ -78,15 +79,12 @@ function loadContent(){
   store.work.sort((a,b)=>a.id.localeCompare(b.id));
   store.event.sort((a,b)=>b.date.localeCompare(a.date)||b.id.localeCompare(a.id));
   store.relation.sort((a,b)=>a.id.localeCompare(b.id));
+  store.release.sort((a,b)=>(b.date??'').localeCompare(a.date??'')||a.id.localeCompare(b.id));
+  store.change.sort((a,b)=>a.id.localeCompare(b.id));
+  validateExtensions(store);
   return store;
 }
-function snapshot(store){
-  const compiled={schemaVersion:1,publicationStatus:'APPROVED_PUBLIC_SNAPSHOT',
-    updatedAt:[...store.work.map(x=>x.updatedAt),...store.event.map(x=>x.date)].sort().at(-1)||null,
-    programs:store.program,workItems:store.work,events:store.event,relations:store.relation};
-  return {...compiled,sourceRevision:hash(compiled)};
-}
-function generated(){return join(root,'src/data/roadmap.generated.json')}
+function generated(version){return join(root,version===1?'src/data/roadmap.generated.json':'src/data/roadmap.v2.generated.json')}
 function recordContext(id){
   const store=loadContent();let obj,kind;
   for(const [k,records] of Object.entries(store)){obj=records.find(r=>r.id===id);if(obj){kind=k;break}}
@@ -114,6 +112,7 @@ function parseIntake(path){
       if(Object.keys(op).some(k=>!['op','id','base','set','evidence'].includes(k)))fail(`Unauthorized patch field ${op.id}`);
       if(!op.set||typeof op.set!=='object'||Array.isArray(op.set)||!Object.keys(op.set).length)fail(`Patch fields required: ${op.id}`);
       if(Object.keys(op.set).some(k=>!['phase','schedule','description','dependsOn'].includes(k)))fail(`Patch includes forbidden fields: ${op.id}`);
+      if('schedule' in op.set && orig.record.scheduleWindows!==undefined)fail('Use the versioned schedule contract for explicit windows');
       if(!Array.isArray(op.evidence)||!op.evidence.length)fail(`Each patch needs evidence ${op.id}`);
       const next={...orig.record,...op.set,sources:[...orig.record.sources,...op.evidence],publication:'draft'};
       const result=schemas.work.safeParse(next);if(!result.success)fail(`Invalid patch ${op.id}: ${result.error.message}`);
@@ -127,7 +126,8 @@ function parseIntake(path){
       if(op.kind==='work' && (op.record.delivery?.state!=='unassigned' || op.record.verifiedAt!==null))
         fail(`Agent candidate may not claim release Gate readiness or independent verification: ${op.id}`);
       if(Object.keys(op).some(k=>!['op','id','kind','record'].includes(k)))fail(`Unknown append field: ${op.id}`);
-      const r=schemas[op.kind].safeParse({...op.record,publication:'draft'});
+      const candidateSchema=op.kind==='work'?legacyWorkSchema:op.kind==='event'?legacyEventSchema:schemas.relation;
+      const r=candidateSchema.safeParse({...op.record,publication:'draft'});
       if(!r.success)fail(`Invalid append: ${op.id}: ${r.error.message}`);
       out.push({op:'append',kind:op.kind,id:op.id,record:r.data});
     }else fail(`Unknown operation: ${op.op}`);
@@ -136,15 +136,17 @@ function parseIntake(path){
 }
 try{
   if(action==='compile'||action==='validate'){
-    const data=snapshot(loadContent());
-    const serialized=JSON.stringify(data,null,2)+'\n';
-    if(action==='compile'){writeFileSync(generated(),serialized);console.log(`PUBLIC_SNAPSHOT_WRITTEN ${data.sourceRevision} programs=${data.programs.length} work=${data.workItems.length} events=${data.events.length} relations=${data.relations.length}`)}
-    else {if(!existsSync(generated())||readFileSync(generated(),'utf8')!==serialized)fail('Generated snapshot differs: run roadmap:compile');console.log(`PUBLIC_SNAPSHOT_VALID ${data.sourceRevision}`)}
+    const snapshots=compileSnapshots(loadContent(),hash);
+    for(const data of snapshots){const file=generated(data.schemaVersion),serialized=JSON.stringify(data,null,2)+'\n';
+      if(action==='compile')writeFileSync(file,serialized);
+      else if(!existsSync(file)||readFileSync(file,'utf8')!==serialized)fail('Generated snapshot v'+data.schemaVersion+' differs: run roadmap:compile');
+      console.log(`PUBLIC_SNAPSHOT_${action==='compile'?'WRITTEN':'VALID'} v${data.schemaVersion} ${data.sourceRevision} programs=${data.programs.length} work=${data.workItems.length} events=${data.events.length} relations=${data.relations.length}`);
+    }
   } else if(action==='roundup'){
     // Read-only roundup of already approved, publicly sourced event facts.
     const since=option('--since',null);
     if(since && !/^\d{4}-\d{2}-\d{2}$/.test(since))fail('--since requires an ISO YYYY-MM-DD date');
-    const events=loadContent().event.filter(x=>!since||x.date>=since);
+    const events=compileSnapshots(loadContent(),hash)[1].events.filter(x=>!since||x.date>=since);
     const lines=['# PROTORHEXIS Roadmap Roundup','','Previously approved public events only. No inferred delay, completion, release or reason.',''];
     for(const e of events){
       lines.push(`- **${e.date} · ${e.id} · ${e.program}** — ${e.title.zh} / ${e.title.en}`);
@@ -159,7 +161,7 @@ try{
     console.log(JSON.stringify(recordContext(id)));
   } else if(action==='new'){
     const kind=option('--kind');const id=option('--id');
-    if(!schemas[kind]||!identifier.safeParse(id).success)fail('Specify --kind program|work|event|relation --id ID');
+    if(!schemas[kind]||!identifier.safeParse(id).success)fail('Specify --kind program|work|event|relation|release|change --id ID');
     const def=definitions.find(x=>x[0]===kind);const file=join(contentRoot,def[1],`${id.toLowerCase()}${def[2]}`);
     if(existsSync(file))fail('Refusing to overwrite existing content');
     const stub={id,publication:'draft',...(kind==='work'?{delivery:{state:'unassigned'},verifiedAt:null}:{})};

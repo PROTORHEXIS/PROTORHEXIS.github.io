@@ -10,3 +10,6 @@ dist/
 # Generated from canonical BrandLockup geometry
 /public/favicon.svg
 /public/favicon.ico
+
+# Generated V2 public snapshot
+/src/data/roadmap.v2.generated.json

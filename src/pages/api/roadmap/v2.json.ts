@@ -1,0 +1,3 @@
+import snapshot from '../../../data/roadmap.v2.generated.json';
+export const prerender = true;
+export function GET() { return new Response(JSON.stringify(snapshot), { status:200,headers:{'Content-Type':'application/json; charset=utf-8','Cache-Control':'public, max-age=300'} }); }
