@@ -16,7 +16,7 @@ export const stages: {id:Stage,zh:string,en:string,code:string}[] = [
 export function roadmapLabels(tr: Translate) {
   const stageName = (stage: Stage) => { const s = stages.find(x => x.id === stage); return s ? tr(s.zh, s.en) : stage; };
   const streamName = (s: Stream) => ({platform:tr('平台','PLATFORM'),product:tr('产品','PRODUCT'),infrastructure:tr('基础设施','INFRASTRUCTURE')})[s];
-  const eventName = (k:PublicEvent['kind']) => ({milestone:tr('里程碑','MILESTONE'),verification:tr('验证','VERIFICATION'),decision:tr('决策变更','DECISION')})[k];
+  const eventName = (k:PublicEvent['kind']) => ({milestone:tr('里程碑','MILESTONE'),verification:tr('验证','VERIFICATION'),decision:tr('决策变更','DECISION'),release:tr('版本发布','RELEASE')})[k];
   const deliveryName = (state:WorkItem['deliveryState']) => ({
     unassigned:tr('未指定交付','UNASSIGNED'),
     tentative:tr('暂定交付','TENTATIVE'),

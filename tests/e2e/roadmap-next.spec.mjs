@@ -120,3 +120,22 @@ test('canonical favicon resources and theme contrast across public routes',async
     }
   }
 });
+
+
+test('Timeline release opens the same compiled Changelog record',async({page})=>{
+  await page.goto('http://127.0.0.1:4322/roadmap/evidence/');
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  await page.locator('[data-event-id="FIXTURE-RELEASE-EVENT"]').click();
+  await expect(page).toHaveURL(/changelog\/\?release=FIXTURE-RELEASE-A/);
+  await expect(page.locator('#roadmap-inspector')).toContainText('已确认修复');
+});
+
+test('V2 API contains the same historical record identities',async({request})=>{
+  const a=await request.get('/api/roadmap/v1.json'),b=await request.get('/api/roadmap/v2.json');
+  expect(a.ok()).toBe(true);expect(b.ok()).toBe(true);
+  const v1=await a.json(),v2=await b.json();expect(v2.schemaVersion).toBe(2);
+  expect(v2.workItems.map(w=>w.id)).toEqual(v1.workItems.map(w=>w.id));
+  expect(v2.events.map(e=>e.id)).toEqual(v1.events.map(e=>e.id));
+  expect(v2.releases.every(r=>!r.id.startsWith('FIXTURE-'))).toBe(true);
+  expect(v2.changes.every(c=>!c.id.startsWith('FIXTURE-'))).toBe(true);
+});

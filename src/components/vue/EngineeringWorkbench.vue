@@ -13,8 +13,9 @@ import { roadmapLabels, stages, reducedMotionKey } from './roadmap-presentation'
 import { publicSnapshot, publicItems, publicEvents, publicPrograms, type WorkItem, type ProgramId, type PublicEvent, type Stream } from '../../data/workstation-public';
 import { monthIndex, monthString, validateWindow, windowEnds, axisTicks, barPosition, visibleRows, dependencyPaths } from '../../lib/gantt';
 
-const props = defineProps<{ view: 'schedule' | 'board' | 'activity' | 'changelog'; releases?: ReleaseView[] }>();
+const props = defineProps<{ view: 'schedule' | 'board' | 'activity' | 'changelog'; releases?: ReleaseView[]; events?: PublicEvent[] }>();
 const releases = computed(() => props.releases ?? publicReleases);
+const events = computed(() => props.events ?? publicEvents);
 const labelWidth = ref(256);
 
 const { locale } = usePublicLocale();
@@ -25,7 +26,7 @@ const stream = ref<'all' | Stream>('all');
 const channelFilter = ref('all');
 const changeFilter = ref<ChangeKind | 'all'>('all');
 const eventKind = ref<'all' | PublicEvent['kind']>('all');
-const eventKinds: Array<'all' | PublicEvent['kind']> = ['all','milestone','verification','decision'];
+const eventKinds: Array<'all' | PublicEvent['kind']> = ['all','milestone','verification','decision','release'];
 // Do not confuse a public record's existence with an explicit selection.
 const selectedId = ref('');
 const inspectorOpen = ref(false);
@@ -139,7 +140,7 @@ onMounted(() => {
     activeProgram.value=deepItem.program;selectedId.value=deepItem.id;inspectorOpen.value=true;
   }
   const requestedEvent=params.get('event');
-  if(props.view==='activity' && publicEvents.some(x=>x.id===requestedEvent)){
+  if(props.view==='activity' && events.value.some(x=>x.id===requestedEvent)){
     selectedId.value=requestedEvent!;inspectorOpen.value=true;
   }
   const deepRelease = releases.value.find(release => release.id === params.get('release'));
@@ -325,26 +326,26 @@ const visibleItems = computed(() => publicItems.filter(item =>
   (stream.value==='all' || item.stream===stream.value) &&
   matching(item.titleZh+' '+item.id+' '+item.program,item.titleEn)
 ));
-const visibleEvents = computed(() => publicEvents.filter(event =>
+const visibleEvents = computed(() => events.value.filter(event =>
   (activeProgram.value==='all' || event.program===activeProgram.value) &&
   (eventKind.value==='all' || event.kind===eventKind.value) &&
   matching(event.titleZh+' '+event.id+' '+event.program,event.titleEn)
 ));
 const chosenItem = computed(() => publicItems.find(x => x.id === selectedId.value) ?? null);
-const chosenEvent = computed(() => publicEvents.find(x => x.id === selectedId.value) ?? null);
+const chosenEvent = computed(() => events.value.find(x => x.id === selectedId.value) ?? null);
 const channels = computed(() => [...new Set(releases.value.map(release=>release.channel))]);
 const visibleReleases = computed(() => releases.value.filter(release =>
   (activeProgram.value==='all' || release.program===activeProgram.value) &&
   (channelFilter.value==='all' || release.channel===channelFilter.value) &&
   (changeFilter.value==='all' || release.changes.some(change=>change.kind===changeFilter.value)) &&
-  matching([release.id,release.program,release.version,release.summary.zh,...release.changes.map(change=>change.text.zh)].join(' '),[release.channel,release.summary.en,...release.changes.map(change=>change.text.en)].join(' '))
+  matching([release.id,release.program,release.version,release.displayName?.zh,release.summary.zh,...release.changes.map(change=>change.text.zh)].join(' '),[release.channel,release.displayName?.en,release.summary.en,...release.changes.map(change=>change.text.en)].join(' '))
 ).sort((a,b)=>(b.date??'').localeCompare(a.date??'') || a.id.localeCompare(b.id)));
 const chosenRelease = computed(() => releases.value.find(release=>release.id===selectedId.value) ?? null);
 const hasInspectorSelection = computed(() => props.view === 'activity'
   ? Boolean(chosenEvent.value)
   : props.view === 'changelog' ? Boolean(chosenRelease.value) : Boolean(chosenItem.value));
 const dependents = computed(() => chosenItem.value ? publicItems.filter(x => x.deps.includes(chosenItem.value!.id)) : []);
-function select(id:string) { if (document.activeElement instanceof HTMLElement) returnFocus = document.activeElement; selectedId.value=id; inspectorOpen.value=true; }
+function select(id:string) { const releaseId=props.view==='activity'?events.value.find(e=>e.id===id)?.releaseId:null; if(releaseId){window.location.assign('/roadmap/changelog/?release='+encodeURIComponent(releaseId));return;} if (document.activeElement instanceof HTMLElement) returnFocus = document.activeElement; selectedId.value=id; inspectorOpen.value=true; }
 function switchProgram(id:ProgramId|'all') { activeProgram.value=id; selectedId.value=''; inspectorOpen.value=false; closeRangePanel(); }
 function toggleGroup(id:string) { expanded.value[id] = expanded.value[id] === false ? true : false; }
 function groupExpanded(id:string) { return expanded.value[id] !== false; }
@@ -479,8 +480,8 @@ async function focusItem(id:string) {
   await nextTick();
   scheduleSelectionReveal(); // Container-local nearest edge, not forced centering.
 }
-function filteredCount(program:ProgramId){return (props.view==='changelog'?releases.value:props.view==='activity'?publicEvents:publicItems).filter(x=>x.program===program).length;}
-const totalRecords = computed(() => props.view==='changelog'?releases.value.length:props.view==='activity'?publicEvents.length:publicItems.length);
+function filteredCount(program:ProgramId){return (props.view==='changelog'?releases.value:props.view==='activity'?events.value:publicItems).filter(x=>x.program===program).length;}
+const totalRecords = computed(() => props.view==='changelog'?releases.value.length:props.view==='activity'?events.value.length:publicItems.length);
 const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visibleItems.value.map(x=>x.program)).size,events:visibleEvents.value.length}));
 </script>
 

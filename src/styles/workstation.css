@@ -1376,7 +1376,7 @@
 .ws-inspector .inspector-status[data-stage="qualification"] {--badge-fg:var(--state-qualification);--badge-bg:var(--state-qualification-bg);--badge-border:var(--state-qualification-border)}
 .ws-inspector .inspector-status[data-stage="review"] {--badge-fg:var(--state-review);--badge-bg:var(--state-review-bg);--badge-border:var(--state-review-border)}
 .ws-inspector .inspector-status[data-stage="published"] {--badge-fg:var(--state-published);--badge-bg:var(--state-published-bg);--badge-border:var(--state-published-border)}
-.ws-inspector .inspector-status[data-event-kind="milestone"] {--badge-fg:var(--state-milestone);--badge-bg:var(--state-milestone-bg);--badge-border:var(--state-milestone-border)}
+.ws-inspector .inspector-status[data-event-kind="milestone"],.ws-inspector .inspector-status[data-event-kind="release"] {--badge-fg:var(--state-milestone);--badge-bg:var(--state-milestone-bg);--badge-border:var(--state-milestone-border)}
 .ws-inspector .inspector-status[data-event-kind="verification"] {--badge-fg:var(--state-verification);--badge-bg:var(--state-verification-bg);--badge-border:var(--state-verification-border)}
 .ws-inspector .inspector-status[data-event-kind="decision"] {--badge-fg:var(--state-decision);--badge-bg:var(--state-decision-bg);--badge-border:var(--state-decision-border)}
 .ws-inspector .inspector-status[data-status="project"] {--badge-fg:var(--state-project);--badge-bg:var(--state-project-bg);--badge-border:var(--state-project-border)}
