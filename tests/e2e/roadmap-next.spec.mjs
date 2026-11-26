@@ -29,6 +29,7 @@ test('test-only Changelog renders release distinctions, filters and stable deep 
 });
 
 test('inspector maintains full text width and slides outside the viewport',async({page,isMobile})=>{
+  await page.addInitScript(()=>localStorage.removeItem('protorhexis.public.locale'));
   for(const width of isMobile?[390]:[1100,1440,1920]){
     if(!isMobile)await page.setViewportSize({width,height:900});
     await page.goto('/roadmap/board/?item=TAL-PROGRESS-001');
@@ -91,6 +92,11 @@ test('Gantt row group transitions keep label and track together and settle exact
   await group.click();
   await expect(canvas).toHaveAttribute('data-row-transitioning','false');
   await expect(group).toHaveAttribute('aria-expanded','true');
+  // Reverse twice before the first collapse finishes.
+  await group.evaluate(async el=>{el.click();await new Promise(requestAnimationFrame);await new Promise(requestAnimationFrame);el.click();});
+  await expect(group).toHaveAttribute('aria-expanded','true');
+  await expect(canvas).toHaveAttribute('data-row-transitioning','false');
+  await expect.poll(()=>group.evaluate(el=>el.nextElementSibling.getBoundingClientRect().height)).toBeGreaterThan(60);
   await page.screenshot({path:'test-results/gantt-motion-'+test.info().project.name+'.png',animations:'disabled'});
 });
 
@@ -108,6 +114,9 @@ test('canonical favicon resources and theme contrast across public routes',async
   for(const colorScheme of ['light','dark']){
     await page.emulateMedia({colorScheme});
     await expect(page.locator('polygon').first()).toHaveCSS('fill',colorScheme==='dark'?'rgb(237, 237, 240)':'rgb(38, 38, 42)');
-    await page.screenshot({path:'test-results/favicon-'+colorScheme+'-'+test.info().project.name+'.png'});
+    for(const size of [16,32]){
+      await page.locator('svg').evaluate((el,size)=>{el.style.width=size+'px';el.style.height=size+'px';},size);
+      await page.locator('svg').screenshot({path:'test-results/favicon-'+colorScheme+'-'+size+'-'+test.info().project.name+'.png'});
+    }
   }
 });

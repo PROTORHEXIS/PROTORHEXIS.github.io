@@ -630,6 +630,6 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
         </div>
       </Transition>
     </Teleport>
-    <div class="ws-statusline"><span><i class="ws-mini-square"></i>{{tr('公开记录工作台','PUBLIC RECORDS')}}</span><span>{{stats.programs.toString().padStart(2,'0')}} PROGRAMS</span><span>{{stats.items.toString().padStart(2,'0')}} WORK ITEMS</span><span>{{stats.events.toString().padStart(2,'0')}} EVENTS</span><span class="status-right">STATIC APPROVED PUBLIC SNAPSHOT</span></div>
+    <div class="ws-statusline"><span><i class="ws-mini-square"></i>{{tr('公开记录工作台','PUBLIC RECORDS')}}</span><template v-if="view==='changelog'"><span>{{new Set(visibleReleases.map(release=>release.program)).size.toString().padStart(2,'0')}} PROGRAMS</span><span>{{visibleReleases.length.toString().padStart(2,'0')}} RELEASES</span></template><template v-else><span>{{stats.programs.toString().padStart(2,'0')}} PROGRAMS</span><span>{{stats.items.toString().padStart(2,'0')}} WORK ITEMS</span><span>{{stats.events.toString().padStart(2,'0')}} EVENTS</span></template><span class="status-right">STATIC APPROVED PUBLIC SNAPSHOT</span></div>
   </section>
 </template>

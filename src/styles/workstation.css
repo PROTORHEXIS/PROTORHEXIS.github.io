@@ -1468,6 +1468,11 @@
 .changelog-card .ws-glyph {position:absolute;right:16px;top:50%;width:18px;height:18px}
 .changelog-empty {padding:32px 16px}
 .release-section summary {cursor:pointer;font-weight:600}
+@supports (interpolate-size:allow-keywords) {
+  .release-section {interpolate-size:allow-keywords}
+  .release-section::details-content {block-size:0;overflow:clip;transition:block-size 180ms ease,content-visibility 180ms allow-discrete}
+  .release-section[open]::details-content {block-size:auto}
+}
 .release-change {padding:12px 0;border-bottom:1px solid #35353a}
 .release-change[data-change-state="planned"] small {color:var(--state-planned)}
 .release-change[data-change-state="verified"] small {color:var(--state-published)}
