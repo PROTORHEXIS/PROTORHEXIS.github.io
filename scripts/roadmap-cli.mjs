@@ -81,12 +81,11 @@ function loadContent(){
   store.relation.sort((a,b)=>a.id.localeCompare(b.id));
   store.release.sort((a,b)=>(b.date??'').localeCompare(a.date??'')||a.id.localeCompare(b.id));
   store.change.sort((a,b)=>a.id.localeCompare(b.id));
-  validateExtensions(store);
   return store;
 }
 function generated(version){return join(root,version===1?'src/data/roadmap.generated.json':'src/data/roadmap.v2.generated.json')}
 function recordContext(id){
-  const store=loadContent();let obj,kind;
+  const store=loadContent();validateExtensions(store);let obj,kind;
   for(const [k,records] of Object.entries(store)){obj=records.find(r=>r.id===id);if(obj){kind=k;break}}
   if(!obj)fail(`Unknown public record ID: ${id}`);
   const {description,documentation,...compact}=obj;
@@ -99,7 +98,7 @@ function parseIntake(path){
   const [head,...ops]=records;
   if(head.schema!=='roadmap-intake/v1'||!/^[-\w]{4,96}$/.test(head.batch||'')||Object.keys(head).some(k=>!['schema','batch','source'].includes(k)))fail('Invalid intake header');
   if(!head.source||typeof head.source!=='string')fail('Intake source reference required');
-  const current=loadContent();const indexed=new Map(Object.entries(current).flatMap(([kind,rows])=>rows.map(r=>[r.id,{kind,record:r}])));
+  const current=loadContent();validateExtensions(current);const indexed=new Map(Object.entries(current).flatMap(([kind,rows])=>rows.map(r=>[r.id,{kind,record:r}])));
   const seen=new Set();
   const out=[];
   for(const op of ops){
