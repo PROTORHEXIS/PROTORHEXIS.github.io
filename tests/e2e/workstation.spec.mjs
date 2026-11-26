@@ -552,6 +552,7 @@ test('Gantt bottom edge hugs its actual final row after filtering to one item',a
   const input=page.locator('.ws-header .ws-search input');
   await input.fill('TAL-PROGRESS-001');
   await expect(page.locator('.gantt-row')).toHaveCount(1);
+  await expect(page.locator('.gantt-canvas')).toHaveAttribute('data-row-transitioning','false');
   const geometry=await page.locator('.gantt-viewport').evaluate(view=>{
     const canvas=view.querySelector('.gantt-canvas');
     const last=view.querySelector('.gantt-row:last-of-type');
@@ -573,9 +574,11 @@ test('Gantt last row, zero results and collapsed group never create a phantom ro
   const search=page.locator('.ws-header .ws-search input');
   await search.fill('TAL-PROGRESS-001');
   await expect(page.locator('.gantt-row')).toHaveCount(1);
+  await expect(page.locator('.gantt-canvas')).toHaveAttribute('data-row-transitioning','false');
   const group=page.locator('.gantt-group');
   await group.click();
   await expect(page.locator('.gantt-row')).toHaveCount(0);
+  await expect(page.locator('.gantt-canvas')).toHaveAttribute('data-row-transitioning','false');
   let gap=await page.locator('.gantt-viewport').evaluate(el=>el.getBoundingClientRect().bottom-el.querySelector('.gantt-canvas').getBoundingClientRect().bottom);
   expect(gap).toBeGreaterThan(40);
   await search.fill('NO_SUCH_PUBLIC_WORK_ITEM_000');
@@ -586,6 +589,7 @@ test('Gantt last row, zero results and collapsed group never create a phantom ro
   // Count the current reviewed public rows; never hardcode the quantity
   // because Future, planned and filtered records vary independently of layout.
   await expect.poll(()=>page.locator('.gantt-row').count()).toBeGreaterThan(1);
+  await expect(page.locator('.gantt-canvas')).toHaveAttribute('data-row-transitioning','false');
   // When the canvas exactly fits the mobile viewport, there must be no
   // artificial overflow from a phantom frozen-label mask.
   const sizes=await page.locator('.gantt-viewport').evaluate(el=>({
@@ -966,6 +970,7 @@ test('V3.6.3 Gantt keeps chart legend at the pane bottom independent of task cou
   const search=page.locator('.ws-header .ws-search input');
   await search.fill('TAL-PROGRESS-001');
   await expect(page.locator('.gantt-row')).toHaveCount(1);
+  await expect(page.locator('.gantt-canvas')).toHaveAttribute('data-row-transitioning','false');
 
   const metrics=()=>page.evaluate(()=>{
     const select=s=>document.querySelector(s)?.getBoundingClientRect()??null;
@@ -999,6 +1004,7 @@ test('V3.6.3 Gantt keeps chart legend at the pane bottom independent of task cou
   // Collapsing the only group keeps the footer at the viewport bottom.
   await page.locator('.gantt-group').first().click();
   await expect(page.locator('.gantt-row')).toHaveCount(0);
+  await expect(page.locator('.gantt-canvas')).toHaveAttribute('data-row-transitioning','false');
   let empty=await metrics();
   expect(Math.abs(empty.paneBottom-empty.legendBottom)).toBeLessThan(3);
   await search.fill('NO_SUCH_PUBLIC_WORK_ITEM_000');
@@ -1007,6 +1013,7 @@ test('V3.6.3 Gantt keeps chart legend at the pane bottom independent of task cou
   expect(Math.abs(empty.paneBottom-empty.legendBottom)).toBeLessThan(3);
   await search.fill('');
   await expect.poll(()=>page.locator('.gantt-row').count()).toBeGreaterThan(1);
+  await expect(page.locator('.gantt-canvas')).toHaveAttribute('data-row-transitioning','false');
   const long=await metrics();
   expect(Math.abs(long.paneBottom-long.legendBottom)).toBeLessThan(3);
   // The final canvas may fit perfectly on mobile. Its real content, not
@@ -1055,12 +1062,14 @@ test('V3.6.4 frozen Gantt label mask ends at the last real row even after vertic
   // Screenshot 2: one TALOS task, no phantom dark row below the task.
   await search.fill('TAL-PROGRESS-001');
   await expect(page.locator('.gantt-row')).toHaveCount(1);
+  await expect(page.locator('.gantt-canvas')).toHaveAttribute('data-row-transitioning','false');
   const single=await metrics();
   assertAligned(single,true);
   expect(single.maskHeight).toBeLessThan(200);
   // Group collapse and empty result must not create a hanging mask.
   await page.locator('.gantt-group').first().click();
   await expect(page.locator('.gantt-row')).toHaveCount(0);
+  await expect(page.locator('.gantt-canvas')).toHaveAttribute('data-row-transitioning','false');
   assertAligned(await metrics(),false);
   await search.fill('NO_MATCHING_PUBLIC_RECORD_000');
   await expect(page.locator('.ws-no-results')).toBeVisible();
@@ -1069,6 +1078,7 @@ test('V3.6.4 frozen Gantt label mask ends at the last real row even after vertic
   // left-hand mask stick to the top while the canvas itself scrolls away.
   await search.fill('');
   await expect.poll(()=>page.locator('.gantt-row').count()).toBeGreaterThan(4);
+  await expect(page.locator('.gantt-canvas')).toHaveAttribute('data-row-transitioning','false');
   await viewport.evaluate(el=>{el.scrollTop=0;el.scrollLeft=0});
   assertAligned(await metrics(),true);
   const capacity=await metrics();

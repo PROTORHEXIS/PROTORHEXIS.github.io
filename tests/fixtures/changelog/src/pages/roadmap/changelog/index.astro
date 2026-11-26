@@ -1,0 +1,18 @@
+---
+import EngineeringLayout from '../../../../../../../src/layouts/EngineeringLayout.astro';
+import EngineeringWorkbench from '../../../../../../../src/components/vue/EngineeringWorkbench.vue';
+import type { ReleaseView } from '../../../../../../../src/components/vue/release-presentation';
+const local=(zh:string,en:string)=>({zh,en});
+const releases:ReleaseView[]=[
+  {id:'FIXTURE-RELEASE-A',program:'TALOS',version:'Fixture 1',channel:'test',date:'2026-01-01',preview:false,summary:local('测试版本','Fixture release'),availability:local('仅测试','Fixture only'),changes:[
+    {id:'FIX-A',kind:'fixed',state:'verified',text:local('已确认的修复','Verified repair')},
+    {id:'FIX-B',kind:'fixed',state:'unconfirmed',text:local('待验证的修复','Unconfirmed repair')},
+    {id:'FIX-C',kind:'fixed',state:'planned',text:local('计划修复','Planned repair')},
+    {id:'ADD-A',kind:'added',state:'verified',text:local('新功能','New feature')},
+    {id:'MIG-A',kind:'migration',state:'verified',text:local('迁移步骤','Migration step')},
+    {id:'ISS-A',kind:'known_issue',state:'unconfirmed',text:local('已知问题记录','Known issue record')}
+  ],migration:local('测试迁移说明','Fixture migration note')},
+  {id:'FIXTURE-RELEASE-B',program:'MAXWELL',version:'Fixture 2',channel:'preview',date:null,preview:true,summary:local('未发布预览','Unreleased fixture'),availability:null,changes:[{id:'ADD-B',kind:'added',state:'planned',text:local('计划功能','Planned feature')}]}
+];
+---
+<EngineeringLayout title="Changelog fixture" active="changelog"><EngineeringWorkbench view="changelog" releases={releases} client:load /></EngineeringLayout>

@@ -14,5 +14,8 @@ export default defineConfig({
     { name: 'chromium-desktop', use: { ...devices['Desktop Chrome'], viewport: { width: 1440, height: 900 } } },
     { name: 'chromium-mobile', use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
   ],
-  webServer: { command: 'npm run preview -- --host 127.0.0.1 --port 4321', url: 'http://127.0.0.1:4321/roadmap/', reuseExistingServer: !process.env.CI, timeout: 60_000 },
+  webServer: [
+    { command: 'npm run preview -- --host 127.0.0.1 --port 4321', url: 'http://127.0.0.1:4321/roadmap/', reuseExistingServer: !process.env.CI, timeout: 60_000 },
+    { command: 'astro dev --root tests/fixtures/changelog --host 127.0.0.1 --port 4322', url: 'http://127.0.0.1:4322/roadmap/changelog/', reuseExistingServer: !process.env.CI, timeout: 90_000 },
+  ],
 });

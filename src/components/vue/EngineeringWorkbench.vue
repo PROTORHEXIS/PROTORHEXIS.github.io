@@ -8,12 +8,13 @@ import RoadmapActivityStream from './RoadmapActivityStream.vue';
 import RoadmapInspectorDetails from './RoadmapInspectorDetails.vue';
 import RoadmapChangelog from './RoadmapChangelog.vue';
 import ReleaseDetails from './ReleaseDetails.vue';
-import { publicReleases, changeKinds, changeLabel, type ChangeKind } from './release-presentation';
+import { publicReleases, changeKinds, changeLabel, type ChangeKind, type ReleaseView } from './release-presentation';
 import { roadmapLabels, stages, reducedMotionKey } from './roadmap-presentation';
 import { publicSnapshot, publicItems, publicEvents, publicPrograms, type WorkItem, type ProgramId, type PublicEvent, type Stream } from '../../data/workstation-public';
 import { monthIndex, monthString, validateWindow, windowEnds, axisTicks, barPosition, visibleRows, dependencyPaths } from '../../lib/gantt';
 
-const props = defineProps<{ view: 'schedule' | 'board' | 'activity' | 'changelog' }>();
+const props = defineProps<{ view: 'schedule' | 'board' | 'activity' | 'changelog'; releases?: ReleaseView[] }>();
+const releases = computed(() => props.releases ?? publicReleases);
 const labelWidth = ref(256);
 
 const { locale } = usePublicLocale();
@@ -141,7 +142,7 @@ onMounted(() => {
   if(props.view==='activity' && publicEvents.some(x=>x.id===requestedEvent)){
     selectedId.value=requestedEvent!;inspectorOpen.value=true;
   }
-  const deepRelease = publicReleases.find(release => release.id === params.get('release'));
+  const deepRelease = releases.value.find(release => release.id === params.get('release'));
   if (props.view === 'changelog' && deepRelease) {
     activeProgram.value = deepRelease.program; selectedId.value = deepRelease.id; inspectorOpen.value = true;
   }
@@ -331,14 +332,14 @@ const visibleEvents = computed(() => publicEvents.filter(event =>
 ));
 const chosenItem = computed(() => publicItems.find(x => x.id === selectedId.value) ?? null);
 const chosenEvent = computed(() => publicEvents.find(x => x.id === selectedId.value) ?? null);
-const channels = computed(() => [...new Set(publicReleases.map(release=>release.channel))]);
-const visibleReleases = computed(() => publicReleases.filter(release =>
+const channels = computed(() => [...new Set(releases.value.map(release=>release.channel))]);
+const visibleReleases = computed(() => releases.value.filter(release =>
   (activeProgram.value==='all' || release.program===activeProgram.value) &&
   (channelFilter.value==='all' || release.channel===channelFilter.value) &&
   (changeFilter.value==='all' || release.changes.some(change=>change.kind===changeFilter.value)) &&
   matching([release.id,release.program,release.version,release.summary.zh,...release.changes.map(change=>change.text.zh)].join(' '),[release.channel,release.summary.en,...release.changes.map(change=>change.text.en)].join(' '))
 ).sort((a,b)=>(b.date??'').localeCompare(a.date??'') || a.id.localeCompare(b.id)));
-const chosenRelease = computed(() => publicReleases.find(release=>release.id===selectedId.value) ?? null);
+const chosenRelease = computed(() => releases.value.find(release=>release.id===selectedId.value) ?? null);
 const hasInspectorSelection = computed(() => props.view === 'activity'
   ? Boolean(chosenEvent.value)
   : props.view === 'changelog' ? Boolean(chosenRelease.value) : Boolean(chosenItem.value));
@@ -478,8 +479,8 @@ async function focusItem(id:string) {
   await nextTick();
   scheduleSelectionReveal(); // Container-local nearest edge, not forced centering.
 }
-function filteredCount(program:ProgramId){return (props.view==='changelog'?publicReleases:props.view==='activity'?publicEvents:publicItems).filter(x=>x.program===program).length;}
-const totalRecords = computed(() => props.view==='changelog'?publicReleases.length:props.view==='activity'?publicEvents.length:publicItems.length);
+function filteredCount(program:ProgramId){return (props.view==='changelog'?releases.value:props.view==='activity'?publicEvents:publicItems).filter(x=>x.program===program).length;}
+const totalRecords = computed(() => props.view==='changelog'?releases.value.length:props.view==='activity'?publicEvents.length:publicItems.length);
 const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visibleItems.value.map(x=>x.program)).size,events:visibleEvents.value.length}));
 </script>
 
@@ -546,7 +547,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
             </div>
           </div>
           <div ref="ganttViewport" class="gantt-viewport" tabindex="0" :aria-label="tr('可横向滚动的只读甘特排期图','Scrollable read-only Gantt timeline')" @pointerdown="panStart" @pointermove="panMove" @pointerup="panEnd" @pointercancel="panEnd" @lostpointercapture="panEnd">
-            <div ref="ganttCanvas" class="gantt-canvas" :style="{'--tick-count':unitCount,'--gantt-label-width':`${labelWidth}px`,'--gantt-masked-height':`${maskHeight}px`,minWidth:`${gridMinWidth}px`}"><div class="gantt-label-mask" aria-hidden="true"></div>
+            <div ref="ganttCanvas" class="gantt-canvas" :data-row-transitioning="transitioningRows" :style="{'--tick-count':unitCount,'--gantt-label-width':`${labelWidth}px`,'--gantt-masked-height':`${maskHeight}px`,minWidth:`${gridMinWidth}px`}"><div class="gantt-label-mask" aria-hidden="true"></div>
               <div class="gantt-head"><div class="gantt-head-name"><strong>{{tr('工作项 / 交付物','WORK PACKAGE / DELIVERABLE')}}</strong><small>WBS INDEX</small></div><div class="gantt-axis"><span v-for="(tick,i) in ticks" :key="i" :style="{width:`${tick.width}%`,flex:`0 0 ${tick.width}%`}">{{tick.label}}</span></div></div>
               <svg v-if="showDependencies && dependencyEdges.length" class="gantt-dependency-layer" :data-transitioning="transitioningRows" :viewBox="`0 0 ${trackWidth} ${ganttLayout.height}`" :style="{height:`${ganttLayout.height}px`}" preserveAspectRatio="none" aria-hidden="true">
                 <defs><marker id="dep-arrow" markerUnits="userSpaceOnUse" viewBox="0 0 10 8" refX="1" refY="4" markerWidth="10" markerHeight="8" orient="auto"><path d="M1 1 L9 4 L1 7 Z" fill="#777781"/></marker><marker id="dep-arrow-active" markerUnits="userSpaceOnUse" viewBox="0 0 10 8" refX="1" refY="4" markerWidth="10" markerHeight="8" orient="auto"><path d="M1 1 L9 4 L1 7 Z" fill="#ff453a"/></marker></defs>
@@ -555,7 +556,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
               </svg>
               <template v-for="group in grouped" :key="group.id">
                 <button class="gantt-group" type="button" @click="toggleGroup(group.id)" :aria-expanded="groupExpanded(group.id)"><span class="gantt-group-name"><span class="chevron" :class="{collapsed:!groupExpanded(group.id)}"><EngineeringIcon name="gantt-chevron" /></span><strong>{{group.id}}</strong><small>{{tr(group.zh,group.en)}}</small></span><span class="gantt-group-suffix">{{group.items.length}} {{tr('个工作项','WORK ITEMS')}}</span></button>
-                <TransitionGroup name="gantt-rows" @before-enter="startRowTransition" @before-leave="startRowTransition" @after-enter="endRowTransition" @after-leave="endRowTransition" @enter-cancelled="endRowTransition" @leave-cancelled="endRowTransition"><div v-for="item in (groupExpanded(group.id)?group.items:[])" :key="item.id" class="gantt-row" :class="{selected:selectedId===item.id}"><button class="gantt-item-name" :data-item-id="item.id" @click="focusItem(item.id)"><small>{{item.id}} <span>·</span> {{streamName(item.stream)}}</small><strong>{{tr(item.titleZh,item.titleEn)}}</strong></button><div class="gantt-track"><span v-for="(tick,i) in ticks" :key="i" class="gantt-gridline" :style="{left:`${tick.left}%`}"></span><span v-if="currentLine" class="gantt-today" :style="{left:currentLine}"></span><button v-if="!durationPositions[item.id].hidden" class="gantt-bar" :data-gantt-id="item.id" :class="[item.stage,{selected:selectedId===item.id,related:focusedId===item.id}]" @pointerenter="hoveredId=item.id" @pointerleave="hoveredId=null" :aria-pressed="selectedId===item.id" :aria-label="`${item.id} · ${tr(item.titleZh,item.titleEn)} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · ${stageName(item.stage)}`" :style="{left:durationPositions[item.id].left,width:durationPositions[item.id].width}" :title="`${item.id} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · PUBLIC RECORD`" @click="select(item.id)"><span>{{item.id}}</span></button><span v-if="!item.start || !item.end" class="gantt-undated">{{tr('未安排公开时间','NO PUBLIC DATE')}}</span></div></div></TransitionGroup>
+                <TransitionGroup name="gantt-rows" :css="!reducedMotion" @before-enter="startRowTransition" @before-leave="startRowTransition" @after-enter="endRowTransition" @after-leave="endRowTransition" @enter-cancelled="endRowTransition" @leave-cancelled="endRowTransition"><div v-for="item in (groupExpanded(group.id)?group.items:[])" :key="item.id" class="gantt-row" :class="{selected:selectedId===item.id}"><button class="gantt-item-name" :data-item-id="item.id" @click="focusItem(item.id)"><small>{{item.id}} <span>·</span> {{streamName(item.stream)}}</small><strong>{{tr(item.titleZh,item.titleEn)}}</strong></button><div class="gantt-track"><span v-for="(tick,i) in ticks" :key="i" class="gantt-gridline" :style="{left:`${tick.left}%`}"></span><span v-if="currentLine" class="gantt-today" :style="{left:currentLine}"></span><button v-if="!durationPositions[item.id].hidden" class="gantt-bar" :data-gantt-id="item.id" :class="[item.stage,{selected:selectedId===item.id,related:focusedId===item.id}]" @pointerenter="hoveredId=item.id" @pointerleave="hoveredId=null" :aria-pressed="selectedId===item.id" :aria-label="`${item.id} · ${tr(item.titleZh,item.titleEn)} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · ${stageName(item.stage)}`" :style="{left:durationPositions[item.id].left,width:durationPositions[item.id].width}" :title="`${item.id} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · PUBLIC RECORD`" @click="select(item.id)"><span>{{item.id}}</span></button><span v-if="!item.start || !item.end" class="gantt-undated">{{tr('未安排公开时间','NO PUBLIC DATE')}}</span></div></div></TransitionGroup>
               </template>
               <div v-if="grouped.length===0" class="ws-no-results">{{tr('没有匹配的工作项。','No matching work items.')}}</div>
             </div>
