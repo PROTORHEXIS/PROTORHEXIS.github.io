@@ -67,9 +67,11 @@ function closeRangePanel(restoreFocus = false) {
   if (restoreFocus) nextTick(() => rangeTrigger.value?.focus());
 }
 function onGlobalPointerDown(event: PointerEvent) {
-  if (!showRangePanel.value) return;
   const target = event.target;
-  if (target instanceof Node && !rangePanel.value?.contains(target) && !rangeTrigger.value?.contains(target)) closeRangePanel();
+  if (!(target instanceof Element)) return;
+  if (showRangePanel.value && !rangePanel.value?.contains(target) && !rangeTrigger.value?.contains(target)) closeRangePanel();
+  if (inspectorOpen.value && !isNarrow.value && !inspectorRef.value?.contains(target)
+      && !target.closest('.ws-inspector-handle,.gantt-item-name,.gantt-bar,.kanban-card,.event-entry,.changelog-card,.ws-search,.gantt-controls,.gantt-floating-range')) closeInspector();
 }
 function onViewportChange() { isNarrow.value = Boolean(viewportQuery?.matches); }
 function onMotionChange() { reducedMotion.value = Boolean(motionQuery?.matches); }
@@ -149,12 +151,12 @@ onMounted(() => {
   viewportQuery.addEventListener('change', onViewportChange);
   motionQuery.addEventListener('change', onMotionChange);
   window.addEventListener('keydown', onKeydown);
+  window.addEventListener('pointerdown', onGlobalPointerDown, true);
   if (props.view === 'board') {
     window.addEventListener('resize', syncBoardScroll);
     nextTick(syncBoardScroll);
   }
   if (props.view === 'schedule') {
-    window.addEventListener('pointerdown', onGlobalPointerDown, true);
     window.addEventListener('resize', positionRangePanel);
     window.addEventListener('resize', measureGanttLabels);
     window.addEventListener('scroll', positionRangePanel, true);
@@ -168,6 +170,10 @@ onMounted(() => {
     }
     scheduleSelectionReveal(); // Deep-link selection initialized during onMounted.
   });
+  if (props.view === 'schedule' && ganttCanvas.value) {
+    canvasObserver = new ResizeObserver(measureTransitionMask);
+    canvasObserver.observe(ganttCanvas.value);
+  }
   if (props.view === 'schedule' && ganttViewport.value) {
     const axis = ganttViewport.value.querySelector<HTMLElement>('.gantt-axis');
     if (axis) {
@@ -187,6 +193,7 @@ onBeforeUnmount(() => {
   viewportQuery?.removeEventListener('change', onViewportChange);
   motionQuery?.removeEventListener('change', onMotionChange);
   resizeObserver?.disconnect();
+  canvasObserver?.disconnect();
   selectionResizeObserver?.disconnect();
   if (selectionRaf) cancelAnimationFrame(selectionRaf);
   restoreBodyScroll();
@@ -199,6 +206,7 @@ const customStart = ref('2026-11');
 const customEnd = ref('2027-10');
 const rangeError = ref('');
 const ganttViewport = ref<HTMLElement | null>(null);
+const ganttCanvas = ref<HTMLElement | null>(null);
 const boardViewport = ref<HTMLElement | null>(null);
 const activityViewport = ref<HTMLElement | null>(null);
 const changelogViewport = ref<HTMLElement | null>(null);
@@ -296,6 +304,7 @@ function measureGanttLabels() {
 if (props.view === 'schedule') watch(locale,()=>nextTick(measureGanttLabels));
 
 let resizeObserver: ResizeObserver | null = null;
+let canvasObserver: ResizeObserver | null = null;
 const showDependencies = ref(true);
 const hoveredId = ref<string | null>(null);
 let pan: { id:number; pointerX:number; scrollLeft:number; dragged:boolean } | null = null;
@@ -389,6 +398,32 @@ const currentLine=computed(()=>{
 });
 // visibleRows.height includes the 56px calendar header; never add it twice.
 const ganttLayout=computed(()=>visibleRows(grouped.value,expanded.value));
+const activeRowTransitions = new Set<Element>();
+const transitioningRows = ref(false);
+const transitionMaskHeight = ref(0);
+function measureTransitionMask() {
+  if (!transitioningRows.value || !ganttCanvas.value) return;
+  const canvas = ganttCanvas.value;
+  const last = Array.from(canvas.querySelectorAll<HTMLElement>('.gantt-head,.gantt-group,.gantt-row')).at(-1);
+  if (last) transitionMaskHeight.value = last.offsetTop + last.offsetHeight;
+}
+function startRowTransition(el: Element) {
+  activeRowTransitions.add(el);
+  if (!transitioningRows.value) {
+    transitioningRows.value = true;
+    measureTransitionMask();
+  }
+  nextTick(measureTransitionMask);
+}
+function endRowTransition(el: Element) {
+  activeRowTransitions.delete(el);
+  if (!activeRowTransitions.size) {
+    transitioningRows.value = false;
+    scheduleSelectionReveal();
+  }
+}
+const maskHeight = computed(() => transitioningRows.value ? transitionMaskHeight.value : ganttLayout.value.height);
+
 const focusedId=computed(()=>hoveredId.value || (chosenItem.value ? selectedId.value : null));
 // Compute geometry only when bars, dates or visibility change, never on mouse hover.
 const routingEdges=computed(()=>dependencyPaths(grouped.value, expanded.value, calendarWindow.value, trackWidth.value,null));
@@ -511,16 +546,16 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
             </div>
           </div>
           <div ref="ganttViewport" class="gantt-viewport" tabindex="0" :aria-label="tr('可横向滚动的只读甘特排期图','Scrollable read-only Gantt timeline')" @pointerdown="panStart" @pointermove="panMove" @pointerup="panEnd" @pointercancel="panEnd" @lostpointercapture="panEnd">
-            <div class="gantt-canvas" :style="{'--tick-count':unitCount,'--gantt-label-width':`${labelWidth}px`,'--gantt-masked-height':`${ganttLayout.height}px`,minWidth:`${gridMinWidth}px`}"><div class="gantt-label-mask" aria-hidden="true"></div>
+            <div ref="ganttCanvas" class="gantt-canvas" :style="{'--tick-count':unitCount,'--gantt-label-width':`${labelWidth}px`,'--gantt-masked-height':`${maskHeight}px`,minWidth:`${gridMinWidth}px`}"><div class="gantt-label-mask" aria-hidden="true"></div>
               <div class="gantt-head"><div class="gantt-head-name"><strong>{{tr('工作项 / 交付物','WORK PACKAGE / DELIVERABLE')}}</strong><small>WBS INDEX</small></div><div class="gantt-axis"><span v-for="(tick,i) in ticks" :key="i" :style="{width:`${tick.width}%`,flex:`0 0 ${tick.width}%`}">{{tick.label}}</span></div></div>
-              <svg v-if="showDependencies && dependencyEdges.length" class="gantt-dependency-layer" :viewBox="`0 0 ${trackWidth} ${ganttLayout.height}`" :style="{height:`${ganttLayout.height}px`}" preserveAspectRatio="none" aria-hidden="true">
+              <svg v-if="showDependencies && dependencyEdges.length" class="gantt-dependency-layer" :data-transitioning="transitioningRows" :viewBox="`0 0 ${trackWidth} ${ganttLayout.height}`" :style="{height:`${ganttLayout.height}px`}" preserveAspectRatio="none" aria-hidden="true">
                 <defs><marker id="dep-arrow" markerUnits="userSpaceOnUse" viewBox="0 0 10 8" refX="1" refY="4" markerWidth="10" markerHeight="8" orient="auto"><path d="M1 1 L9 4 L1 7 Z" fill="#777781"/></marker><marker id="dep-arrow-active" markerUnits="userSpaceOnUse" viewBox="0 0 10 8" refX="1" refY="4" markerWidth="10" markerHeight="8" orient="auto"><path d="M1 1 L9 4 L1 7 Z" fill="#ff453a"/></marker></defs>
                 <path v-for="trunk in dependencyTrunks" :key="`trunk-${trunk.key}`" class="gantt-dependency-trunk" :data-dependency-trunk="trunk.key" :class="{active:trunk.active}" :d="trunk.d" />
                 <path v-for="edge in dependencyEdges" :key="edge.key" :data-dependency-key="edge.key" :d="edge.d" :class="{active:edge.active}" :marker-end="edge.active?'url(#dep-arrow-active)':'url(#dep-arrow)'"/>
               </svg>
               <template v-for="group in grouped" :key="group.id">
                 <button class="gantt-group" type="button" @click="toggleGroup(group.id)" :aria-expanded="groupExpanded(group.id)"><span class="gantt-group-name"><span class="chevron" :class="{collapsed:!groupExpanded(group.id)}"><EngineeringIcon name="gantt-chevron" /></span><strong>{{group.id}}</strong><small>{{tr(group.zh,group.en)}}</small></span><span class="gantt-group-suffix">{{group.items.length}} {{tr('个工作项','WORK ITEMS')}}</span></button>
-                <template v-if="groupExpanded(group.id)"><div v-for="item in group.items" :key="item.id" class="gantt-row" :class="{selected:selectedId===item.id}"><button class="gantt-item-name" :data-item-id="item.id" @click="focusItem(item.id)"><small>{{item.id}} <span>·</span> {{streamName(item.stream)}}</small><strong>{{tr(item.titleZh,item.titleEn)}}</strong></button><div class="gantt-track"><span v-for="(tick,i) in ticks" :key="i" class="gantt-gridline" :style="{left:`${tick.left}%`}"></span><span v-if="currentLine" class="gantt-today" :style="{left:currentLine}"></span><button v-if="!durationPositions[item.id].hidden" class="gantt-bar" :data-gantt-id="item.id" :class="[item.stage,{selected:selectedId===item.id,related:focusedId===item.id}]" @pointerenter="hoveredId=item.id" @pointerleave="hoveredId=null" :aria-pressed="selectedId===item.id" :aria-label="`${item.id} · ${tr(item.titleZh,item.titleEn)} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · ${stageName(item.stage)}`" :style="{left:durationPositions[item.id].left,width:durationPositions[item.id].width}" :title="`${item.id} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · PUBLIC RECORD`" @click="select(item.id)"><span>{{item.id}}</span></button><span v-if="!item.start || !item.end" class="gantt-undated">{{tr('未安排公开时间','NO PUBLIC DATE')}}</span></div></div></template>
+                <TransitionGroup name="gantt-rows" @before-enter="startRowTransition" @before-leave="startRowTransition" @after-enter="endRowTransition" @after-leave="endRowTransition" @enter-cancelled="endRowTransition" @leave-cancelled="endRowTransition"><div v-for="item in (groupExpanded(group.id)?group.items:[])" :key="item.id" class="gantt-row" :class="{selected:selectedId===item.id}"><button class="gantt-item-name" :data-item-id="item.id" @click="focusItem(item.id)"><small>{{item.id}} <span>·</span> {{streamName(item.stream)}}</small><strong>{{tr(item.titleZh,item.titleEn)}}</strong></button><div class="gantt-track"><span v-for="(tick,i) in ticks" :key="i" class="gantt-gridline" :style="{left:`${tick.left}%`}"></span><span v-if="currentLine" class="gantt-today" :style="{left:currentLine}"></span><button v-if="!durationPositions[item.id].hidden" class="gantt-bar" :data-gantt-id="item.id" :class="[item.stage,{selected:selectedId===item.id,related:focusedId===item.id}]" @pointerenter="hoveredId=item.id" @pointerleave="hoveredId=null" :aria-pressed="selectedId===item.id" :aria-label="`${item.id} · ${tr(item.titleZh,item.titleEn)} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · ${stageName(item.stage)}`" :style="{left:durationPositions[item.id].left,width:durationPositions[item.id].width}" :title="`${item.id} · ${fmtDate(item.start)} – ${fmtDate(item.end)} · PUBLIC RECORD`" @click="select(item.id)"><span>{{item.id}}</span></button><span v-if="!item.start || !item.end" class="gantt-undated">{{tr('未安排公开时间','NO PUBLIC DATE')}}</span></div></div></TransitionGroup>
               </template>
               <div v-if="grouped.length===0" class="ws-no-results">{{tr('没有匹配的工作项。','No matching work items.')}}</div>
             </div>

@@ -75,6 +75,10 @@
 .chevron {font:18px var(--font-sans);color:#ff453a;width:13px}
 .gantt-group-suffix {font:9px var(--font-sans);color:#90909a}
 .gantt-row {height:62px;display:flex;border-bottom:1px solid #29292d;background:#151517}
+.gantt-rows-enter-active,.gantt-rows-leave-active {transition:height 200ms ease,opacity 200ms ease,border-bottom-width 200ms ease;overflow:clip}
+.gantt-rows-enter-from,.gantt-rows-leave-to {height:0;opacity:0;border-bottom-width:0}
+.gantt-dependency-layer[data-transitioning="true"] {visibility:hidden}
+
 .gantt-row:nth-child(even) {background:#18181b}
 .gantt-row:hover {background:#1f1f23}
 .gantt-row.selected {background:#201c1e}
@@ -751,7 +755,7 @@
 .kanban-card,.event-entry { transform-origin: center center; }
 @media (max-width:1050px) {.ws-inspector { z-index:var(--ws-layer-drawer); }
 .ws-inspector-scrim { z-index:var(--ws-layer-drawer-backdrop); }
-.ws-inspector[aria-hidden='true'] { visibility:hidden; pointer-events:none; }
+.ws-inspector[aria-hidden='true'] { pointer-events:none; }
 .ws-inspector.inspector-visible { visibility:visible; pointer-events:auto; }
 }
 @media (pointer:coarse) {.gantt-range-trigger,.range-panel-header button { min-height:44px; min-width:44px; }
@@ -1076,31 +1080,26 @@
 .ws-content-grid > .ws-project-index {border-right:1px solid #36363c}
 .ws-content-grid > .ws-primary {overflow:hidden}
 .ws-content-grid > .ws-inspector {
-  width:100%;
+  position:absolute;
+  inset:0 0 0 auto;
+  width:var(--ws-inspector);
   min-height:0;
-  /* Size containment prevents zero-width hidden detail text from inflating
-     the Grid row (and shifting the 50%-centered collapse handle downward).
-     The opened inspector instead scrolls within the primary-driven row. */
+  z-index:40;
   contain:size;
-  border-left:0;
-  overflow:hidden;
-  visibility:hidden;
-  opacity:0;
-  transform:translateX(9px);
-  pointer-events:none;
-  transition:opacity 210ms ease,transform 260ms cubic-bezier(.22,.72,.18,1),
-    visibility 0s linear 260ms;
-}
-.ws-content-grid[data-inspector-open="true"] > .ws-inspector {
   border-left:1px solid #36363c;
   overflow-y:auto;
   overflow-x:hidden;
+  scrollbar-gutter:stable;
+  visibility:hidden;
+  transform:translateX(100%);
+  pointer-events:none;
+  transition:transform 260ms cubic-bezier(.22,.72,.18,1),visibility 0s linear 260ms;
+}
+.ws-content-grid[data-inspector-open="true"] > .ws-inspector {
   visibility:visible;
-  opacity:1;
   transform:translateX(0);
   pointer-events:auto;
-  transition:opacity 210ms ease,transform 260ms cubic-bezier(.22,.72,.18,1),
-    visibility 0s linear 0s;
+  transition:transform 260ms cubic-bezier(.22,.72,.18,1),visibility 0s linear 0s;
 }
 .ws-inspector-handle {
   position:absolute;
@@ -1186,19 +1185,17 @@
 .ws-content-grid > .ws-inspector {
     position:fixed;
     top:0;bottom:0;right:0;
-    width:min(370px,96vw);
+    width:min(390px,94vw);
     height:100dvh;
     z-index:var(--ws-layer-drawer);
-    border:0;
+    border-left:1px solid #504247;
     border-radius:0!important;
-    opacity:1;
     visibility:hidden;
     overflow-y:auto;
-    transform:translateX(102%);
+    transform:translateX(100%);
     transition:transform 260ms cubic-bezier(.22,.72,.18,1),visibility 0s linear 260ms;
   }
 .ws-content-grid[data-inspector-open="true"] > .ws-inspector {
-    border-left:1px solid #504247;
     visibility:visible;
     transform:translateX(0);
     transition:transform 260ms cubic-bezier(.22,.72,.18,1),visibility 0s linear 0s;
@@ -1212,7 +1209,7 @@
 .ws-content-grid[data-inspector-open="true"] > .ws-inspector-handle {
     /* A nearly full-screen mobile drawer leaves less than 44px outside it:
        place the hit target immediately INSIDE the seam so it stays visible. */
-    right:calc(min(370px,96vw) - var(--ws-handle-width));
+    right:calc(min(390px,94vw) - var(--ws-handle-width));
   }
 .ws-content-grid > .ws-project-index {border-right:1px solid #36363c}
 }
@@ -1319,11 +1316,6 @@
 }
 @container ws-inspector (min-width:350px) {.inspector-spec dt {flex:0 1 40%}
 .inspector-spec dd {max-width:58%}
-}
-@media(max-width:1050px) {.ws-content-grid > .ws-inspector {width:min(390px,94vw)}
-.ws-content-grid[data-inspector-open="true"] > .ws-inspector-handle {
-    right:calc(min(390px,94vw) - var(--ws-handle-width));
-  }
 }
 @media(max-width:420px) {.ws-inspector .inspector-hero {padding:18px 17px}
 .ws-inspector .inspector-section {padding:18px 17px}
@@ -1462,3 +1454,24 @@
     overflow:auto;
   }
 }
+
+/* Changelog presentation; release data integration is separate. */
+.changelog-filters {display:flex;flex-wrap:wrap;gap:12px}
+.changelog-filters label {display:flex;align-items:center;gap:8px}
+.changelog-filters select {background:#242428;border:1px solid #47474d;border-radius:8px;color:inherit;font:inherit;min-height:36px;padding:5px 8px}
+.changelog-list {display:grid;align-content:start;gap:12px;padding:16px}
+.changelog-card {position:relative;display:grid;gap:6px;text-align:left;background:#242428;color:#eee;border:1px solid #3b3b43;border-radius:12px;padding:16px 48px 16px 16px}
+.changelog-card[aria-pressed="true"] {border-color:#ff756b;background:#2b2428}
+.changelog-card small,.release-change small {color:#bcbcc5;font-size:12px}
+.changelog-card strong {font-size:18px}
+.changelog-card p {margin:0;color:#bcbcc5}
+.changelog-card .ws-glyph {position:absolute;right:16px;top:50%;width:18px;height:18px}
+.changelog-empty {padding:32px 16px}
+.release-section summary {cursor:pointer;font-weight:600}
+.release-change {padding:12px 0;border-bottom:1px solid #35353a}
+.release-change[data-change-state="planned"] small {color:var(--state-planned)}
+.release-change[data-change-state="verified"] small {color:var(--state-published)}
+.release-change[data-change-state="unconfirmed"] small {color:var(--state-review)}
+.release-change[data-change-state="failed"] small {color:#ff8a81}
+.release-list-enter-active,.release-list-leave-active,.activity-list-enter-active,.activity-list-leave-active,.board-list-enter-active,.board-list-leave-active {transition:opacity 160ms ease}
+.release-list-enter-from,.release-list-leave-to,.activity-list-enter-from,.activity-list-leave-to,.board-list-enter-from,.board-list-leave-to {opacity:0}
