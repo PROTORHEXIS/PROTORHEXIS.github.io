@@ -2,13 +2,12 @@
 import EngineeringIcon from './EngineeringIcon.vue';
 import RoadmapStatusIcon from './RoadmapStatusIcon.vue';
 import { roadmapLabels, type Translate } from './roadmap-presentation';
-import type { WorkItem, PublicEvent, publicPrograms } from '../../data/workstation-public';
+import type { WorkItem, PublicEvent } from '../../data/workstation-public';
 
 const props = defineProps<{
-  view: 'schedule' | 'board' | 'activity' | 'systems';
+  view: 'schedule' | 'board' | 'activity';
   chosenItem: WorkItem | null;
   chosenEvent: PublicEvent | null;
-  chosenProgram: (typeof publicPrograms)[number] | null;
   dependents: WorkItem[];
   tr: Translate;
 }>();
@@ -20,7 +19,7 @@ const projectEventsLink=(item:WorkItem) => `/roadmap/evidence/?program=${encodeU
 </script>
 
 <template>
-  <template v-if="chosenItem && view!=='activity' && view!=='systems'"><div class="inspector-hero"><small>{{chosenItem.id}} / {{chosenItem.program}}</small><h2>{{tr(chosenItem.titleZh,chosenItem.titleEn)}}</h2><span class="inspector-status" :data-stage="chosenItem.stage"><RoadmapStatusIcon :status="chosenItem.stage" />{{stageName(chosenItem.stage)}}</span></div><div class="inspector-section"><span class="inspector-label">{{tr('工作概要','DESCRIPTION')}}</span><p>{{tr(chosenItem.descZh,chosenItem.descEn)}}</p></div><dl class="inspector-spec"><div><dt>{{tr('公开时间记录','PUBLIC DATE RECORD')}}</dt><dd>{{fmtDate(chosenItem.start)}}<br/>— {{fmtDate(chosenItem.end)}}<small v-if="chosenItem.scheduleKind==='observed'">{{tr('公开 PR 观察窗口','Observed PR window')}}</small></dd></div><div><dt>{{tr('工作类别','STREAM')}}</dt><dd>{{streamName(chosenItem.stream)}}</dd></div>
+  <template v-if="chosenItem && view!=='activity'"><div class="inspector-hero"><small>{{chosenItem.id}} / {{chosenItem.program}}</small><h2>{{tr(chosenItem.titleZh,chosenItem.titleEn)}}</h2><span class="inspector-status" :data-stage="chosenItem.stage"><RoadmapStatusIcon :status="chosenItem.stage" />{{stageName(chosenItem.stage)}}</span></div><div class="inspector-section"><span class="inspector-label">{{tr('工作概要','DESCRIPTION')}}</span><p>{{tr(chosenItem.descZh,chosenItem.descEn)}}</p></div><dl class="inspector-spec"><div><dt>{{tr('公开时间记录','PUBLIC DATE RECORD')}}</dt><dd>{{fmtDate(chosenItem.start)}}<br/>— {{fmtDate(chosenItem.end)}}<small v-if="chosenItem.scheduleKind==='observed'">{{tr('公开 PR 观察窗口','Observed PR window')}}</small></dd></div><div><dt>{{tr('工作类别','STREAM')}}</dt><dd>{{streamName(chosenItem.stream)}}</dd></div>
         <div><dt>{{tr('交付可信度','DELIVERY CONFIDENCE')}}</dt><dd class="inspector-delivery" :data-delivery="chosenItem.deliveryState"><span class="inspector-delivery-label"><RoadmapStatusIcon :status="chosenItem.deliveryState" />{{deliveryName(chosenItem.deliveryState)}}</span><small v-if="chosenItem.releaseTarget">{{chosenItem.releaseTarget}}</small></dd></div>
         <div><dt>{{tr('来源核验','SOURCE VERIFICATION')}}</dt><dd>{{chosenItem.verifiedAt?fmtDate(chosenItem.verifiedAt):tr('未单独核验','NOT SEPARATELY VERIFIED')}}<small>{{tr('记录更新','Record updated')}}: {{fmtDate(chosenItem.updatedAt)}}</small></dd></div><div class="inspector-dep-row"><dt>{{tr('前置依赖','PREDECESSORS')}}</dt><dd><template v-if="chosenItem.deps.length"><button v-for="dep in chosenItem.deps" :key="dep" class="inspector-dep-link" type="button" :title="tr('定位并打开依赖任务','Locate dependency')" @click="focusItem(dep)">{{dep}} <EngineeringIcon name="next" /></button></template><span v-else>{{tr('无','NONE')}}</span></dd></div><div class="inspector-dep-row"><dt>{{tr('后续工作','SUCCESSORS')}}</dt><dd><template v-if="dependents.length"><button v-for="next in dependents" :key="next.id" class="inspector-dep-link" type="button" :title="tr('定位后续任务','Locate successor')" @click="focusItem(next.id)">{{next.id}} <EngineeringIcon name="next" /></button></template><span v-else>{{tr('无','NONE')}}</span></dd></div><div><dt>{{tr('数据级别','PROVENANCE')}}</dt><dd>{{chosenItem.evidence.length ? 'PUBLIC / SOURCE-LINKED' : chosenItem.reviewReceipt ? 'PRIVATE / REVIEWED SUMMARY' : 'FUTURE INTENT / NO DATE'}}</dd></div><div v-if="chosenItem.reviewReceipt"><dt>{{tr('审核编号','REVIEW RECEIPT')}}</dt><dd>{{chosenItem.reviewReceipt}}</dd></div><div v-if="chosenItem.evidence.length"><dt>{{tr('公开来源','PUBLIC SOURCES')}}</dt><dd><a v-for="src in chosenItem.evidence" :key="src.url" :href="src.url" target="_blank" rel="noopener noreferrer" class="inspector-dep-link">GitHub ↗</a></dd></div></dl><nav class="inspector-crossviews" :aria-label="tr('同一工作项的其他视图','Other views of this work item')">
           <a v-if="chosenItem.stage!=='future' && view!=='schedule'" :href="workLink('schedule',chosenItem)">{{tr('查看排期','Open schedule')}} →</a>
@@ -31,6 +30,6 @@ const projectEventsLink=(item:WorkItem) => `/roadmap/evidence/?program=${encodeU
         <div v-if="chosenEvent.change"><dt>{{tr('变化与原因','CHANGE / REASON')}}</dt><dd>{{chosenEvent.change.before}} → {{chosenEvent.change.after}}<small>{{tr(chosenEvent.change.reason.zh,chosenEvent.change.reason.en)}}</small></dd></div><div><dt>{{tr('公开来源','PUBLIC SOURCES')}}</dt><dd><a v-for="src in chosenEvent.evidence" :key="src.url" :href="src.url" target="_blank" rel="noopener noreferrer" class="inspector-dep-link">GitHub ↗</a></dd></div></dl><nav v-if="chosenEvent.itemId" class="inspector-crossviews" :aria-label="tr('关联工作项','Linked work item')">
           <a :href="`/roadmap/board/?item=${encodeURIComponent(chosenEvent.itemId)}`">{{tr('查看对应交付物','Open linked deliverable')}} →</a>
         </nav></template>
-        <template v-else-if="view==='systems'"><div class="inspector-hero"><small>SYSTEM MAP / {{chosenProgram?.code??'OVERVIEW'}}</small><h2>{{chosenProgram?.id??'PROTORHEXIS'}}</h2><span class="inspector-status" data-status="project"><RoadmapStatusIcon status="project" />PUBLIC PROJECT / LIMITED RECORD</span></div><div class="inspector-section"><span class="inspector-label">{{tr('系统范围','SYSTEM SCOPE')}}</span><p>{{chosenProgram?tr(chosenProgram.zh,chosenProgram.en):tr('分布式科研和工程协作网络','Distributed research and engineering network')}}</p></div><dl class="inspector-spec"><div><dt>PUBLICATION</dt><dd>PUBLIC OVERVIEW ONLY</dd></div></dl></template>
+
         <template v-else><div class="inspector-placeholder"><span class="placeholder-cross">⌖</span><strong>{{tr('选择一个条目','Select an item')}}</strong><p>{{tr('在主视图中点击时间条、卡片或事件，查看对应详细信息。','Choose a bar, card or event to inspect its details.')}}</p></div></template>
 </template>

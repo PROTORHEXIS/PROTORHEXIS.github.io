@@ -1,32 +1,28 @@
 <script setup lang="ts">
-import { computed, ref, nextTick, onMounted, onBeforeUnmount, watch, shallowRef, provide, type Component } from 'vue';
+import { computed, ref, nextTick, onMounted, onBeforeUnmount, watch, provide } from 'vue';
 import { AnimatePresence, motion } from 'motion-v';
 import { usePublicLocale } from './usePublicLocale';
 import EngineeringIcon from './EngineeringIcon.vue';
 import RoadmapBoardLanes from './RoadmapBoardLanes.vue';
 import RoadmapActivityStream from './RoadmapActivityStream.vue';
 import RoadmapInspectorDetails from './RoadmapInspectorDetails.vue';
+import RoadmapChangelog from './RoadmapChangelog.vue';
+import ReleaseDetails from './ReleaseDetails.vue';
+import { publicReleases, changeKinds, changeLabel, type ChangeKind } from './release-presentation';
 import { roadmapLabels, stages, reducedMotionKey } from './roadmap-presentation';
 import { publicSnapshot, publicItems, publicEvents, publicPrograms, type WorkItem, type ProgramId, type PublicEvent, type Stream } from '../../data/workstation-public';
 import { monthIndex, monthString, validateWindow, windowEnds, axisTicks, barPosition, visibleRows, dependencyPaths } from '../../lib/gantt';
 
-const props = defineProps<{ view: 'schedule' | 'board' | 'activity' | 'systems' }>();
-const graphComponent = shallowRef<Component | null>(null);
+const props = defineProps<{ view: 'schedule' | 'board' | 'activity' | 'changelog' }>();
 const labelWidth = ref(256);
-function selectGraphProgram(id:string) {
-  if (id === 'all') { switchProgram('all'); return; }
-  if (publicPrograms.some(p=>p.id===id)) {
-    activeProgram.value = id as ProgramId;
-    selectedId.value = id;
-    inspectorOpen.value = true;
-  }
-}
 
 const { locale } = usePublicLocale();
 const tr = (zh: string, en: string) => locale.value === 'zh' ? zh : en;
 const activeProgram = ref<ProgramId | 'all'>('all');
 const search = ref('');
 const stream = ref<'all' | Stream>('all');
+const channelFilter = ref('all');
+const changeFilter = ref<ChangeKind | 'all'>('all');
 const eventKind = ref<'all' | PublicEvent['kind']>('all');
 const eventKinds: Array<'all' | PublicEvent['kind']> = ['all','milestone','verification','decision'];
 // Do not confuse a public record's existence with an explicit selection.
@@ -136,12 +132,16 @@ onMounted(() => {
     activeProgram.value=requestedProgram as ProgramId;
   const requestedItem=params.get('item');
   const deepItem=publicItems.find(x=>x.id===requestedItem);
-  if(deepItem && props.view!=='activity' && props.view!=='systems' && !(props.view==='schedule' && deepItem.stage==='future')){
+  if(deepItem && (props.view==='schedule' || props.view==='board') && !(props.view==='schedule' && deepItem.stage==='future')){
     activeProgram.value=deepItem.program;selectedId.value=deepItem.id;inspectorOpen.value=true;
   }
   const requestedEvent=params.get('event');
   if(props.view==='activity' && publicEvents.some(x=>x.id===requestedEvent)){
     selectedId.value=requestedEvent!;inspectorOpen.value=true;
+  }
+  const deepRelease = publicReleases.find(release => release.id === params.get('release'));
+  if (props.view === 'changelog' && deepRelease) {
+    activeProgram.value = deepRelease.program; selectedId.value = deepRelease.id; inspectorOpen.value = true;
   }
   viewportQuery = window.matchMedia('(max-width: 1050px)');
   motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -168,7 +168,6 @@ onMounted(() => {
     }
     scheduleSelectionReveal(); // Deep-link selection initialized during onMounted.
   });
-  if (props.view === 'systems') import('./SystemRelationshipGraph.vue').then(mod=>{graphComponent.value=mod.default;}).catch(()=>{graphComponent.value=null;});
   if (props.view === 'schedule' && ganttViewport.value) {
     const axis = ganttViewport.value.querySelector<HTMLElement>('.gantt-axis');
     if (axis) {
@@ -202,7 +201,7 @@ const rangeError = ref('');
 const ganttViewport = ref<HTMLElement | null>(null);
 const boardViewport = ref<HTMLElement | null>(null);
 const activityViewport = ref<HTMLElement | null>(null);
-const systemViewport = ref<HTMLElement | null>(null);
+const changelogViewport = ref<HTMLElement | null>(null);
 const boardScrollRatio = ref(0);
 const boardOverflow = ref(false);
 function syncBoardScroll() {
@@ -259,9 +258,9 @@ function revealSelection() {
   } else if (props.view==='activity' && activityViewport.value) {
     const target=findSelected(activityViewport.value.querySelectorAll<HTMLElement>('.event-entry[data-event-id]'),id,'eventId');
     if (target) revealInside(activityViewport.value,target);
-  } else if (props.view==='systems' && systemViewport.value) {
-    const target=findSelected(systemViewport.value.querySelectorAll<HTMLElement>('.system-graph-node[data-program-id],.systemmap-fallback [data-program-id]'),id,'programId');
-    if (target) revealInside(systemViewport.value,target);
+  } else if (props.view==='changelog' && changelogViewport.value) {
+    const target=findSelected(changelogViewport.value.querySelectorAll<HTMLElement>('[data-release-id]'),id,'releaseId');
+    if (target) revealInside(changelogViewport.value,target);
   }
 }
 function scheduleSelectionReveal() {
@@ -275,7 +274,6 @@ function scheduleSelectionReveal() {
 watch([selectedId,inspectorOpen,activeProgram,search,locale,isNarrow],()=>{
   nextTick(scheduleSelectionReveal);
 },{flush:'post'});
-watch(graphComponent,()=>nextTick(scheduleSelectionReveal),{flush:'post'});
 
 const trackWidth = ref(900);
 // Measure the full visible label text (not clipped DOM widths), then share one CSS variable
@@ -307,7 +305,7 @@ const viewLinks = [
   {id:'schedule',href:'/roadmap/',code:'01',zh:'开发排期',en:'PROGRESS TRACKER'},
   {id:'board',href:'/roadmap/board/',code:'02',zh:'交付看板',en:'RELEASE BOARD'},
   {id:'activity',href:'/roadmap/evidence/',code:'03',zh:'事件时间线',en:'ACTIVITY'},
-  {id:'systems',href:'/roadmap/systems/',code:'04',zh:'系统图谱',en:'SYSTEM MAP'},
+  {id:'changelog',href:'/roadmap/changelog/',code:'04',zh:'版本日志',en:'CHANGELOG'},
 ] as const;
 const activeView = computed(() => viewLinks.find(v=>v.id===props.view)!);
 const matching = (zh:string,en:string) => `${zh} ${en}`.toLowerCase().includes(search.value.trim().toLowerCase());
@@ -324,19 +322,24 @@ const visibleEvents = computed(() => publicEvents.filter(event =>
 ));
 const chosenItem = computed(() => publicItems.find(x => x.id === selectedId.value) ?? null);
 const chosenEvent = computed(() => publicEvents.find(x => x.id === selectedId.value) ?? null);
-const chosenProgram = computed(() => publicPrograms.find(x => x.id === activeProgram.value) ?? null);
+const channels = computed(() => [...new Set(publicReleases.map(release=>release.channel))]);
+const visibleReleases = computed(() => publicReleases.filter(release =>
+  (activeProgram.value==='all' || release.program===activeProgram.value) &&
+  (channelFilter.value==='all' || release.channel===channelFilter.value) &&
+  (changeFilter.value==='all' || release.changes.some(change=>change.kind===changeFilter.value)) &&
+  matching([release.id,release.program,release.version,release.summary.zh,...release.changes.map(change=>change.text.zh)].join(' '),[release.channel,release.summary.en,...release.changes.map(change=>change.text.en)].join(' '))
+).sort((a,b)=>(b.date??'').localeCompare(a.date??'') || a.id.localeCompare(b.id)));
+const chosenRelease = computed(() => publicReleases.find(release=>release.id===selectedId.value) ?? null);
 const hasInspectorSelection = computed(() => props.view === 'activity'
   ? Boolean(chosenEvent.value)
-  : props.view === 'systems'
-    ? Boolean(chosenProgram.value && selectedId.value === chosenProgram.value.id)
-    : Boolean(chosenItem.value));
+  : props.view === 'changelog' ? Boolean(chosenRelease.value) : Boolean(chosenItem.value));
 const dependents = computed(() => chosenItem.value ? publicItems.filter(x => x.deps.includes(chosenItem.value!.id)) : []);
 function select(id:string) { if (document.activeElement instanceof HTMLElement) returnFocus = document.activeElement; selectedId.value=id; inspectorOpen.value=true; }
 function switchProgram(id:ProgramId|'all') { activeProgram.value=id; selectedId.value=''; inspectorOpen.value=false; closeRangePanel(); }
 function toggleGroup(id:string) { expanded.value[id] = expanded.value[id] === false ? true : false; }
 function groupExpanded(id:string) { return expanded.value[id] !== false; }
 const grouped = computed(() => publicPrograms.map(prog => ({...prog, items: visibleItems.value.filter(item=>item.program===prog.id)})).filter(group=>group.items.length));
-const totalCount = computed(()=>props.view==='activity'? visibleEvents.value.length:visibleItems.value.length);
+const totalCount = computed(()=>props.view==='activity'? visibleEvents.value.length:props.view==='changelog'?visibleReleases.value.length:visibleItems.value.length);
 const windowBounds = computed(() => windowEnds(calendarWindow.value));
 const ticks = computed(() => axisTicks(calendarWindow.value, zoom.value));
 const unitCount = computed(() => ticks.value.length);
@@ -440,7 +443,8 @@ async function focusItem(id:string) {
   await nextTick();
   scheduleSelectionReveal(); // Container-local nearest edge, not forced centering.
 }
-function filteredCount(program:ProgramId){return publicItems.filter(x=>x.program===program).length;}
+function filteredCount(program:ProgramId){return (props.view==='changelog'?publicReleases:props.view==='activity'?publicEvents:publicItems).filter(x=>x.program===program).length;}
+const totalRecords = computed(() => props.view==='changelog'?publicReleases.length:props.view==='activity'?publicEvents.length:publicItems.length);
 const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visibleItems.value.map(x=>x.program)).size,events:visibleEvents.value.length}));
 </script>
 
@@ -471,7 +475,7 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
         </details>
         <div class="ws-project-filters">
         <div class="rail-title"><span>PROJECT INDEX</span><span>{{String(publicPrograms.length).padStart(2,'0')}} / SYS</span></div>
-        <button class="rail-item" :class="{'is-current':activeProgram==='all'}" @click="switchProgram('all')"><span class="rail-symbol rail-symbol-all">✳</span><span class="rail-copy"><strong>{{tr('全部系统','ALL SYSTEMS')}}</strong><small>OVERVIEW / ALL</small></span><span class="rail-count">{{publicItems.length.toString().padStart(2,'0')}}</span></button>
+        <button class="rail-item" :class="{'is-current':activeProgram==='all'}" @click="switchProgram('all')"><span class="rail-symbol rail-symbol-all">✳</span><span class="rail-copy"><strong>{{tr('全部系统','ALL SYSTEMS')}}</strong><small>OVERVIEW / ALL</small></span><span class="rail-count">{{totalRecords.toString().padStart(2,'0')}}</span></button>
         <div class="rail-separator">{{tr('系统与产品','SYSTEMS & PRODUCTS')}}</div>
         <button v-for="program in publicPrograms" :key="program.id" class="rail-item" :class="{'is-current':activeProgram===program.id}" @click="switchProgram(program.id)"><span class="rail-symbol">{{program.id.slice(0,1)}}</span><span class="rail-copy"><strong>{{program.id}}</strong><small>{{tr(program.zh,program.en)}}</small></span><span class="rail-count">{{filteredCount(program.id).toString().padStart(2,'0')}}</span></button>
         <div class="rail-block"><div class="rail-block-title">DATA SCOPE</div><div class="rail-block-value"><span class="ws-signal"></span> PUBLIC / REVIEWED</div><p>{{tr('公开页面仅读取独立的脱敏数据模型，不能直接读取内部仓库。','Public pages must use an independent reviewed feed, never internal repository access.')}}</p></div>
@@ -480,11 +484,11 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
       </aside>
 
       <div class="ws-primary">
-        <div class="ws-view-toolbar"><div class="ws-view-state"><span class="ws-mini-square"></span><span>{{activeProgram==='all' ? 'ALL PROGRAMS' : activeProgram}}</span><span class="v-divider">/</span><span>{{totalCount.toString().padStart(2,'0')}} {{view==='activity'?'EVENTS':'ENTRIES'}}</span></div>
+        <div class="ws-view-toolbar"><div class="ws-view-state"><span class="ws-mini-square"></span><span>{{activeProgram==='all' ? 'ALL PROGRAMS' : activeProgram}}</span><span class="v-divider">/</span><span>{{totalCount.toString().padStart(2,'0')}} {{view==='activity'?'EVENTS':view==='changelog'?'RELEASES':'ENTRIES'}}</span></div>
           <div v-if="view==='schedule'" class="ws-view-sub">{{rangeLabel}} <span class="v-divider">·</span> {{tr('拖动空白处平移 · 只读','Drag empty track to pan · read-only')}}</div>
           <div v-else-if="view==='board'" class="ws-view-sub">{{tr('状态代表公开交付阶段','PUBLIC DELIVERY STAGES')}}</div>
           <div v-else-if="view==='activity'" class="ws-view-sub">{{tr('按时间倒序排列','NEWEST FIRST')}}</div>
-          <div v-else class="ws-view-sub">{{tr('公开项目概览','PUBLIC PROGRAM OVERVIEW')}}</div>
+          <div v-else class="ws-view-sub">{{tr('版本与变更记录','RELEASES & CHANGES')}}</div>
         </div>
 
         <div v-if="view==='schedule'" class="ws-timeline">
@@ -537,7 +541,13 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
 
         <div v-else-if="view==='activity'" ref="activityViewport" class="ws-activity"><div class="activity-filters"><span>{{tr('事件类型','EVENT TYPE')}}</span><div class="ws-toolset"><button v-for="kind in eventKinds" :key="kind" :class="{current:eventKind===kind}" @click="eventKind=kind">{{kind==='all'?tr('全部','ALL'):eventName(kind)}}</button></div></div><RoadmapActivityStream :events="visibleEvents" :selected-id="selectedId" :tr="tr" @select="select" /></div>
 
-        <div v-else ref="systemViewport" class="ws-systemmap"><div class="systemmap-topline">PROTORHEXIS / DISTRIBUTED RESEARCH & ENGINEERING <span>PUBLIC INDEX / VERIFIED ONLY</span></div><div class="systemmap-stage"><component :is="graphComponent" v-if="graphComponent" :programs="publicPrograms" :relations="publicSnapshot.relations" :locale="locale" :active-program="activeProgram" @select="selectGraphProgram" /><div v-else class="systemmap-fallback" role="group" :aria-label="tr('系统列表','System list')"><button v-for="prog in publicPrograms" :key="prog.id" type="button" :data-program-id="prog.id" @click="selectGraphProgram(prog.id)">{{prog.id}}</button></div></div><p class="systemmap-note">{{tr('仅绘制经公开审核的组织级项目归属关系；不代表系统之间已实现技术集成或依赖。','Only reviewed organizational grouping is shown; no technical integration or dependencies are implied.')}}</p></div>
+        <div v-else ref="changelogViewport" class="ws-activity ws-changelog">
+          <div class="activity-filters changelog-filters">
+            <label>{{tr('发布渠道','CHANNEL')}} <select v-model="channelFilter"><option value="all">{{tr('全部','ALL')}}</option><option v-for="channel in channels" :key="channel" :value="channel">{{channel}}</option></select></label>
+            <label>{{tr('变更类型','CHANGE KIND')}} <select v-model="changeFilter"><option value="all">{{tr('全部','ALL')}}</option><option v-for="kind in changeKinds" :key="kind" :value="kind">{{changeLabel(kind,tr)}}</option></select></label>
+          </div>
+          <RoadmapChangelog :releases="visibleReleases" :selected-id="selectedId" :tr="tr" @select="select" />
+        </div>
       </div>
 
       <button v-if="inspectorOpen" class="ws-inspector-scrim" type="button" :aria-label="tr('关闭详情面板','Close detail panel')" @click="closeInspector"></button>
@@ -553,7 +563,8 @@ const stats=computed(()=>({items:visibleItems.value.length,programs:new Set(visi
             :animate="{ opacity: 1, y: 0 }"
             :exit="reducedMotion ? { opacity: 1, y: 0 } : { opacity: 0, y: -5 }"
             :transition="{ duration: reducedMotion ? 0 : 0.16, ease: 'easeOut' }">
-        <RoadmapInspectorDetails :view="view" :chosen-item="chosenItem" :chosen-event="chosenEvent" :chosen-program="chosenProgram" :dependents="dependents" :tr="tr" @focus="focusItem" />
+        <ReleaseDetails v-if="view==='changelog' && chosenRelease" :release="chosenRelease" :tr="tr" />
+        <RoadmapInspectorDetails v-else-if="view!=='changelog'" :view="view" :chosen-item="chosenItem" :chosen-event="chosenEvent" :dependents="dependents" :tr="tr" @focus="focusItem" />
           </motion.div>
         </AnimatePresence>
         <div class="inspector-warning"><span><EngineeringIcon name="warning" /></span><p>{{tr('公开事实由来源链接支持，未公布的项目没有推定进度或日期。','Public facts are source-linked. Undisclosed projects have no inferred status or dates.')}}</p></div>

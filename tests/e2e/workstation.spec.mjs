@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test';
 
-const routes = ['/roadmap/', '/roadmap/board/', '/roadmap/evidence/', '/roadmap/systems/'];
+const routes = ['/roadmap/', '/roadmap/board/', '/roadmap/evidence/', '/roadmap/changelog/'];
 for (const route of routes) {
   test(`Astro hydration preserves the full workstation: ${route}`, async ({ page }) => {
     const errors = [];
@@ -62,13 +62,13 @@ test('mobile sidebar view selector replaces clipped horizontal top navigation', 
 
 test('desktop navigation lives in the project sidebar without page-description header',async({page,isMobile})=>{
   test.skip(isMobile,'desktop sidebar');
-  await page.goto('/roadmap/systems/',{waitUntil:'domcontentloaded'});
+  await page.goto('/roadmap/changelog/',{waitUntil:'domcontentloaded'});
   await expect(page.locator('.ws-tabbar,.ws-notice,.ws-command-title')).toHaveCount(0);
   const nav=page.locator('.ws-project-index .ws-view-nav');
   await expect(nav).toBeVisible();
   await expect(nav.locator('a')).toHaveCount(4);
   await expect(nav.locator('a[aria-current="page"]')).toHaveCount(1);
-  await expect(nav.locator('a[aria-current="page"]')).toContainText(/系统图谱|SYSTEM MAP/);
+  await expect(nav.locator('a[aria-current="page"]')).toContainText(/版本日志|CHANGELOG/);
   await expect(page.locator('header .ws-header-notice')).toBeVisible();
   await nav.getByRole('link',{name:/02.*(交付看板|RELEASE BOARD)/}).click({noWaitAfter:true});
   await expect(page).toHaveURL(/\/roadmap\/board\/?$/);
@@ -152,30 +152,14 @@ test('Gantt labels have one opaque sticky mask with shared dynamic width', async
   await page.screenshot({path:`test-results/v26-gantt-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
 });
 
-test('system map renders four reviewed organizational edges without inferred dependencies', async ({page}) => {
-  const errors=[];page.on('pageerror',e=>errors.push(e.message));
-  await page.goto('/roadmap/systems/', {waitUntil:'domcontentloaded'});
-  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
-  await expect(page.locator('.system-graph .vue-flow')).toBeVisible({timeout:15000});
-  await expect(page.locator('.vue-flow__node')).toHaveCount(5);
-  await expect(page.locator('.vue-flow__edge')).toHaveCount(4);
-  await expect(page.locator('.vue-flow__edge-path')).toHaveCount(4);
-  for(const edge of await page.locator('.vue-flow__edge-path').all()){
-    expect((await edge.getAttribute('d')||'').length).toBeGreaterThan(20);
-  }
-  await expect(page.locator('.system-graph-node').filter({hasText:'TALOS'})).toBeVisible();
-  if (test.info().project.name.includes('mobile')) {
-    const viewport=await page.locator('.system-graph-viewport').boundingBox();
-    for(const node of await page.locator('.system-graph-node').all()) {
-      const box=await node.boundingBox();
-      expect(box.x).toBeGreaterThanOrEqual(viewport.x-2);
-      expect(box.x+box.width).toBeLessThanOrEqual(viewport.x+viewport.width+2);
-    }
-  }
-  await page.locator('.system-graph-node').filter({hasText:'TALOS'}).click();
-  await expect(page.locator('.rail-item.is-current')).toContainText('TALOS');
-  await page.screenshot({path:`test-results/v26-systems-${test.info().project.name}.png`,fullPage:true,animations:'disabled'});
-  expect(errors).toEqual([]);
+test('retired Systems route redirects without graph wiring',async({page,request})=>{
+  await page.goto('/roadmap/systems/');
+  await expect(page).toHaveURL(/\/roadmap\/$/);
+  await expect(page.locator('.vue-flow,.system-graph')).toHaveCount(0);
+  await expect(page.locator('a[href="/roadmap/systems/"]')).toHaveCount(0);
+  const data=await (await request.get('/api/roadmap/v1.json')).json();
+  expect(data.relations).toHaveLength(4);
+  expect(data.relations.every(r=>r.kind==='contains' && r.from==='PROTORHEXIS')).toBe(true);
 });
 
 
@@ -285,7 +269,7 @@ test('six board stages occupy one horizontal row and the rightmost Published col
 
 
 test('global SiteBrand renders identical SVG on home, 404 and all roadmap routes', async ({page}) => {
-  const routes=['/','/404.html','/roadmap/','/roadmap/board/','/roadmap/evidence/','/roadmap/systems/'];
+  const routes=['/','/404.html','/roadmap/','/roadmap/board/','/roadmap/evidence/','/roadmap/changelog/'];
   let canonicalMarkup;
   for(const route of routes){
     await page.goto(route,{waitUntil:'domcontentloaded'});
@@ -329,7 +313,7 @@ test('global brand color is controlled by a CSS custom property on every layout'
 
 
 test('global loading gate is composed as logo above progress bar on all public routes',async({page})=>{
-  const all=['/','/404.html','/roadmap/','/roadmap/board/','/roadmap/evidence/','/roadmap/systems/'];
+  const all=['/','/404.html','/roadmap/','/roadmap/board/','/roadmap/evidence/','/roadmap/changelog/'];
   for(const route of all){
     await page.goto(route,{waitUntil:'domcontentloaded'});
     const gate=page.locator('#site-loading-gate');
@@ -401,7 +385,7 @@ test('V3.4 same work ID links between board and schedule without duplicating sou
 
 
 test('navbar owns the only search input; no standalone tools band remains', async({page})=>{
-  for(const route of ['/roadmap/','/roadmap/board/','/roadmap/evidence/','/roadmap/systems/']){
+  for(const route of ['/roadmap/','/roadmap/board/','/roadmap/evidence/','/roadmap/changelog/']){
     await page.goto(route,{waitUntil:'domcontentloaded'});
     await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
     await expect(page.locator('.ws-commandbar,.ws-tools')).toHaveCount(0);
@@ -505,7 +489,7 @@ test('notice click pins open across pointer leave, and outside click dismisses i
 });
 
 test('notice Escape closes pinned and supports keyboard activation',async({page})=>{
-  await page.goto('/roadmap/systems/',{waitUntil:'domcontentloaded'});
+  await page.goto('/roadmap/changelog/',{waitUntil:'domcontentloaded'});
   const notice=page.locator('.ws-header-notice');
   const summary=notice.locator('summary');
   await summary.focus();
@@ -692,14 +676,15 @@ test('V3.5 handle hover visibly increases opacity and reduced-motion closes inst
   await expect(handle).toHaveCSS('transition-duration',/^0s(, 0s)*$/);
 });
 
-test('V3.5 a system-map node explicitly selects and opens its inspector',async({page})=>{
-  await page.goto('/roadmap/systems/',{waitUntil:'domcontentloaded'});
-  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+test('Changelog has no invented releases and keeps shared inspector',async({page})=>{
+  await page.goto('/roadmap/changelog/?release=UNKNOWN');
+  await expect(page.locator('.changelog-empty')).toBeVisible();
+  await expect(page.locator('[data-release-id]')).toHaveCount(0);
   await expect(page.locator('#roadmap-inspector')).toHaveAttribute('aria-hidden','true');
-  await page.locator('.system-graph-node').filter({hasText:'TALOS'}).click();
-  const inspector=page.locator('#roadmap-inspector');
-  await expect(inspector).toHaveClass(/inspector-visible/);
-  await expect(inspector).toContainText('TALOS');
+  await page.locator('.ws-inspector-handle').click();
+  await expect(page.locator('.inspector-empty-state')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('#roadmap-inspector')).toHaveAttribute('aria-hidden','true');
 });
 
 
@@ -867,8 +852,7 @@ test('V3.6 container-driven inspector typography adapts when desktop viewport ch
 for (const [view,route,selector] of [
   ['schedule','/roadmap/','.gantt-item-name'],
   ['board','/roadmap/board/','.kanban-card'],
-  ['activity','/roadmap/evidence/','.event-entry'],
-  ['systems','/roadmap/systems/','.system-graph-node']
+  ['activity','/roadmap/evidence/','.event-entry']
 ]) {
   test(`V3.6.1 collapsing the ${view} inspector preserves page geometry without a blank tail`,async({page,isMobile})=>{
     test.skip(isMobile,'Inline grid geometry is desktop-only; mobile drawer has a separate fixed layout');
@@ -892,10 +876,7 @@ for (const [view,route,selector] of [
       };
     });
     const before=await metrics();
-    // The map's first node is the ALL overview; select an actual program.
-    const target=view==='systems'
-      ? page.locator('.system-graph-node').filter({hasText:'TALOS'}).first()
-      : page.locator(selector).first();
+    const target=page.locator(selector).first();
     await target.click();
     await expect(grid).toHaveAttribute('data-inspector-open','true');
     await expect(inspector).toHaveAttribute('aria-hidden','false');
@@ -947,7 +928,7 @@ test('V3.6.2 header publishes source-backed data update immediately left of the 
   const {readFileSync}=await import('node:fs');
   const {fileURLToPath}=await import('node:url');
   const snapshot=JSON.parse(readFileSync(fileURLToPath(new URL('../../src/data/roadmap.generated.json',import.meta.url)),'utf8'));
-  for(const route of ['/roadmap/','/roadmap/board/','/roadmap/evidence/','/roadmap/systems/']){
+  for(const route of ['/roadmap/','/roadmap/board/','/roadmap/evidence/','/roadmap/changelog/']){
     await page.goto(route,{waitUntil:'domcontentloaded'});
     await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
     const data=page.locator('.ws-header-data-updated');

@@ -112,17 +112,12 @@ test('V3.6.5 activity record stays inside its own scrollport when inspector open
   await expect(page.locator('#roadmap-inspector')).not.toContainText('Select an item to display');
   await expect.poll(async()=>visible(await metrics(page,'.ws-activity','.event-entry.selected'))).toBe(true);
 });
-test('V3.6.5 Vue Flow pans its selected system into the pane when inspector narrows the canvas',async({page,isMobile})=>{
-  test.skip(isMobile,'Mobile inspector is a fixed drawer');
-  await page.setViewportSize({width:1440,height:820});
-  await page.goto('/roadmap/systems/',{waitUntil:'domcontentloaded'});
-  const node='.system-graph-node[data-program-id="THOULESS"]';
-  await expect(page.locator(node)).toBeVisible();
-  await page.locator(node).click();
-  await expect(page.locator('.ws-content-grid')).toHaveAttribute('data-inspector-open','true');
-  await expect.poll(async()=>visible(await metrics(page,'.system-graph-viewport',node,14))).toBe(true);
-  await page.setViewportSize({width:1200,height:820});
-  await expect.poll(async()=>visible(await metrics(page,'.system-graph-viewport',node,14))).toBe(true);
+test('Changelog program filter retains an empty authorized release list',async({page})=>{
+  await page.goto('/roadmap/changelog/');
+  await page.locator('.rail-item').filter({hasText:'THOULESS'}).click();
+  await expect(page.locator('.rail-item.is-current')).toContainText('THOULESS');
+  await expect(page.locator('.changelog-empty')).toBeVisible();
+  await expect(page.locator('[data-release-id]')).toHaveCount(0);
 });
 test('V3.6.5 mobile selection preserves Escape and return focus on the fixed inspector drawer',async({page,isMobile})=>{
   test.skip(!isMobile,'Mobile-only focus behavior');

@@ -4,7 +4,7 @@ Site: https://protorhexis.com/roadmap/  |  API: https://protorhexis.com/api/road
 
 ## Data source
 
-Markdown/YAML records in `src/content/roadmap/` compile into one public snapshot consumed by the Gantt, board, timeline, system map and JSON API. Scheduled updates follow [the current agent policy](agent/AGENTS.md). Historical observation windows are distinct from delivery dates; Future stays undated.
+Markdown/YAML records in `src/content/roadmap/` compile into one public snapshot consumed by the Gantt, board, timeline and JSON API. Scheduled updates follow [the current agent policy](agent/AGENTS.md). Historical observation windows are distinct from delivery dates; Future stays undated.
 
 ### Human / Agent authoring
 - Human-friendly Markdown frontmatter/YAML and VS Code Front Matter config (`frontmatter.json`).
@@ -38,7 +38,8 @@ GitHub Actions runs source, schema, build and desktop/mobile Chromium Hydration 
 - `/roadmap/` read-only Gantt; no invented future dates; unknown schedules appear as undated items.
 - `/roadmap/board/` current *public* work phases, not private Issue states.
 - `/roadmap/evidence/` recorded public events with cited external sources in the inspector.
-- `/roadmap/systems/` public index. No unreviewed integration edges are drawn.
+- `/roadmap/changelog/` independent release notes; empty until the release projection is authorized.
+- The retired `/roadmap/systems/` redirects to Schedule; the graph model remains in source for future internal use.
 
 Frontend: Astro 7 + Vue 3 + TypeScript + Vue Flow + Motion for Vue. Preserve full-width graphite/coral UI, Iconify material line icons, accessible controls, reduced-motion, continuous corners and **no shadows**. Deployment is GitHub Pages at `protorhexis.com`. The unfinished institutional home remains separate.
 
