@@ -7,25 +7,19 @@
     "dev": "astro dev",
     "build": "astro build",
     "preview": "astro preview",
-    "check:fixtures": "node scripts/check-fixtures.mjs",
-    "check:style": "node scripts/check-style.mjs",
     "check:gantt": "node --experimental-strip-types scripts/check-gantt.mjs",
-    "check:layers": "node scripts/check-layers.mjs",
-    "check:v25": "node scripts/check-v25.mjs",
     "test:e2e": "playwright test",
-    "check:v26": "node scripts/check-v26.mjs",
-    "check:v29": "node --experimental-strip-types scripts/check-v29.mjs",
-    "check:v30": "node --experimental-strip-types scripts/check-v30.mjs",
     "roadmap:compile": "node scripts/roadmap-cli.mjs compile",
     "roadmap:validate": "node scripts/roadmap-cli.mjs validate",
     "roadmap:context": "node scripts/roadmap-cli.mjs context",
     "roadmap:intake": "node scripts/roadmap-cli.mjs intake",
     "roadmap:new": "node scripts/roadmap-cli.mjs new",
-    "prebuild": "npm run roadmap:compile",
+    "prebuild": "node scripts/build-favicon.mjs && npm run roadmap:compile",
     "check:roadmap": "node scripts/check-roadmap.mjs",
-    "predev": "npm run roadmap:compile",
+    "predev": "node scripts/build-favicon.mjs && npm run roadmap:compile",
     "roadmap:roundup": "node scripts/roadmap-cli.mjs roundup",
-    "check:fonts": "node scripts/check-fonts.mjs"
+    "check:fonts": "node scripts/check-fonts.mjs",
+    "check:site": "node scripts/check-site.mjs"
   },
   "dependencies": {
     "astro": "^7.4.0",
@@ -43,10 +37,12 @@
     "unplugin-icons": "^24.0.0",
     "@iconify-json/line-md": "^1.2.0",
     "@iconify-json/material-symbols": "^1.2.0",
-    "@iconify-json/fluent": "^1.2.0",
     "@playwright/test": "^1.64.1"
   },
   "engines": {
     "node": ">=22.23.4"
+  },
+  "overrides": {
+    "rolldown": "1.3.3"
   }
 }

@@ -13,7 +13,7 @@
 - `prefers-reduced-motion` disables movement and page fade.
 
 ## Build/check commands
-`npm install && npm run check:fixtures && npm run check:style && npm run check:gantt && npm run check:layers && npm run build`
+Use the [current build and validation commands](../README.md#build-and-validation).
 
 ## Public data
 Synthetic fixture only, no internal source has been copied. This patch does not change release readiness or project evidence.

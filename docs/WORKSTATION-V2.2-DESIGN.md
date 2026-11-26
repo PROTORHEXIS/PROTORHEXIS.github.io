@@ -35,4 +35,4 @@ Use a consistent hierarchy rather than applying a large radius everywhere:
 
 ## Quality gate
 
-Run `npm run check:fixtures` and `npm run check:style`. A supported Node.js runtime and an actual Astro build/browser pass are still required before merging and deployment. The reference HTML in the release package is visual-only, not a substitute for running Vue.
+For the current build and validation commands, see [README](../README.md#build-and-validation). A supported Node.js runtime and an actual Astro build/browser pass are still required before merging and deployment. The reference HTML in the release package is visual-only, not a substitute for running Vue.

@@ -3,13 +3,14 @@
 // We deliberately DO NOT show a fabricated completion percentage: the bar is
 // indeterminate until the document and Astro hydration signal real readiness.
 type State = 'entry'|'idle'|'covering'|'covered'|'revealing';
-const gate = document.getElementById('site-loading-gate');
+const loadingGate = document.getElementById('site-loading-gate');
 const root = document.documentElement;
 const startClip = 'polygon(-40% -10%,-20% -10%,-40% 110%,-60% 110%)';
 const coverClip = 'polygon(-30% -10%,130% -10%,110% 110%,-50% 110%)';
 const exitClip = 'polygon(130% -10%,150% -10%,130% 110%,110% 110%)';
 
-if (gate) {
+if (loadingGate) {
+  const gate = loadingGate;
   const back = gate.querySelector<HTMLElement>('.site-loading-gate__slab--back');
   const front = gate.querySelector<HTMLElement>('.site-loading-gate__slab--front');
   const progress = gate.querySelector<HTMLElement>('.site-loading-gate__track');
@@ -19,14 +20,12 @@ if (gate) {
   const twoFrames = () => new Promise<void>(resolve=>requestAnimationFrame(()=>requestAnimationFrame(()=>resolve())));
 
   function setState(state:State) {
-    if(!gate) return;
     gate.dataset.state=state;
     gate.setAttribute('aria-hidden',state==='idle'?'true':'false');
     root.classList.toggle('site-gate-busy',state!=='idle');
     document.body?.setAttribute('aria-busy',String(state!=='idle'));
   }
   function reset() {
-    if (!gate) return;
     setState('idle');
     gate.dataset.progress='loading';
     progress?.setAttribute('aria-valuetext','加载中 / Loading');
@@ -68,7 +67,7 @@ if (gate) {
     try {
       // The watchdog and timeout ensure a failed asset cannot trap the visitor.
       await Promise.race([Promise.all([awaitFullLoad(),awaitHydration()]),delay(7200)]);
-      if(!gate || gate.dataset.state!=='entry') return;
+      if(gate.dataset.state!=='entry') return;
       gate.dataset.progress='ready';
       progress?.setAttribute('aria-valuetext','页面已就绪 / Ready');
       await delay(reduced.matches?0:190);
@@ -88,7 +87,7 @@ if (gate) {
     inTransition=true;
     if(reduced.matches) {window.location.assign(url);return;}
     setState('covering');
-    if(gate) gate.dataset.progress='loading';
+    gate.dataset.progress='loading';
     try {
       await Promise.all([
         animateClip(back,startClip,coverClip,550),

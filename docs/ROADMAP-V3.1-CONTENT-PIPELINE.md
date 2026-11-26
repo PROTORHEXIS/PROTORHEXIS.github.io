@@ -25,7 +25,9 @@ npm install
 npm run roadmap:compile
 npm run roadmap:validate
 npm run check:roadmap
-npm run check:fixtures
+npm run check:site
+npm run check:fonts
+npm run check:gantt
 npm run build # also compiles roadmap automatically
 npm run test:e2e
 ```

@@ -1,5 +1,4 @@
 ---
-import EngineeringLayout from '../../../layouts/EngineeringLayout.astro';
-import EngineeringWorkbench from '../../../components/vue/EngineeringWorkbench.vue';
+// Static-host compatible retirement of the former public graph route.
+return Astro.redirect('/roadmap/');
 ---
-<EngineeringLayout title="System Map" active="systems"><EngineeringWorkbench view="systems" client:load /></EngineeringLayout>

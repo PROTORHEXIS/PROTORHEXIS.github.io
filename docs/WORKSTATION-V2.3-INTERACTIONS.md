@@ -34,8 +34,10 @@ Scope: visual/prototype only. No backend mutation, publication of factual milest
 
 ```powershell
 npm install
-npm run check:fixtures
-npm run check:style
+npm run build
+npm run check:roadmap
+npm run check:site
+npm run check:fonts
 npm run check:gantt
 npm run build
 npm run dev

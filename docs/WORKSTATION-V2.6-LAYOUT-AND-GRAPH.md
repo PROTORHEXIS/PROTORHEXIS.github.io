@@ -22,7 +22,7 @@ The demo illustrates PROTORHEXIS organizational grouping to TALOS, MAXWELL, THOU
 
 ## Verification
 
-`check:fixtures`, `check:style`, `check:gantt`, `check:layers`, `check:v25`, and `check:v26` must PASS. Chromium E2E must verify both breakpoints, all four routes, scroll mask geometry, event arrow contained, graph node+edge count and selection, and no page errors. Screenshots at 390 px and 1440 px are required. Merge/deploy only after PR checks pass.
+Use the [current build and validation commands](../README.md#build-and-validation); the historical version-specific checks have been retired. Chromium E2E must verify both breakpoints, all four routes, scroll mask geometry, event arrow contained, graph node+edge count and selection, and no page errors. Screenshots at 390 px and 1440 px are required. Merge/deploy only after PR checks pass.
 
 ### V2.6 browser-reported repairs
 

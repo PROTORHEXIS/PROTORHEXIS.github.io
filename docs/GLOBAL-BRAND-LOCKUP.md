@@ -7,3 +7,6 @@ Brand dimensions, base color, hover color, and mobile sizing are controlled in t
 The retired `/brand/mark.svg` placeholder is not referenced by any page. The separate homepage and workstation visual systems remain distinct outside their common brand asset.
 
 Regression checks cover all six public HTML routes (home, 404, four roadmap views), identical canonical SVG markup, absence of old HTML wordmarks and placeholder-image use, and CSS-driven SVG color on both homepage and workstation.
+
+## Browser icon
+`scripts/build-favicon.mjs` extracts the canonical mark polygons directly from BrandLockup and emits self-contained theme-aware SVG and 16/32px ICO fallback before build/dev. No independent vector redraw.

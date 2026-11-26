@@ -3,19 +3,9 @@ import BaseLayout from './BaseLayout.astro';
 import SiteBrand from '../components/SiteBrand.astro';
 import publicSnapshot from '../data/roadmap.generated.json';
 import '../styles/workstation.css';
-import '../styles/workstation-refinements.css';
-import '../styles/workstation-layer-motion.css';
-import '../styles/workstation-v25.css';
-import '../styles/workstation-v26.css';
-import '../styles/workstation-v28.css';
-import '../styles/workstation-v33.css';
-import '../styles/workstation-v34.css';
-import '../styles/workstation-v35.css';
-import '../styles/workstation-v36.css';
-import '../styles/workstation-v363.css';
 interface Props {
   title: string;
-  active: 'schedule' | 'board' | 'activity' | 'systems';
+  active: 'schedule' | 'board' | 'activity' | 'changelog';
 }
 const { title, active } = Astro.props;
 ---

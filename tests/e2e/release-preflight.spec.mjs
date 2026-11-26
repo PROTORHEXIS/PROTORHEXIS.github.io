@@ -61,6 +61,7 @@ test('release-preflight: single-task mask has zero phantom pixels and a +56px mu
   const search = page.locator('.ws-header .ws-search input');
   await search.fill('TAL-PROGRESS-001');
   await expect(page.locator('.gantt-row')).toHaveCount(1);
+  await expect(page.locator('.gantt-canvas')).toHaveAttribute('data-row-transitioning','false');
   const original = await geometry(page);
   assertRealRows(original);
   expect(original.maskHeight).toBeLessThan(200);
@@ -90,6 +91,7 @@ test('release-preflight: single-task mask has zero phantom pixels and a +56px mu
   // Follow-up states once showed a phantom tail under the final row.
   await page.locator('.gantt-group').first().click();
   await expect(page.locator('.gantt-row')).toHaveCount(0);
+  await expect(page.locator('.gantt-canvas')).toHaveAttribute('data-row-transitioning','false');
   const folded = await geometry(page);
   expect(folded.maskBottom - folded.canvasBottom).toBeLessThanOrEqual(3);
   closeEnough(folded.paneBottom, folded.legendBottom, 3.5);
@@ -105,6 +107,7 @@ test('release-preflight: all-program frozen left column and legend survive doubl
   await page.goto('/roadmap/', { waitUntil: 'domcontentloaded' });
   await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
   await expect.poll(() => page.locator('.gantt-row').count()).toBeGreaterThan(4);
+  await expect(page.locator('.gantt-canvas')).toHaveAttribute('data-row-transitioning','false');
   const viewport = page.locator('.gantt-viewport');
   const initial = await geometry(page);
   assertRealRows(initial);
@@ -149,6 +152,7 @@ test('release-preflight: inspector collapse and resizing preserve chart height, 
   const search = page.locator('.ws-header .ws-search input');
   await search.fill('TAL-PROGRESS-001');
   await expect(page.locator('.gantt-row')).toHaveCount(1);
+  await expect(page.locator('.gantt-canvas')).toHaveAttribute('data-row-transitioning','false');
   const state = () => page.evaluate(() => ({
     gridHeight: document.querySelector('.ws-content-grid').getBoundingClientRect().height,
     handleTop: document.querySelector('.ws-inspector-handle').getBoundingClientRect().top,

@@ -10,6 +10,6 @@
 
 ## Qualification
 
-- Local source/calendar/geometry checks, and `check:v28` (positive marker tangent, no round cap, separated B lanes, one shared trunk per source, home entry policy, DEMO provenance).
+- Historical V2.8 validation covered the then-current router and demo fixture. Use `npm run check:gantt` and the [current validation commands](../README.md#build-and-validation) for the current implementation.
 - Playwright desktop and mobile: actual Astro + Vue hydration; production routing; check source trunk count, arrow marker/tip alignment and stroke cap; hover card without moving the date or timeline axis; accessible non-link logo SVG loading.
 - Keep draft until candidate GitHub CI and Chromium screenshots pass. Only then merge to deploy. The unrelated Pages Jekyll workflow may fail but is not the Astro release workflow.
