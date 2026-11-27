@@ -7,21 +7,23 @@
     "en": "Independent rental-service validation"
   },
   "description": {
-    "zh": "订单读取与仓储目录完成限定范围联测，完整租赁业务仍未正式发布。",
-    "en": "Order reads and warehouse listing have bounded integration evidence; the full rental service is not released."
+    "zh": "租赁模块完成后继候选浏览器业务验证，34项测试通过。",
+    "en": "The rental module passed 34 browser business tests for the successor candidate."
   },
   "phase": "qualification",
   "category": "product",
   "schedule": null,
   "dependsOn": [],
-  "sources": [],
-  "updatedAt": "2026-11-18",
+  "sources": [
+    {
+      "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/blob/main/docs/roadmap-disclosures/tho-progress-001-20261126.md"
+    }
+  ],
+  "updatedAt": "2026-11-27",
   "publication": "approved",
-  "reviewReceipt": "PUB-RM-20261118-THO",
   "delivery": {
     "state": "unassigned"
   },
   "verifiedAt": null
 }
 ---
-这份公开摘要只代表已审核的限定工程进度；不包含私有证据，且不构成产品发布承诺。
