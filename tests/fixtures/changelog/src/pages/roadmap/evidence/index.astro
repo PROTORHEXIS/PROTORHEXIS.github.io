@@ -1,0 +1,6 @@
+---
+import EngineeringLayout from '../../../../../../../src/layouts/EngineeringLayout.astro';
+import EngineeringWorkbench from '../../../../../../../src/components/vue/EngineeringWorkbench.vue';
+import {events} from '../../../../fixture';
+---
+<EngineeringLayout title="Timeline fixture" active="activity"><EngineeringWorkbench view="activity" events={events} client:load /></EngineeringLayout>

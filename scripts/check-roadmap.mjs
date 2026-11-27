@@ -73,3 +73,5 @@ assert.equal(roundup.status,0,roundup.stderr);
 assert(roundup.stdout.includes('SITE-EV-004') && roundup.stdout.includes('Sources:'),'Roundup must cite already-approved events');
 assert(!/https:\/\/github\.com\/(?!PROTORHEXIS\/)/.test(roundup.stdout),'Only approved public GitHub sources may appear');
 console.log('Roadmap content and intake: PASS');
+
+await import('./check-roadmap-v2.mjs');

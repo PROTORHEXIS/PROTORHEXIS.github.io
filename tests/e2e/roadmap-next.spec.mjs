@@ -101,16 +101,23 @@ test('Gantt row group transitions keep label and track together and settle exact
 });
 
 test('canonical favicon resources and theme contrast across public routes',async({page,request})=>{
-  const svg=await request.get('/favicon.svg'),ico=await request.get('/favicon.ico');
+  const svg=await request.get('/favicon.svg?v=2'),ico=await request.get('/favicon.ico');
   expect(svg.ok()).toBe(true);expect(svg.headers()['content-type']).toMatch(/image\/svg\+xml/);
   const xml=await svg.text();expect((xml.match(/<polygon\b/g)||[]).length).toBe(4);expect(xml).toContain('prefers-color-scheme:dark');
   const bytes=await ico.body();expect(bytes.readUInt16LE(2)).toBe(1);expect(bytes.readUInt16LE(4)).toBe(2);expect([bytes[6],bytes[22]]).toEqual([16,32]);
+  for(const [i,n] of [16,32].entries()){
+    const start=bytes.readUInt32LE(6+16*i+12)+40;
+    const pixels=Array.from({length:n*n},(_,p)=>[...bytes.subarray(start+4*p,start+4*p+4)]);
+    expect(pixels.some(p=>p[3]===0)).toBe(true);
+    expect(pixels.some(p=>p[3]===255)).toBe(true);
+    expect(pixels.filter(p=>p[3]>0).every(p=>p[0]===133&&p[1]===133&&p[2]===137)).toBe(true);
+  }
   for(const route of ['/','/404.html','/roadmap/','/roadmap/board/','/roadmap/evidence/','/roadmap/changelog/']){
     await page.goto(route);
-    await expect(page.locator('link[rel="icon"]')).toHaveCount(2);
-    await expect(page.locator('link[rel="icon"][type="image/svg+xml"]')).toHaveAttribute('href','/favicon.svg');
+    await expect(page.locator('link[rel~="icon"]')).toHaveCount(1);
+    await expect(page.locator('link[rel="icon"][type="image/svg+xml"]')).toHaveAttribute('href','/favicon.svg?v=2');
   }
-  await page.goto('/favicon.svg');
+  await page.goto('/favicon.svg?v=2');
   for(const colorScheme of ['light','dark']){
     await page.emulateMedia({colorScheme});
     await expect(page.locator('polygon').first()).toHaveCSS('fill',colorScheme==='dark'?'rgb(237, 237, 240)':'rgb(38, 38, 42)');
@@ -119,4 +126,23 @@ test('canonical favicon resources and theme contrast across public routes',async
       await page.locator('svg').screenshot({path:'test-results/favicon-'+colorScheme+'-'+size+'-'+test.info().project.name+'.png'});
     }
   }
+});
+
+
+test('Timeline release opens the same compiled Changelog record',async({page})=>{
+  await page.goto('http://127.0.0.1:4322/roadmap/evidence/');
+  await expect(page.locator('astro-island[ssr]')).toHaveCount(0);
+  await page.locator('[data-event-id="FIXTURE-RELEASE-EVENT"]').click();
+  await expect(page).toHaveURL(/changelog\/\?release=FIXTURE-RELEASE-A/);
+  await expect(page.locator('#roadmap-inspector')).toContainText('已确认修复');
+});
+
+test('V2 API contains the same historical record identities',async({request})=>{
+  const a=await request.get('/api/roadmap/v1.json'),b=await request.get('/api/roadmap/v2.json');
+  expect(a.ok()).toBe(true);expect(b.ok()).toBe(true);
+  const v1=await a.json(),v2=await b.json();expect(v2.schemaVersion).toBe(2);
+  expect(v2.workItems.map(w=>w.id)).toEqual(v1.workItems.map(w=>w.id));
+  expect(v2.events.map(e=>e.id)).toEqual(v1.events.map(e=>e.id));
+  expect(v2.releases.every(r=>!r.id.startsWith('FIXTURE-'))).toBe(true);
+  expect(v2.changes.every(c=>!c.id.startsWith('FIXTURE-'))).toBe(true);
 });

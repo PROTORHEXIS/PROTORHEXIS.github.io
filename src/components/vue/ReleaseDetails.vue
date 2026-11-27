@@ -1,11 +1,13 @@
 <script setup lang="ts">
-import { changeKinds, changeLabel, changeStateLabel, type ReleaseView } from './release-presentation';
+import { changeKinds, changeLabel, changeStateLabel, releaseTitle, type ReleaseView } from './release-presentation';
 import type { Translate } from './roadmap-presentation';
 defineProps<{ release:ReleaseView; tr:Translate }>();
 </script>
 <template>
-  <div class="inspector-hero"><small>{{release.program}} / {{release.channel}}</small><h2>{{release.version}}</h2><span class="inspector-status">{{release.preview?tr('未发布预览','Unreleased preview'):release.date??tr('日期未公开','Date unavailable')}}</span></div>
+  <div class="inspector-hero"><small>{{release.program}} / {{release.channel}}</small><h2>{{releaseTitle(release,tr)}}</h2><span class="inspector-status">{{release.preview?tr('未发布预览','Unreleased preview'):release.date??tr('日期未公开','Date unavailable')}}</span></div>
   <div class="inspector-section"><p>{{tr(release.summary.zh,release.summary.en)}}</p><p v-if="release.availability">{{tr(release.availability.zh,release.availability.en)}}</p><a :href="'/roadmap/changelog/?release='+encodeURIComponent(release.id)">{{tr('版本链接','Release link')}} ↗</a></div>
+  <div v-if="release.components?.length" class="inspector-section"><span class="inspector-label">{{tr('组件版本','COMPONENT VERSIONS')}}</span><p v-for="component in release.components" :key="component.name.en">{{tr(component.name.zh,component.name.en)}} · {{component.version??tr('版本未公开','Version unavailable')}}</p></div>
+  <div v-if="release.evidence?.length" class="inspector-section"><span class="inspector-label">{{tr('公开来源','PUBLIC SOURCES')}}</span><a v-for="src in release.evidence" :key="src.url" :href="src.url" target="_blank" rel="noopener noreferrer" class="inspector-dep-link">{{tr('来源','Source')}} ↗</a></div>
   <template v-for="kind in changeKinds" :key="kind">
     <details v-if="release.changes.some(change=>change.kind===kind)" class="inspector-section release-section" open>
       <summary>{{changeLabel(kind,tr)}}</summary>

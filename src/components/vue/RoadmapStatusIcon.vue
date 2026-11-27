@@ -15,13 +15,13 @@ import IconProject from '~icons/material-symbols/info-outline';
 /** States are facts from the reviewed public snapshot, not a theme/accent. */
 type Status = 'future' | 'planned' | 'development' | 'qualification' | 'review' |
   'published' | 'unassigned' | 'tentative' | 'committed' | 'released' |
-  'milestone' | 'verification' | 'decision' | 'project';
+  'milestone' | 'verification' | 'decision' | 'release' | 'project';
 const props=defineProps<{status:Status}>();
 const icons={
   future:IconFuture,planned:IconPlanned,development:IconDevelop,
   qualification:IconQualify,review:IconReview,published:IconPublished,
   unassigned:IconFuture,tentative:IconTentative,committed:IconCommitted,released:IconPublished,
-  milestone:IconMilestone,verification:IconCommitted,decision:IconDecision,project:IconProject
+  milestone:IconMilestone,verification:IconCommitted,decision:IconDecision,release:IconPublished,project:IconProject
 };
 const selected=computed(()=>icons[props.status]);
 </script>
