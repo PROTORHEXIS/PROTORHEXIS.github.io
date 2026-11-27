@@ -11,7 +11,7 @@ const x=(minX+maxX-size)/2,y=(minY+maxY-size)/2;
 const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="'+[x,y,size,size].join(' ')+'"><style>polygon{fill:#26262a}@media(prefers-color-scheme:dark){polygon{fill:#ededf0}}</style>'+polygons.map(p=>'<polygon points="'+p+'"/>').join('')+'</svg>\n';
 writeFileSync(new URL('public/favicon.svg',root),svg);
 // ICO DIB frames: supersampled original polygons, transparent background.
-// Neutral graphite fill with pale outline remains visible on light and dark chrome.
+// Legacy implicit ICO fallback uses one neutral fill, without outline or shadow.
 function inside(px,py,polygon) {
   let hit=false;
   for(let i=0,j=polygon.length-1;i<polygon.length;j=i++){
@@ -36,12 +36,9 @@ function frame(n) {
   const coverageGrid=Array.from({length:n*n},(_,i)=>coverage(i%n,Math.floor(i/n),n));
   for(let py=0;py<n;py++)for(let px=0;px<n;px++){
     const cov=coverageGrid[py*n+px];
-    const halo=Math.max(...[-1,0,1].flatMap(dy=>[-1,0,1].map(dx=>px+dx>=0&&px+dx<n&&py+dy>=0&&py+dy<n?coverageGrid[(py+dy)*n+px+dx]:0)))*.8;
-    const alpha=Math.max(cov,halo);
     const offset=40+((n-1-py)*n+px)*4;
-    const grey=alpha?Math.round((cov*38+(alpha-cov)*235)/alpha):0;
-    bitmap[offset]=grey;bitmap[offset+1]=grey;bitmap[offset+2]=grey;bitmap[offset+3]=Math.round(alpha*255);
-    if(!alpha)bitmap[40+n*n*4+(n-1-py)*maskStride+(px>>3)]|=1<<(7-(px&7));
+    bitmap[offset]=133;bitmap[offset+1]=133;bitmap[offset+2]=137;bitmap[offset+3]=Math.round(cov*255);
+    if(!cov)bitmap[40+n*n*4+(n-1-py)*maskStride+(px>>3)]|=1<<(7-(px&7));
   }
   return bitmap;
 }
