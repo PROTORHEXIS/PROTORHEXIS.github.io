@@ -7,21 +7,23 @@
     "en": "Warehouse read and isolation validation"
   },
   "description": {
-    "zh": "仓储只读查询及隔离已完成限定范围联测，完整仓储业务尚未正式发布。",
-    "en": "Warehouse reads and isolation have bounded integration evidence; the complete warehouse service is not released."
+    "zh": "仓储模块完成后继候选浏览器业务验证，24项测试通过。",
+    "en": "The warehouse module passed 24 browser business tests for the successor candidate."
   },
   "phase": "qualification",
   "category": "product",
   "schedule": null,
   "dependsOn": [],
-  "sources": [],
-  "updatedAt": "2026-11-18",
+  "sources": [
+    {
+      "url": "https://github.com/PROTORHEXIS/PROTORHEXIS.github.io/blob/main/docs/roadmap-disclosures/tes-progress-001-20261126.md"
+    }
+  ],
+  "updatedAt": "2026-11-27",
   "publication": "approved",
-  "reviewReceipt": "PUB-RM-20261118-TES",
   "delivery": {
     "state": "unassigned"
   },
   "verifiedAt": null
 }
 ---
-这份公开摘要只代表已审核的限定工程进度；不包含私有证据，且不构成产品发布承诺。
